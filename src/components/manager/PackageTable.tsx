@@ -83,7 +83,13 @@ export function PackageTable({
   }
 
   return (
-    <div role="table" aria-label={`${managerId} packages`} className="rounded-card border border-border">
+    <div
+      role="table"
+      aria-label={`${managerId} packages`}
+      // 658px of fixed columns + gaps + padding, plus a floor for Name: below
+      // this the pane scrolls horizontally instead of cells colliding.
+      className="min-w-[790px] rounded-card border border-border"
+    >
       {/* Header */}
       <div
         role="row"
@@ -107,9 +113,9 @@ export function PackageTable({
           />
         </div>
         <div className="min-w-0 flex-1">Name</div>
-        <div className="w-[120px] shrink-0">Installed</div>
-        <div className="w-[150px] shrink-0">Latest</div>
-        <div className="w-[110px] shrink-0">Status</div>
+        <div className="w-[100px] shrink-0">Installed</div>
+        <div className="w-[216px] shrink-0">Latest</div>
+        <div className="w-[150px] shrink-0">Status</div>
         <div className="w-[90px] shrink-0" />
       </div>
 

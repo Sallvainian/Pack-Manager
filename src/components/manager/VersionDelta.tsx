@@ -38,8 +38,9 @@ export function VersionDelta({ installed, latest, outdated }: VersionDeltaProps)
 
   if (outdated && delta.comparable && delta.severity) {
     return (
-      <span className="inline-flex items-center gap-2 font-mono text-[12px] tabular-nums">
-        <span>
+      <span className="flex min-w-0 items-center gap-2 font-mono text-[12px] tabular-nums">
+        {/* Truncates rather than spilling into the Status column on long versions. */}
+        <span className="truncate" title={`${installed} → ${latest}`}>
           <span className="text-text-secondary">{installed}</span>
           <span className="px-1 text-text-muted">→</span>
           <span className="text-text-secondary" data-testid="delta-prefix">

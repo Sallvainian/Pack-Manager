@@ -136,15 +136,19 @@ export function PackageRow({
         )}
       </div>
 
-      <div role="cell" className="w-[120px] shrink-0 pt-0.5 font-mono text-[12px] tabular-nums text-text-secondary">
+      <div
+        role="cell"
+        title={pkg.installed ?? undefined}
+        className="w-[100px] shrink-0 truncate pt-0.5 font-mono text-[12px] tabular-nums text-text-secondary"
+      >
         {pkg.installed ?? "—"}
       </div>
 
-      <div role="cell" className="w-[150px] shrink-0 pt-0.5">
+      <div role="cell" className="w-[216px] shrink-0 pt-0.5">
         <VersionDelta installed={pkg.installed} latest={pkg.latest} outdated={pkg.outdated} />
       </div>
 
-      <div role="cell" className="w-[110px] shrink-0 pt-0.5">
+      <div role="cell" className="w-[150px] shrink-0 pt-0.5">
         <StatusBadge pkg={pkg} opState={opState} />
       </div>
 
