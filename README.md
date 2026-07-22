@@ -51,6 +51,13 @@ Authoritative design docs: `docs/SPEC.md`, `docs/DECISIONS.md`,
 - **Diagnostics export** — one zip on the Desktop: report.json (detection with
   evidence, search path + source, settings), recent app logs, last 25
   transcripts, and the journal.
+- **In-app auto-update** — checks on launch, every 6h, and on demand from the
+  macOS app menu (**Pack-Manager → Check for Updates…**). A found update
+  downloads in the background with progress in the status bar, then that
+  indicator becomes a **Restart to update** button. Installing is never
+  automatic — the click is the gate. If the app bundle's directory isn't
+  writable the updater would need an admin prompt, so it stops and says so
+  instead (Pack-Manager never asks for a password). DECISIONS D25.
 
 ## Stack
 
@@ -62,14 +69,21 @@ Authoritative design docs: `docs/SPEC.md`, `docs/DECISIONS.md`,
 ## Dev commands
 
 ```sh
-npm install                # frontend deps
-npm run tauri dev          # run the app (dev)
-npm run tauri build        # ad-hoc-signed .app under src-tauri/target/release/bundle/macos/
+npm install                          # frontend deps
+npm run tauri dev                    # run the app (dev)
+fnox exec -- npm run tauri build     # .app + .dmg + updater archive
 
 npm test                   # Vitest suite
 npx tsc --noEmit           # typecheck
 cd src-tauri && cargo test # Rust suite (offline; live smoke is #[ignore])
 ```
+
+`tauri build` needs the updater's minisign key, because `bundle.createUpdaterArtifacts`
+is on and the CLI refuses to bundle when it finds a configured `pubkey` with no
+private key ("A public key has been found, but no private key"). `fnox exec`
+supplies `TAURI_SIGNING_PRIVATE_KEY` and its password; CI reads the same two
+values from GitHub secrets of the same name. To build without signing at all,
+add `--no-sign` (what `ci.yml`'s build-smoke job does).
 
 Lint/format gates (CI runs all of these):
 
@@ -106,6 +120,33 @@ PM_CAPTURE_ONLINE=1 dev/capture-fixtures.sh  # + network-dependent outdated prob
 Synthetic fixtures carry a `_synthetic` suffix, copy values verbatim from real
 captures, and are listed with retirement conditions in the fixtures README.
 
+## Releases
+
+Fully automated by release-please — see `CLAUDE.md` for the rules that matter
+when committing.
+
+1. Push conventional commits to `main`; release-please opens a
+   `chore(main): release X.Y.Z` PR that bumps the five version files in
+   lockstep and writes `CHANGELOG.md`.
+2. **Merging that PR is the release.** It tags `vX.Y.Z` and publishes the
+   GitHub Release.
+3. `release.yml` then builds a universal (arm64 + x86_64) app, signs it with
+   Developer ID, notarizes and staples it, and attaches:
+
+| Asset | For |
+|---|---|
+| `Pack-Manager-X.Y.Z.dmg` | first install |
+| `Pack-Manager-X.Y.Z.zip` | archive |
+| `Pack-Manager-X.Y.Z.app.tar.gz` + `.sig` | the in-app updater |
+| `latest.json` | the updater endpoint |
+
+Signing and notarization degrade gracefully when the secrets are absent (e.g.
+on a fork): the build stays unsigned and the job still succeeds.
+
+Never hand-edit a version — release-please owns `package.json`,
+`package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and
+`src-tauri/Cargo.lock`, plus `CHANGELOG.md` and `.release-please-manifest.json`.
+
 ## Log locations
 
 | What | Where |
@@ -138,9 +179,11 @@ questions.
   machine doesn't have mas installed, so its parsers are tested only against
   labeled `_synthetic` fixtures. Parse failures degrade to an error card with
   an excerpt, never a crash (DECISIONS D23).
-- **Notarization is out of scope** — `npm run tauri build` produces an
-  ad-hoc-signed `.app` (the shipping deliverable). No Developer-ID signing,
-  no notarized DMG (DECISIONS D20; macOS 27 beta + Xcode-beta).
+- **Updating from a read-only location** — the updater replaces the `.app` in
+  place, so it needs write access to the bundle's parent directory. Run from
+  `/Applications` (or `~/Applications`); launched straight off a mounted DMG,
+  the in-app update stops at "needs a manual install" rather than raising an
+  admin prompt (DECISIONS D25).
 - **Dark theme only** — tokens are structured for a future light theme, but
   MVP ships dark-only (DECISIONS D19).
 - **Cask outdated JSON shape is unverified** — both captured fixtures have

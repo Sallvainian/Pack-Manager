@@ -606,4 +606,8 @@ rust (macos-14): `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings
 ---
 
 ## 8. Packaging & delivery
-`npm run tauri build` on this machine produces the ad-hoc-signed `Pack-Manager.app` under `src-tauri/target/release/bundle/macos/` — this is the MVP deliverable. Notarization/Developer-ID/DMG are out of scope (macOS 27 beta + Xcode-beta codesign drift; personal tool). The app must launch from Finder/Dock (the PATH machinery exists precisely for this) — the final gate verifies via `open` of the built bundle, not just `tauri dev`.
+**Superseded for MVP.** This section described the original ad-hoc-signed deliverable; delivery has since moved to a signed, notarized, auto-updating release pipeline. DECISIONS D20 (notarization out of scope) is superseded by D25, which records why and what it cost. The current pipeline is documented in README "Releases" and implemented in `.github/workflows/release.yml`.
+
+What still holds from the original text: the app must launch from Finder/Dock (the PATH machinery in §5.2 exists precisely for this) — the final gate verifies via `open` of the built bundle, not just `tauri dev`.
+
+What changed: `release.yml` builds a universal (arm64 + x86_64) bundle, signs it with a Developer ID Application certificate, notarizes and staples both the `.app` and the `.dmg`, and attaches `.dmg`, `.zip`, `.app.tar.gz` + `.sig`, and `latest.json` to the GitHub Release. The `.app.tar.gz` and `latest.json` are what `tauri-plugin-updater` consumes for the in-app update flow (D25); the Package step asserts the archived `.app` carries a notarization ticket rather than trusting bundler ordering, because an un-stapled auto-update would install an app that has to phone Apple on first launch.
