@@ -37,12 +37,14 @@ const FAILURE: ReadonlySet<string> = new Set(["failed", "cancelled", "timedOut",
 // ---------------------------------------------------------------------------
 // Launch refresh gating (SPEC §5.12 step 3)
 //
-// Backend detection runs asynchronously after the window shows; `refresh_all`
-// rejects with `detection_not_ready` until it lands. Firing the launch refresh
-// inline from bootstrap therefore races detection (and loses on a warm
-// relaunch). Instead, the launch refresh fires immediately only when a real
-// detection is already hydrated, and otherwise arms a one-shot that the first
-// real `detection:updated` consumes.
+// Backend detection runs asynchronously after the window shows. `refresh_all`
+// re-runs detection itself before fanning out (SPEC F1/F2), so firing the
+// launch refresh inline from bootstrap would race the startup detection with
+// a second, concurrent detection pass. Instead, the launch refresh fires
+// immediately only when a real detection is already hydrated, and otherwise
+// arms a one-shot that the first real `detection:updated` consumes. The
+// `detection:updated` that refresh_all itself emits arrives with the one-shot
+// already consumed — no re-fire loop.
 // ---------------------------------------------------------------------------
 
 let launchRefreshArmed = false;

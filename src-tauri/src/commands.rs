@@ -8,9 +8,8 @@ use std::path::PathBuf;
 use serde::Deserialize;
 use tauri::State;
 
-use crate::detect::{self, DetectStatus};
+use crate::detect::DetectStatus;
 use crate::error::{IpcError, PmError};
-use crate::events::AppEvent;
 use crate::ipc::{
     AppState as AppStateWire, DetectionReport, DiagnosticsResult, ManagerId, OpIds, OpRef,
     OperationDetail, OperationRecord, PlanRequest, SelfUpdateRoute, UpgradePlan,
@@ -114,14 +113,8 @@ pub enum FrontendLogLevel {
 /// Also serves as Re-detect; rebuilds ToolEnv (SPEC §5.9).
 #[tauri::command]
 pub async fn detect_managers(state: State<'_, AppState>) -> Result<DetectionReport, IpcError> {
-    let env = ToolEnv::build().await;
-    let outcome = detect::detect_all(&env, state.runner.as_ref()).await;
-    *state.tool_env.write().expect("tool_env poisoned") = env;
-    state.registry.set_routes_from(&outcome.report);
-    let report = outcome.report.clone();
-    *state.detection.write().expect("detection poisoned") = Some(outcome);
-    state.sink.emit(AppEvent::DetectionUpdated(report.clone()));
-    Ok(report)
+    let outcome = state.redetect(ToolEnv::build().await).await;
+    Ok(outcome.report)
 }
 
 /// Rehydration on mount / dev reload.
@@ -145,44 +138,80 @@ pub async fn get_state(state: State<'_, AppState>) -> Result<AppStateWire, IpcEr
     })
 }
 
-/// Coalesces duplicates (same-manager refresh → existing opId).
+/// Refresh submission from the CACHED detection outcome. `None` when detection
+/// has not completed yet or the manager is currently marked absent.
+fn refresh_submission_from_cache(state: &AppState, id: ManagerId) -> Option<queue::OpSubmission> {
+    let det = state.detection.read().expect("detection poisoned");
+    let outcome = det.as_ref()?;
+    let status = outcome.statuses.get(&id)?;
+    let settings = state.settings.read().expect("settings poisoned").clone();
+    let env = state.tool_env.read().expect("tool_env poisoned").clone();
+    queue::make_refresh_submission(id, status, &settings, &env)
+}
+
+/// Coalesces duplicates (same-manager refresh → existing opId). A manager the
+/// cached detection marks absent is re-probed first (rebuild ToolEnv +
+/// detect_all — same path as Re-detect) instead of erroring: the ManagerPane
+/// header's Refresh button is reachable while a pane shows the absent state,
+/// and the manager may have been installed since the last detection.
 #[tauri::command]
 pub async fn refresh_manager(
     state: State<'_, AppState>,
     args: ManagerArgs,
 ) -> Result<OpRef, IpcError> {
+    if let Some(sub) = refresh_submission_from_cache(&state, args.manager_id) {
+        let op_id = state.queue.submit(sub).await.map_err(IpcError::from)?;
+        return Ok(OpRef { op_id });
+    }
+    refresh_manager_after_redetect(&state, args.manager_id, ToolEnv::build().await).await
+}
+
+/// The absent-manager re-probe path of [`refresh_manager`], with the ToolEnv
+/// injected (`ToolEnv::build` probes the real login shell — this seam keeps
+/// the path deterministic under test). Re-detects, then submits the refresh
+/// when the manager turned out present; errors `tool_not_found` otherwise.
+pub async fn refresh_manager_after_redetect(
+    state: &AppState,
+    id: ManagerId,
+    env: ToolEnv,
+) -> Result<OpRef, IpcError> {
+    let outcome = state.redetect(env).await;
     let sub = {
-        let det = state.detection.read().expect("detection poisoned");
-        let outcome = det.as_ref().ok_or_else(detection_not_ready)?;
-        let status =
-            outcome
-                .statuses
-                .get(&args.manager_id)
-                .cloned()
-                .unwrap_or(DetectStatus::Absent {
-                    reason: format!("{} was not detected", args.manager_id),
-                });
         let settings = state.settings.read().expect("settings poisoned").clone();
         let env = state.tool_env.read().expect("tool_env poisoned").clone();
-        queue::make_refresh_submission(args.manager_id, &status, &settings, &env)
+        outcome
+            .statuses
+            .get(&id)
+            .and_then(|status| queue::make_refresh_submission(id, status, &settings, &env))
     };
     let Some(sub) = sub else {
         return Err(IpcError::from(PmError::ToolNotFound {
-            tool: args.manager_id.as_str().to_string(),
+            tool: id.as_str().to_string(),
             searched: vec![],
         })
-        .with_manager(args.manager_id));
+        .with_manager(id));
     };
     let op_id = state.queue.submit(sub).await.map_err(IpcError::from)?;
     Ok(OpRef { op_id })
 }
 
-/// Fan out one refresh op per present manager (SPEC F2).
+/// Fan out one refresh op per present manager (SPEC F2). Re-runs detection
+/// FIRST (same path as Re-detect: rebuild ToolEnv + detect_all, store, emit
+/// `detection:updated`) so the fan-out reflects the CURRENT machine state — a
+/// manager installed mid-session is detected AND refreshed by the same
+/// Refresh All click, and one that disappeared stops being refreshed.
 #[tauri::command]
 pub async fn refresh_all(state: State<'_, AppState>) -> Result<OpIds, IpcError> {
+    refresh_all_with_env(&state, ToolEnv::build().await).await
+}
+
+/// [`refresh_all`] with the ToolEnv injected (`ToolEnv::build` probes the real
+/// login shell — this seam keeps the pathway deterministic under test).
+/// `detection:updated` is emitted (inside [`AppState::redetect`]) BEFORE the
+/// refresh submissions are built from the fresh statuses.
+pub async fn refresh_all_with_env(state: &AppState, env: ToolEnv) -> Result<OpIds, IpcError> {
+    let outcome = state.redetect(env).await;
     let subs: Vec<_> = {
-        let det = state.detection.read().expect("detection poisoned");
-        let outcome = det.as_ref().ok_or_else(detection_not_ready)?;
         let settings = state.settings.read().expect("settings poisoned").clone();
         let env = state.tool_env.read().expect("tool_env poisoned").clone();
         outcome
@@ -548,7 +577,14 @@ pub async fn log_frontend_event(args: LogFrontendEventArgs) -> Result<(), IpcErr
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ipc::PathSource;
+    use std::sync::{Arc, Mutex, RwLock};
+
+    use crate::events::{AppEvent, VecSink};
+    use crate::ipc::{ManagerStatus, OpKind, PathSource};
+    use crate::journal::Journal;
+    use crate::process::fake::FakeRunner;
+    use crate::queue::{Queue, QueueDeps};
+    use crate::registry::Registry;
 
     /// The placeholder report used before detection completes carries the
     /// current ToolEnv so the Environment Report is never blank.
@@ -563,5 +599,280 @@ mod tests {
         assert!(report.managers.is_empty());
         assert_eq!(report.env.entries, vec!["/a".to_string()]);
         assert_eq!(report.env.home, "/Users/testuser");
+    }
+
+    // -----------------------------------------------------------------------
+    // Refresh All re-detects first (SPEC F1/F2 — the "brew install mas, press
+    // Refresh All" bug): the fan-out must be built from FRESH statuses, never
+    // the cached detection outcome.
+    // -----------------------------------------------------------------------
+
+    struct Harness {
+        state: AppState,
+        fake: Arc<FakeRunner>,
+        sink: Arc<VecSink>,
+        /// Sandboxed ToolEnv: `entries = [bin]`, home + candidate root inside
+        /// the tempdir — host-installed managers can never leak in.
+        env: ToolEnv,
+        bin: PathBuf,
+        _dir: tempfile::TempDir,
+    }
+
+    fn make_exec(path: &std::path::Path) {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, "#!/bin/sh\nexit 0\n").unwrap();
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    /// Full AppState over FakeRunner + VecSink (no Tauri, no real binaries).
+    fn harness() -> Harness {
+        let dir = tempfile::tempdir().unwrap();
+        let bin = dir.path().join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let env = ToolEnv::from_entries(
+            dir.path().join("home"),
+            vec![bin.clone()],
+            PathSource::StaticFallback,
+        )
+        .with_candidate_root(dir.path().join("candidates"));
+
+        let fake = Arc::new(FakeRunner::new());
+        let sink = Arc::new(VecSink::new());
+        let registry = Arc::new(Registry::new());
+        let queue = Queue::new(QueueDeps {
+            runner: fake.clone(),
+            sink: sink.clone(),
+            registry: registry.clone(),
+            journal: Arc::new(Journal::new(dir.path().join("operations.jsonl"))),
+            ops_dir: dir.path().join("ops"),
+            refresh_factory: None,
+            route_recheck: None,
+            max_concurrency: queue::MAX_CONCURRENCY,
+            aging_guard: queue::AGING_GUARD,
+        });
+        let state = AppState {
+            settings: Arc::new(RwLock::new(Settings::default())),
+            settings_path: Arc::new(dir.path().join("settings.json")),
+            tool_env: Arc::new(RwLock::new(env.clone())),
+            detection: Arc::new(RwLock::new(None)),
+            registry,
+            queue,
+            journal_records: Arc::new(RwLock::new(Vec::new())),
+            runner: fake.clone(),
+            sink: sink.clone(),
+            logging: Arc::new(Mutex::new(None)),
+        };
+        Harness {
+            state,
+            fake,
+            sink,
+            env,
+            bin,
+            _dir: dir,
+        }
+    }
+
+    /// Registers probe + full refresh-plan rules for brew and mas so any op
+    /// the fan-out enqueues completes against canned outputs.
+    fn register_brew_and_mas_rules(fake: &FakeRunner) {
+        fake.on("brew", &["--version"]).ok("Homebrew 4.5.2\n");
+        fake.on("brew", &["update"]).ok("Already up-to-date.\n");
+        fake.on("brew", &["list", "--versions"])
+            .fixture("brew_list_versions_2026-07-22.txt");
+        fake.on("brew", &["list", "--cask", "--versions"])
+            .fixture("brew_list_cask_versions_2026-07-22.txt");
+        fake.on("brew", &["outdated", "--json=v2"])
+            .fixture("brew_outdated.json");
+        fake.on("brew", &["outdated", "--json=v2", "--greedy"])
+            .fixture("brew_outdated_greedy.json");
+        fake.on("mas", &["--version"]).ok("1.9.0\n");
+        fake.on("mas", &["list"]).fixture("mas_list_synthetic.txt");
+        fake.on("mas", &["outdated"])
+            .fixture("mas_outdated_synthetic.txt");
+    }
+
+    fn detection_updated_reports(sink: &VecSink) -> Vec<DetectionReport> {
+        sink.events()
+            .into_iter()
+            .filter_map(|e| match e {
+                AppEvent::DetectionUpdated(r) => Some(r),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn manager_status(report: &DetectionReport, id: ManagerId) -> ManagerStatus {
+        report
+            .managers
+            .iter()
+            .find(|m| m.id == id)
+            .expect("manager in report")
+            .status
+    }
+
+    fn refresh_subjects(state: &AppState) -> Vec<ManagerId> {
+        state
+            .queue
+            .records()
+            .into_iter()
+            .filter(|r| matches!(r.kind, OpKind::Refresh))
+            .map(|r| r.subject)
+            .collect()
+    }
+
+    /// THE regression (user repro): mas is absent at first detection, then
+    /// installed mid-session. Refresh All must re-detect FIRST — storing and
+    /// emitting the fresh DetectionReport — and include the newly present mas
+    /// in the same fan-out. Pre-fix, `refresh_all` read the CACHED outcome and
+    /// mas stayed "Not installed" with no refresh enqueued.
+    #[tokio::test]
+    async fn refresh_all_re_detects_and_includes_newly_installed_manager() {
+        let h = harness();
+        register_brew_and_mas_rules(&h.fake);
+        make_exec(&h.bin.join("brew"));
+
+        // First detection: brew present, mas absent (nothing outside the
+        // sandbox is visible — candidate root is re-rooted).
+        let first = h.state.redetect(h.env.clone()).await;
+        assert!(matches!(
+            first.statuses[&ManagerId::Mas],
+            crate::detect::DetectStatus::Absent { .. }
+        ));
+        h.sink.take();
+
+        // The user runs `brew install mas` in a terminal…
+        make_exec(&h.bin.join("mas"));
+
+        // …and presses Refresh All.
+        let ids = refresh_all_with_env(&h.state, h.env.clone()).await.unwrap();
+
+        // Fan-out covers the FRESH present set: brew AND the new mas.
+        assert_eq!(ids.op_ids.len(), 2, "brew + newly detected mas");
+        let subjects = refresh_subjects(&h.state);
+        assert!(subjects.contains(&ManagerId::Brew), "{subjects:?}");
+        assert!(subjects.contains(&ManagerId::Mas), "{subjects:?}");
+
+        // The fresh outcome is STORED…
+        {
+            let det = h.state.detection.read().unwrap();
+            assert!(matches!(
+                det.as_ref().unwrap().statuses[&ManagerId::Mas],
+                crate::detect::DetectStatus::Present { .. }
+            ));
+        }
+        // …and EMITTED before any op event (redetect emits synchronously,
+        // submissions follow).
+        let events = h.sink.events();
+        assert!(
+            matches!(events.first(), Some(AppEvent::DetectionUpdated(_))),
+            "detection:updated must precede the fan-out, got {:?}",
+            events.first().map(AppEvent::name)
+        );
+        let reports = detection_updated_reports(&h.sink);
+        assert_eq!(reports.len(), 1);
+        assert_eq!(
+            manager_status(&reports[0], ManagerId::Mas),
+            ManagerStatus::Present
+        );
+
+        // Let the enqueued refreshes finish against the canned outputs.
+        assert!(
+            h.state
+                .queue
+                .wait_until_idle(std::time::Duration::from_secs(10))
+                .await
+        );
+    }
+
+    /// The inverse: a manager that disappeared mid-session stops being
+    /// refreshed and the emitted report renders it absent.
+    #[tokio::test]
+    async fn refresh_all_re_detects_and_drops_removed_manager() {
+        let h = harness();
+        register_brew_and_mas_rules(&h.fake);
+        make_exec(&h.bin.join("brew"));
+        make_exec(&h.bin.join("mas"));
+
+        let first = h.state.redetect(h.env.clone()).await;
+        assert!(matches!(
+            first.statuses[&ManagerId::Mas],
+            crate::detect::DetectStatus::Present { .. }
+        ));
+        h.sink.take();
+
+        std::fs::remove_file(h.bin.join("mas")).unwrap();
+
+        let ids = refresh_all_with_env(&h.state, h.env.clone()).await.unwrap();
+
+        assert_eq!(ids.op_ids.len(), 1, "only brew remains in the fan-out");
+        let subjects = refresh_subjects(&h.state);
+        assert!(subjects.contains(&ManagerId::Brew), "{subjects:?}");
+        assert!(!subjects.contains(&ManagerId::Mas), "{subjects:?}");
+
+        let reports = detection_updated_reports(&h.sink);
+        assert_eq!(reports.len(), 1);
+        assert_eq!(
+            manager_status(&reports[0], ManagerId::Mas),
+            ManagerStatus::Absent
+        );
+        {
+            let det = h.state.detection.read().unwrap();
+            assert!(matches!(
+                det.as_ref().unwrap().statuses[&ManagerId::Mas],
+                crate::detect::DetectStatus::Absent { .. }
+            ));
+        }
+        assert!(
+            h.state
+                .queue
+                .wait_until_idle(std::time::Duration::from_secs(10))
+                .await
+        );
+    }
+
+    /// Per-manager refresh of a manager the CACHE marks absent re-probes
+    /// instead of erroring (the ManagerPane header's Refresh button stays
+    /// reachable in the absent state); a manager still absent after the
+    /// re-probe errors `tool_not_found` as before.
+    #[tokio::test]
+    async fn refresh_manager_absent_in_cache_re_probes_then_submits() {
+        let h = harness();
+        register_brew_and_mas_rules(&h.fake);
+        make_exec(&h.bin.join("brew"));
+
+        h.state.redetect(h.env.clone()).await;
+        assert!(
+            refresh_submission_from_cache(&h.state, ManagerId::Mas).is_none(),
+            "cache says absent — the command would fall through to the re-probe"
+        );
+
+        // Still absent after the re-probe → the original error.
+        let err = refresh_manager_after_redetect(&h.state, ManagerId::Mas, h.env.clone())
+            .await
+            .unwrap_err();
+        assert_eq!(err.code, crate::ipc::ErrorCode::ToolNotFound);
+
+        // Installed since → the re-probe detects it and submits the refresh.
+        make_exec(&h.bin.join("mas"));
+        let op = refresh_manager_after_redetect(&h.state, ManagerId::Mas, h.env.clone())
+            .await
+            .unwrap();
+        let record = h.state.queue.record(&op.op_id).expect("record exists");
+        assert!(matches!(record.kind, OpKind::Refresh));
+        assert_eq!(record.subject, ManagerId::Mas);
+        {
+            let det = h.state.detection.read().unwrap();
+            assert!(matches!(
+                det.as_ref().unwrap().statuses[&ManagerId::Mas],
+                crate::detect::DetectStatus::Present { .. }
+            ));
+        }
+        assert!(
+            h.state
+                .queue
+                .wait_until_idle(std::time::Duration::from_secs(10))
+                .await
+        );
     }
 }

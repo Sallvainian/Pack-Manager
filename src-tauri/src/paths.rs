@@ -183,6 +183,12 @@ pub struct ToolEnv {
     pub entries: Vec<PathBuf>,
     pub home: PathBuf,
     pub source: PathSource,
+    /// Filesystem root that ABSOLUTE fixed-path detection candidates
+    /// (`ManagerAdapter::detection_candidates`) resolve under. Always `/` in
+    /// production; hermetic detection tests re-root it into a tempdir so a
+    /// manager installed on the host machine (e.g. a real
+    /// `/opt/homebrew/bin/mas`) can never leak into a sandboxed detection.
+    pub candidate_root: PathBuf,
 }
 
 impl ToolEnv {
@@ -229,7 +235,16 @@ impl ToolEnv {
             entries,
             home,
             source,
+            candidate_root: PathBuf::from("/"),
         }
+    }
+
+    /// Test seam: re-roots the fixed-path candidate fallback (detection) into
+    /// a sandbox directory. Production code never calls this.
+    #[cfg(any(test, feature = "test-util"))]
+    pub fn with_candidate_root(mut self, root: impl Into<PathBuf>) -> ToolEnv {
+        self.candidate_root = root.into();
+        self
     }
 
     /// Resolves `binary` to an absolute path on OUR search path (never the

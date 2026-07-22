@@ -146,13 +146,27 @@ impl AppState {
     /// store routes, emit `detection:updated`. The window is already showing;
     /// the frontend renders skeletons until this lands.
     pub async fn startup(&self) {
-        let env = ToolEnv::build().await;
+        self.redetect(ToolEnv::build().await).await;
+    }
+
+    /// Re-runs detection against `env` and publishes the outcome: stores the
+    /// ToolEnv, rebinds the registry's routes, stores the outcome, emits
+    /// `detection:updated`. The single detection path shared by startup,
+    /// `detect_managers` (Re-detect) and `refresh_all` (SPEC F2 — Refresh All
+    /// re-detects first so a manager installed or removed mid-session is
+    /// picked up by the same click). Idempotent: re-running with an unchanged
+    /// machine state stores and emits an equivalent report.
+    ///
+    /// No lock guard is held across an await: detection completes first, then
+    /// the guards are taken briefly for the writes.
+    pub async fn redetect(&self, env: ToolEnv) -> DetectionOutcome {
         let outcome = detect::detect_all(&env, self.runner.as_ref()).await;
         *self.tool_env.write().expect("tool_env poisoned") = env;
         self.registry.set_routes_from(&outcome.report);
         let report = outcome.report.clone();
-        *self.detection.write().expect("detection poisoned") = Some(outcome);
+        *self.detection.write().expect("detection poisoned") = Some(outcome.clone());
         self.sink.emit(AppEvent::DetectionUpdated(report));
+        outcome
     }
 
     /// Quit-guard kill hook: cancel every running op (SIGTERM → 5s → SIGKILL

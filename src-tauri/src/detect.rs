@@ -290,9 +290,12 @@ fn install_hint(id: ManagerId) -> Option<String> {
 /// outside mise's tree, so their shim resolution (managed by mise) stands —
 /// this preference can never reroute a manager to ANOTHER manager's tree.
 fn resolve_binary(env: &ToolEnv, adapter: &dyn ManagerAdapter) -> Option<PathBuf> {
+    // `~/` candidates expand against the ToolEnv's home; absolute candidates
+    // resolve under its `candidate_root` (`/` in production — a no-op; a
+    // tempdir in hermetic tests so host-installed managers cannot leak in).
     let expand = |candidate: &str| match candidate.strip_prefix("~/") {
         Some(rest) => env.home.join(rest),
-        None => PathBuf::from(candidate),
+        None => env.candidate_root.join(candidate.trim_start_matches('/')),
     };
     if let Some(found) = env.which(adapter.binary_name()) {
         let shims = env.home.join(".local/share/mise/shims");
@@ -791,13 +794,15 @@ mod tests {
         std::fs::create_dir_all(&shims).unwrap();
         std::os::unix::fs::symlink(bin.join("mise"), shims.join("npm")).unwrap();
         std::os::unix::fs::symlink(bin.join("mise"), shims.join("uv")).unwrap();
-        // mas: nowhere.
-
+        // mas: nowhere. The candidate root is re-rooted into the tempdir so
+        // the fixed-path fallback (`/opt/homebrew/bin/mas`) cannot resolve a
+        // mas that happens to be installed on the machine running this suite.
         let env = ToolEnv::from_entries(
             home.clone(),
             vec![shims.clone(), bin.clone(), cargo_bin.clone()],
             PathSource::StaticFallback,
-        );
+        )
+        .with_candidate_root(tmp.path().join("candidates"));
 
         let fake = FakeRunner::new();
         fake.on("brew", &["--version"]).ok("Homebrew 4.5.2\n");
@@ -807,8 +812,8 @@ mod tests {
             .ok("uv 0.11.26 (abc123 2026-06-01)\n");
         fake.on("rustup", &["--version"])
             .ok("rustup 1.29.0 (2026-05-01)\n");
-        // Defensive rule: if a machine WITH mas ever runs this suite, the
-        // machine-fact assertion below fails cleanly instead of panicking.
+        // Defensive rule: if the sandbox ever leaks again, the machine-fact
+        // assertion below fails cleanly instead of panicking.
         fake.on("mas", &["--version"]).ok("1.9.0\n");
 
         let outcome = detect_all(&env, &fake).await;
@@ -910,12 +915,14 @@ mod tests {
             std::os::unix::fs::symlink(bin.join("mise"), shims.join(shim)).unwrap();
         }
 
-        // Shims FIRST — the SPEC §5.2 static ordering.
+        // Shims FIRST — the SPEC §5.2 static ordering. Candidate root
+        // re-rooted: hermetic against managers installed on the host.
         let env = ToolEnv::from_entries(
             home.clone(),
             vec![shims.clone(), bin.clone(), cargo_bin.clone()],
             PathSource::StaticFallback,
-        );
+        )
+        .with_candidate_root(root.join("candidates"));
 
         let fake = FakeRunner::new();
         for tool in ["brew", "mise", "npm", "uv", "rustup", "mas"] {

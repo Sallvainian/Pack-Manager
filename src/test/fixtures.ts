@@ -109,6 +109,26 @@ export const masInfo: ManagerInfo = {
   installHint: "brew install mas",
 };
 
+/** mas AFTER `brew install mas` mid-session: the re-detect run by Refresh All
+ * (SPEC F1/F2) reports it present, brew-managed (§5.3: mas self-update is
+ * `brew upgrade mas` when brew-managed). */
+export const masPresentInfo: ManagerInfo = {
+  id: "mas",
+  displayName: "mas",
+  status: "present",
+  binaryPath: "/opt/homebrew/bin/mas",
+  canonicalPath: "/opt/homebrew/bin/mas",
+  version: "1.9.0",
+  managedBy: "brew",
+  evidence: "resolved at /opt/homebrew/bin/mas — under Homebrew's tree",
+  selfUpdate: {
+    kind: "routed",
+    executor: "brew",
+    commandPreview: "brew upgrade mas",
+    why: "mas is managed by Homebrew",
+  },
+};
+
 export const detectionReport: DetectionReport = {
   managers: [brewInfo, miseInfo, npmInfo, uvInfo, rustupInfo, masInfo],
   env: {
@@ -127,6 +147,13 @@ export const detectionReport: DetectionReport = {
     source: "merged",
     home: HOME,
   },
+};
+
+/** The report the backend emits after a mid-session Refresh All re-detects a
+ * freshly installed mas (same machine, mas flipped absent → present). */
+export const detectionReportMasPresent: DetectionReport = {
+  managers: [brewInfo, miseInfo, npmInfo, uvInfo, rustupInfo, masPresentInfo],
+  env: detectionReport.env,
 };
 
 // --- Snapshots (merged inventory + outdated overlay) ------------------------
