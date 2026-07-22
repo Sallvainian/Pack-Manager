@@ -183,10 +183,6 @@ questions.
 
 ## Known limitations
 
-- **mas is unverified live** — the adapter ships fully implemented, but this
-  machine doesn't have mas installed, so its parsers are tested only against
-  labeled `_synthetic` fixtures. Parse failures degrade to an error card with
-  an excerpt, never a crash (DECISIONS D23).
 - **Updating from a read-only location** — the updater replaces the `.app` in
   place, so it needs write access to the bundle's parent directory. Run from
   `/Applications` (or `~/Applications`); launched straight off a mounted DMG,

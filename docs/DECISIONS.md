@@ -71,6 +71,22 @@ Our serialization prevents self-contention only; a user's terminal brew can stil
 ## D23. mas adapter ships fully implemented but labeled UNVERIFIED
 Detection returns Absent on this machine (verified `zsh: command not found: mas`); parsers are regex-lenient, tested only against `_synthetic` fixtures, and fail as ParseFailed-with-excerpt, never a crash. Installing mas later requires zero code changes. **Rejected:** omitting the adapter (graceful-absence requirement includes future presence); claiming its parsing is verified.
 
+### D23a. Resolved 2026-07-22 — mas is verified live
+mas 7.0.0 is installed; `mas list` / `mas outdated` are captured as
+`dev/fixtures/mas_list_2026-07-22.txt` and `mas_outdated_2026-07-22.txt` (one
+refresh, so the pair is self-consistent) and both `_synthetic` fixtures are
+retired. The UNVERIFIED label is withdrawn and the README limitation deleted.
+
+D23's bet paid off — "installing mas later requires zero code changes" held
+exactly. But the synthetic fixtures were **wrong about the format** in three
+ways, and only regex leniency hid it: mas right-aligns the app id (9-digit ids
+carry a leading space), pads the name column to the widest entry rather than
+single-spacing, and pads the version column *inside* the parens, so
+`(4.2.2  -> 4.3.0)` leaves trailing spaces on the installed version. The
+adapter parsed real output on the first live run, but by luck rather than by
+test. **Read as:** a `_synthetic` fixture validates that a parser doesn't
+panic; it cannot validate that the parser is right.
+
 ## D24. Fixed-stack review (required by the brief)
 No fixed decision is fatally flawed. Tauri 2 + Rust backend suits process orchestration; React/TS/Vite/Tailwind suits an event-driven table UI. Watch-items, not flaws: (a) Tauri/wry on macOS 27 beta WebKit — keep the UI free of exotic WebView APIs so regressions stay cosmetic; (b) Tailwind v4 CSS-first `@theme` is already in the scaffold, so tokens live in one CSS file either way.
 

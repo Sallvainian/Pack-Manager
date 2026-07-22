@@ -1,2 +1,0 @@
-497799835 Xcode (16.1 -> 16.2)
-1295203466 Microsoft Remote Desktop (10.9.4 -> 10.9.5)
