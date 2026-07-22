@@ -621,6 +621,11 @@ pub async fn install_app_update(
     })?;
     // Same kill hook as a normal quit: children must never outlive the app.
     state.shutdown();
+    // `restart` bare-spawns the new binary instead of going through
+    // LaunchServices, so it comes up behind every other window unless it
+    // activates itself. The spawned process inherits this env var and acts on
+    // it at `RunEvent::Ready`. Set last: it must not outlive a failed install.
+    std::env::set_var(crate::RELAUNCH_FOCUS_ENV, "1");
     tracing::info!("restarting into the updated build");
     app.restart();
 }
