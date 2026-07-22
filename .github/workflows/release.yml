@@ -53,6 +53,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # On the release-please path the release commit is created DURING the
+          # calling run, so `github.sha` still points at the commit that
+          # triggered it — one BEFORE the version bump. Checking that out makes
+          # "Resolve version" below correctly refuse to build, because
+          # tauri.conf.json still holds the previous version while the tag is
+          # the new one. Check out the tag itself; fall back to the default ref
+          # for manual `workflow_dispatch` runs, which pass no tag.
+          ref: ${{ inputs.attach_to_tag || github.ref }}
 
       - uses: actions/setup-node@v4
         with:
