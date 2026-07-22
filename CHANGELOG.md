@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.6](https://github.com/Sallvainian/Pack-Manager/compare/v0.2.5...v0.2.6) (2026-07-22)
+
+
+### Bug Fixes
+
+* **update:** stop the post-update focus depending on a hardcoded window label ([54243bd](https://github.com/Sallvainian/Pack-Manager/commit/54243bd99df56fdf8bf5df3661a1720f58202b6a))
+
 ## [0.2.5](https://github.com/Sallvainian/Pack-Manager/compare/v0.2.4...v0.2.5) (2026-07-22)
 
 
