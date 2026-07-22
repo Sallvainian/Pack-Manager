@@ -44,6 +44,7 @@ These constraints shape the architecture and should be treated as correctness re
 | Frontend state | Zustand | 5.0.14 | Domain-specific session stores. |
 | Large-list rendering | TanStack React Virtual | 3.14.7 | Package and live-output virtualization. |
 | Frontend tests | Vitest + Testing Library | Vitest 4.1.10 | jsdom component, store, and contract behavior. |
+| Browser tests | Playwright | Playwright 1.61.1 | Chromium/WebKit journeys over the React interface and fake Tauri boundary. |
 | Native tests | Cargo test | Rust toolchain | Unit, fixture, paused-time, lifecycle, persistence, and ignored live smoke tests. |
 | Release automation | release-please + GitHub Actions | Workflow-defined | Version PR, universal build, signing, notarization, and assets. |
 
@@ -292,12 +293,13 @@ Machine-dependent detection and Homebrew smoke tests are explicitly ignored and 
 
 Vitest, jsdom, React Testing Library, fake timers, fake IPC, and typed fixtures cover bootstrap ordering, stores, dashboard/navigation/settings, package selection and upgrade preview, operation logs/cancellation, dialogs, keyboard behavior, history, error copy, contract guards, and application updates.
 
-At scan time, all 120 frontend tests passed across 22 files. There is no browser end-to-end suite.
+Playwright adds Chromium and WebKit browser journeys over the real React interface with a deterministic in-browser Tauri transport.
 
 ### CI gates
 
 - Rust/macOS: `cargo fmt --check`, Clippy with warnings denied, `cargo test --locked`.
 - Web/Ubuntu: clean npm install, TypeScript check, Vitest, Vite production build.
+- Browser/Ubuntu: Playwright validation, two shards collectively covering the configured Chromium and WebKit projects, pull-request and weekly burn-in, and merged HTML/JUnit reporting.
 - Main branch: unsigned debug Tauri bundle smoke on macOS.
 
 ## Deployment Architecture
@@ -325,8 +327,8 @@ See [source-tree-analysis.md](./source-tree-analysis.md) for the annotated tree 
 
 ## Current Constraints and Documentation Drift
 
-- Node 24 and stable Rust are used in CI, but local toolchain versions are not pinned in the repository.
-- There is no configured frontend lint/format command and no Playwright/Cypress suite.
+- Node 24 is pinned through `.nvmrc`; stable Rust is used in CI without a repository `rust-toolchain.toml` pin.
+- There is no configured frontend lint/format command. Playwright provides deterministic browser journeys across Chromium and WebKit.
 - The application is English-only and has no localization framework.
 - Current production registration has 20 commands and six events; some older comments/tests still say 17 commands or five events.
 - Fixture/spec history contains conflicting older statements about mas availability/verification. Treat current code and current captured fixtures as implementation evidence and reconcile authoritative prose before relying on a machine-specific mas status.

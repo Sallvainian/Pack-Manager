@@ -31,7 +31,7 @@ The `src/` and `src-tauri/` folders are internal layers, not separately deployed
 | Interface | React 19.2.8, TypeScript 5.8.3 |
 | Build/styling | Vite 7.3.6, Tailwind CSS 4.3.3 |
 | State/rendering | Zustand 5.0.14, TanStack React Virtual 3.14.7 |
-| Tests | Cargo test, Vitest 4.1.10, React Testing Library, jsdom |
+| Tests | Cargo test, Vitest 4.1.10, React Testing Library, Playwright |
 | Secrets | fnox with age-encrypted local values; GitHub Secrets in CI |
 | Delivery | release-please and GitHub Actions |
 
@@ -74,20 +74,22 @@ Settings and operation history use atomic/crash-aware local files. Logs and tran
 ### Prerequisites
 
 - macOS and Apple command-line build tools.
-- Node.js/npm (CI uses Node 24; no local version pin exists).
+- Node.js/npm (Node 24 is pinned in `.nvmrc` for local development and CI).
 - Stable Rust/Cargo.
 - fnox via mise for an updater-signed local build.
 
 ### Getting Started
 
 ```sh
-npm install
+nvm install && nvm use
+npm ci
 npm run tauri dev
 ```
 
 ### Key Commands
 
 - **Frontend tests:** `npm test`
+- **Browser tests:** `npm run test:e2e:typecheck && npm run test:e2e`
 - **Typecheck:** `npx tsc --noEmit`
 - **Frontend production build:** `npm run build`
 - **Native checks:** `cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test --locked`
@@ -95,7 +97,7 @@ npm run tauri dev
 - **Signed app build:** `fnox exec -- npm run tauri build`
 - **Unsigned smoke build:** `npm run tauri build -- --no-sign`
 
-At scan time, all 120 frontend tests passed across 22 files. Native verification should still be run as part of final documentation validation because this workflow performed a source deep scan rather than changing product code.
+Vitest covers the frontend unit and integration layers, while Playwright adds Chromium/WebKit browser journeys. Native verification should still be run for changes that affect the Rust core.
 
 ## Repository Structure
 

@@ -127,14 +127,14 @@ The event channels are `detection:updated`, `snapshot:updated`, `op:status`, `op
 
 ## Testing Support
 
-The frontend suite contains 22 test files and 120 passing tests at scan time. Important test seams are:
+Frontend coverage uses these important test seams:
 
 - `src/test/fakeIpc.ts` for command calls, listeners, event emission, and listener-leak checks.
 - `src/test/fixtures.ts` for realistic typed manager/application state.
 - Shared `dev/fixtures/ipc/*.json` payloads for Rust–TypeScript contract drift detection.
 - Vitest, jsdom, React Testing Library, and fake timers for component, store, keyboard, dialog, updater, history, and operation behavior.
 
-There is no Playwright/Cypress end-to-end suite. Machine-dependent smoke tests are implemented as ignored Rust integration tests.
+Playwright adds Chromium/WebKit browser journeys over the real React interface with a deterministic in-browser Tauri transport. Machine-dependent smoke tests remain separate, ignored Rust integration tests.
 
 ## Extension Guidance
 

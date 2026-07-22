@@ -87,6 +87,7 @@ Pack-Manager/
 │   └── *.md                           # Generated brownfield documentation
 ├── .github/workflows/
 │   ├── ci.yml                         # Rust/web checks and unsigned bundle smoke
+│   ├── test.yml                       # Playwright shards, burn-in, and reports
 │   ├── release-please.yml             # Version PR, tag, release orchestration
 │   ├── release.yml                    # Universal signed/notarized macOS artifacts
 │   ├── claude.yml                     # Mention-triggered GitHub agent workflow
@@ -97,6 +98,9 @@ Pack-Manager/
 ├── package.json / package-lock.json   # Frontend scripts and locked dependencies
 ├── vite.config.ts                     # Tauri-aware Vite server/build configuration
 ├── vitest.config.ts                   # jsdom frontend test configuration
+├── playwright.config.ts               # Chromium/WebKit browser-test configuration
+├── tests/                              # Browser journeys and deterministic Tauri fixtures
+├── .nvmrc                              # Node 24 local/CI toolchain pin
 ├── tsconfig*.json                     # Strict TypeScript configuration
 ├── fnox.toml                          # Age-encrypted updater-signing secret references
 ├── release-please-config.json         # Automated release/version policy
@@ -139,7 +143,7 @@ Committed evidence for parsers and IPC contracts. Fixture provenance distinguish
 
 ### `.github/workflows/`
 
-Verification and delivery automation. CI tests Rust and web layers separately; the release workflow combines them into one universal macOS application and distribution artifacts.
+Verification and delivery automation. CI tests Rust, web, and Playwright browser layers separately; the release workflow combines them into one universal macOS application and distribution artifacts.
 
 ## Entry and Startup Flow
 
@@ -186,7 +190,7 @@ Subscribing before frontend hydration prevents the UI from missing the asynchron
 | `src-tauri/src/managers/*.rs` | Manager adapters | `brew.rs`, `uv.rs` |
 | `src-tauri/src/managers/parse/*.rs` | Pure output parsers | `mise.rs`, `npm.rs` |
 | `dev/fixtures/**/*` | Captured and contract test inputs | `ipc/app-state.json` |
-| `.github/workflows/*.yml` | CI and release automation | `ci.yml`, `release.yml` |
+| `.github/workflows/*.yml` | CI and release automation | `ci.yml`, `test.yml`, `release.yml` |
 
 ## Asset Locations
 

@@ -64,17 +64,26 @@ Authoritative design docs: `docs/SPEC.md`, `docs/DECISIONS.md`,
 - Backend: Tauri 2 + Rust (tokio, tracing)
 - Frontend: React 19 + TypeScript + Vite 7 + Tailwind v4 (dark-only MVP)
 - State: zustand · Virtualized tables: @tanstack/react-virtual
-- Tests: cargo test (offline, fixture-grounded) + Vitest 4 (jsdom, RTL)
+- Tests: cargo test (offline, fixture-grounded) + Vitest 4 (jsdom, RTL) +
+  Playwright (Chromium/WebKit browser journeys)
 
 ## Dev commands
 
 ```sh
-npm install                # frontend deps
+nvm install && nvm use     # Node 24 from .nvmrc
+npm ci                     # locked frontend dependencies
 npm run tauri dev          # run the app (dev)
 npm test                   # Vitest suite
-npx tsc --noEmit           # typecheck
-cd src-tauri && cargo test # Rust suite (offline; live smoke is #[ignore])
+npm run test:e2e:install   # first browser-test run / browser updates
+npm run test:e2e:typecheck # Playwright TypeScript validation
+npm run test:e2e           # Chromium + WebKit journeys
+npx tsc --noEmit           # application typecheck
+npm run test:rust          # Rust suite (live smoke remains #[ignore])
 ```
+
+Use `npm run test:e2e:install:ci` only on Linux CI runners. See
+[`tests/README.md`](tests/README.md) for the browser-test architecture,
+commands, and troubleshooting guide.
 
 Building the app bundle:
 

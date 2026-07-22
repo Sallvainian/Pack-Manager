@@ -12,6 +12,16 @@ dist
 dist-ssr
 *.local
 
+# Local environment files (the documented template remains tracked)
+.env
+.env.*
+!.env.example
+
+# Playwright output
+playwright-report/
+test-results/
+blob-report/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
