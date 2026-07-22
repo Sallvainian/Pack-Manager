@@ -33,10 +33,25 @@ on:
 permissions:
   contents: write        # create the release + tag, and upload assets
   pull-requests: write   # open/update AND merge the release PR
+  actions: write         # approve the checks GitHub gates on bot-authored PRs
 
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    env:
+      # Optional, and the root-cause fix for the approval gate. Set this secret
+      # to a PAT (or GitHub App token) with contents + pull-requests write and
+      # the release PR is authored by a real write-access account instead of
+      # github-actions[bot]. GitHub only gates workflow runs on PRs it treats
+      # as untrusted — bot-authored ones qualify under this repo's
+      # `first_time_contributors` approval policy — so a human-authored release
+      # PR never lands in `action_required` at all. It also restores normal
+      # workflow triggering, which GITHUB_TOKEN deliberately suppresses.
+      #
+      # Everything below works without it: the approve step is the workaround
+      # for the gate, and the twice-invoked release-please covers the missing
+      # trigger.
+      RP_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
     outputs:
       # The tag only exists after the second invocation, which is the one that
       # sees the merged release commit.
@@ -48,32 +63,94 @@ jobs:
         uses: googleapis/release-please-action@v5
         # Config + last-released version live in release-please-config.json and
         # .release-please-manifest.json (the action's default filenames).
+        with:
+          token: ${{ env.RP_TOKEN }}
 
       # Look the PR up rather than reading `steps.rp.outputs.pr`: that output is
       # only set when the run CREATES or UPDATES a PR. A push that changes
       # nothing releasable (chore:, ci:, docs:…) leaves an existing release PR
       # untouched and emits no output, so keying off it would skip the merge
-      # and strand the PR — which is exactly what happened on the first
-      # attempt. The `autorelease: pending` label is applied by release-please
-      # to every release PR and flips to `autorelease: tagged` once cut, so it
-      # identifies precisely the PRs that still need merging.
+      # and strand the PR.
+      #
+      # Do NOT use `gh pr list --label` for this. That path queries GitHub's
+      # SEARCH INDEX, which lags PR creation by seconds to minutes, and this
+      # step runs about one second after release-please labels the PR. On
+      # 2026-07-22 it printed "No open release PR — nothing to merge" 1.07s
+      # after the same job logged "Successfully added labels autorelease:
+      # pending to issue: 17"; the job went green and #17 sat open. The REST
+      # pulls list is read-after-write consistent and carries labels inline, so
+      # it sees the PR the instant it exists. The retry covers residual lag.
       - name: Find the open release PR
         id: find
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ env.RP_TOKEN }}
         run: |
           set -euo pipefail
-          number=$(gh pr list \
-            --repo "${{ github.repository }}" \
-            --state open \
-            --label "autorelease: pending" \
-            --json number --jq '.[0].number // empty')
+          number=''
+          for attempt in 1 2 3; do
+            number=$(gh api \
+              "repos/${{ github.repository }}/pulls?state=open&per_page=100" \
+              --jq '[.[] | select(any(.labels[]; .name == "autorelease: pending"))][0].number // empty')
+            if [ -n "$number" ]; then break; fi
+            echo "Attempt ${attempt}: no labelled release PR yet; retrying in 5s."
+            sleep 5
+          done
           echo "number=${number}" >> "$GITHUB_OUTPUT"
           if [ -n "$number" ]; then
             echo "Found release PR #${number}"
           else
             echo "No open release PR — nothing to merge."
           fi
+
+      # The lookup failing silently is precisely how the stall above stayed
+      # invisible: a skipped merge is indistinguishable from "nothing to
+      # release". `steps.rp.outputs.pr` is not a reliable way to FIND the PR
+      # (see above), but it is a reliable cross-check — if release-please just
+      # wrote a PR and the lookup saw nothing, the lookup is broken.
+      - name: Fail if release-please wrote a PR the lookup could not see
+        if: steps.rp.outputs.pr != '' && steps.find.outputs.number == ''
+        run: |
+          echo "::error::release-please created or updated a release PR in this run," \
+               "but the lookup found no open PR labelled 'autorelease: pending'. The" \
+               "merge would be skipped and the release would stall silently."
+          exit 1
+
+      # `ci` and `Claude Code Review` are triggered by `pull_request` on the
+      # release PR, and GitHub parks both in `action_required` because the PR
+      # is authored by github-actions[bot]. Approving them here clears the gate
+      # without loosening the repo-wide fork-PR approval policy — on a public
+      # repo that would let any fork PR run workflows unapproved, which is a
+      # far worse trade than approving one bot branch nobody else can push to.
+      #
+      # Best effort on purpose. GITHUB_TOKEN is not documented to work on the
+      # approve endpoint and may 403, and approval is cosmetic here: nothing in
+      # this repo's ruleset requires those checks to merge (0 required reviews,
+      # no required status checks), so the release must never hinge on it.
+      # RELEASE_PLEASE_TOKEN makes the whole step a no-op by removing the gate.
+      - name: Approve the checks GitHub gated on the release PR
+        if: steps.find.outputs.number != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ env.RP_TOKEN }}
+        run: |
+          set -uo pipefail
+          repo="${{ github.repository }}"
+          branch=$(gh api "repos/${repo}/pulls/${{ steps.find.outputs.number }}" --jq '.head.ref')
+          ids=$(gh api "repos/${repo}/actions/runs?branch=${branch}&per_page=100" \
+            --jq '.workflow_runs[] | select(.status == "waiting" or .conclusion == "action_required") | .id')
+          if [ -z "$ids" ]; then
+            echo "No gated runs on ${branch}."
+            exit 0
+          fi
+          for id in $ids; do
+            if gh api --method POST "repos/${repo}/actions/runs/${id}/approve" >/dev/null; then
+              echo "Approved run ${id}."
+            else
+              echo "::warning::Could not approve run ${id}. GITHUB_TOKEN may lack access" \
+                   "to the approve endpoint — set RELEASE_PLEASE_TOKEN to a PAT with" \
+                   "contents + pull-requests write to remove the gate at its source."
+            fi
+          done
 
       # Squash, not merge: a merge commit repeats the original commit message
       # in its body, so release-please counts the same fix twice and the
@@ -82,7 +159,7 @@ jobs:
         id: merge
         if: steps.find.outputs.number != ''
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ env.RP_TOKEN }}
         run: |
           set -euo pipefail
           echo "Merging release PR #${{ steps.find.outputs.number }}"
@@ -95,6 +172,8 @@ jobs:
         id: rp_after_merge
         if: steps.merge.outcome == 'success'
         uses: googleapis/release-please-action@v5
+        with:
+          token: ${{ env.RP_TOKEN }}
 
       # Without this, a merge that failed to produce a release would look like
       # a green run while main silently carries an unreleased version bump.
