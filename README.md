@@ -148,3 +148,7 @@ questions.
   (DECISIONS D7).
 - **Updates only** — no package install/uninstall, no auto-upgrades without
   user action, no telemetry.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
