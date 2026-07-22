@@ -1,0 +1,2 @@
+stable-aarch64-apple-darwin - Update available : 1.94.0 (4a4ef493e 2026-03-02) -> 1.97.1 (8bab26f4f 2026-07-14)
+rustup - Update available : 1.28.2 -> 1.29.0

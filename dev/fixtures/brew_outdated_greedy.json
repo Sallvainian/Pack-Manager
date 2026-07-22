@@ -1,0 +1,14 @@
+{
+  "formulae": [
+    {
+      "name": "dolt",
+      "installed_versions": [
+        "2.2.1"
+      ],
+      "current_version": "2.2.2",
+      "pinned": false,
+      "pinned_version": null
+    }
+  ],
+  "casks": []
+}
