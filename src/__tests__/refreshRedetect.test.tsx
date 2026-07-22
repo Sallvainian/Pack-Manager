@@ -66,8 +66,8 @@ describe("refresh_all_re_detects_managers_mid_session", () => {
     expect(within(masCardBefore).getByText("Not installed")).toBeInTheDocument();
     expect(within(sidebar.container).getByText(/Not installed \(1\)/)).toBeInTheDocument();
 
-    // One Refresh All click.
-    fireEvent.click(within(dashboard.container).getByRole("button", { name: "Refresh All" }));
+    // One Refresh All click — the sidebar is the only place it lives.
+    fireEvent.click(within(sidebar.container).getByRole("button", { name: "Refresh All" }));
     await vi.waitFor(() => expect(fakeIpc.called("refresh_all")).toBe(true));
     expect(fakeIpc.callsFor("refresh_all")).toHaveLength(1);
 
