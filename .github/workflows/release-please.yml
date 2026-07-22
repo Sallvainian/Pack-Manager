@@ -49,20 +49,44 @@ jobs:
         # Config + last-released version live in release-please-config.json and
         # .release-please-manifest.json (the action's default filenames).
 
+      # Look the PR up rather than reading `steps.rp.outputs.pr`: that output is
+      # only set when the run CREATES or UPDATES a PR. A push that changes
+      # nothing releasable (chore:, ci:, docs:…) leaves an existing release PR
+      # untouched and emits no output, so keying off it would skip the merge
+      # and strand the PR — which is exactly what happened on the first
+      # attempt. The `autorelease: pending` label is applied by release-please
+      # to every release PR and flips to `autorelease: tagged` once cut, so it
+      # identifies precisely the PRs that still need merging.
+      - name: Find the open release PR
+        id: find
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          number=$(gh pr list \
+            --repo "${{ github.repository }}" \
+            --state open \
+            --label "autorelease: pending" \
+            --json number --jq '.[0].number // empty')
+          echo "number=${number}" >> "$GITHUB_OUTPUT"
+          if [ -n "$number" ]; then
+            echo "Found release PR #${number}"
+          else
+            echo "No open release PR — nothing to merge."
+          fi
+
       # Squash, not merge: a merge commit repeats the original commit message
       # in its body, so release-please counts the same fix twice and the
       # changelog lists it under two SHAs (see 0.2.0 through 0.2.3).
       - name: Merge the release PR
         id: merge
-        if: steps.rp.outputs.pr
+        if: steps.find.outputs.number != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR: ${{ steps.rp.outputs.pr }}
         run: |
           set -euo pipefail
-          number=$(jq -r '.number' <<<"$PR")
-          echo "Merging release PR #$number"
-          gh pr merge "$number" \
+          echo "Merging release PR #${{ steps.find.outputs.number }}"
+          gh pr merge "${{ steps.find.outputs.number }}" \
             --repo "${{ github.repository }}" \
             --squash \
             --delete-branch
