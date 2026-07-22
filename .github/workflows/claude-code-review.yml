@@ -3,45 +3,99 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
 
 jobs:
-  claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
-
+  review-with-tracking:
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      # write (not read): the review is delivered as a PR comment.
       pull-requests: write
-      issues: write
+      issues: read
       id-token: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
-      - name: Run Claude Code Review
-        id: claude-review
+      - name: PR Review with Progress Tracking
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
-          claude_args: |
-            --model claude-opus-4-8[1m]
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
 
+          # Enable progress tracking
+          track_progress: true
+
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            ## Code Review Instructions
+
+            Perform a comprehensive code review. Review only the pull request changes; use surrounding code only to understand impact.
+
+            Do not edit files, commit, push, approve the PR, or request changes. Produce one review in the output format below.
+
+            ## Project Rules - Pack-Manager
+
+            macOS GUI for package managers. Tauri 2 + Rust backend (`src-tauri/`), React 19 + TypeScript + Vite 7 + Tailwind v4 frontend. `docs/SPEC.md` is authoritative; `docs/DECISIONS.md` records why each choice was made and what was rejected.
+
+            ### Load-bearing invariants (violations are bugs, not style notes)
+
+            1. The manager's `outdated` verdict is authoritative. Nothing may compute a version comparison to decide outdatedness — real data includes `2.0.14-1`, `1.6.2.dev0`, `stable`, and rustup commit hashes. The frontend's version-delta highlight and severity chips are display affordances computed by pure string segment-diff, never a source of truth.
+            2. Who-manages-whom is derived from paths at detection time, never hardcoded. Classification inspects the RAW resolved path against mise directories BEFORE canonicalizing — mise shims are symlinks to the mise binary, so canonicalize-first misroutes uv and npm to brew. Flag any new hardcoded manager-to-manager routing.
+            3. Homebrew is never contended. Every operation declares a lock set; all brew-binary operations hold the Brew lock, and npm/uv operations add the Mise lock when mise-managed. A new operation kind without a considered lock set is a finding.
+            4. No sudo, no password entry, ever. Child stdin is `/dev/null`. Flag anything that could raise a credential prompt, including indirect paths such as an installer that escalates on a permission error.
+            5. One failing manager never blanks the others. Per-manager refresh isolation: independent operations, timeouts, error cards; prior snapshots retained on failure.
+            6. Nothing runs that was not shown. Bulk upgrades go through the plan sheet, whose command strings must be byte-equal to what the backend spawns.
+            7. Every operation is reconstructible from disk: transcript with argv/PATH/env header, structured app log, and journal, all correlated by opId.
+
+            ### Architecture seams (these exist so the code stays testable)
+
+            - `src/lib/ipc/bridge.ts` is the ONLY importer of `@tauri-apps/api`. It is the single Vitest mock seam. A component or lib importing `@tauri-apps/api` (or a Tauri plugin package) directly breaks every test that mocks the bridge.
+            - Components never call `listen`. `src/lib/ipc/events.ts` owns the one subscription and dispatches into stores.
+            - Every IPC payload type lives in `src-tauri/src/ipc.rs` with `#[serde(rename_all = "camelCase")]` and is mirrored 1:1 in `src/lib/ipc/types.ts`. Drift is guarded by committed fixtures in `dev/fixtures/ipc/`. A changed Rust type without regenerated fixtures (`PM_UPDATE_CONTRACT=1`) plus a matching TS type and type guard is a finding.
+            - Core Rust logic emits through the `EventSink` trait and never touches `tauri::AppHandle` directly, so `VecSink` tests work.
+            - Child processes go through the `CommandRunner` trait; tests use `FakeRunner`. Children are spawned by absolute path with a constructed env, never an inherited `PATH`.
+            - Parsers in `src-tauri/src/managers/parse/` are pure functions, grounded in real captures under `dev/fixtures/`, and never log. A parser that guesses at an output shape instead of parsing a captured fixture is a finding; synthetic fixtures must carry the `_synthetic` suffix.
+            - Nondeterminism has exactly one seam per category: processes to `CommandRunner`, time to `#[tokio::test(start_paused = true)]` / `vi.useFakeTimers()`, IPC to `bridge.ts`, paths to constructor params. Default test suites must pass offline with no real processes, no network, and no sleeps.
+
+            ### Versioning and releases
+
+            - Never hand-edit a version. release-please owns `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and `src-tauri/Cargo.lock` in lockstep, plus `CHANGELOG.md` and `.release-please-manifest.json`. A manual bump in any of these is a finding.
+            - Commits must be conventional commits — the next release version is computed from them.
+
+            ### Style
+
+            - Design tokens live in `src/styles/theme.css` (Tailwind v4 `@theme`). Dark is the only theme. Flag hardcoded hex colors outside that file.
+            - Every color-carrying state needs a text or icon equivalent; text contrast at least 4.5:1 on its surface.
+            - Status chips never wrap (`whitespace-nowrap`); the package table has a `min-w` floor so a narrow window scrolls rather than colliding columns.
+
+            ## Review Checklist
+
+            Check the PR for:
+            1. Invariant violations: local version comparison deciding outdatedness, hardcoded routing, a missing or wrong lock set, any path that could prompt for a password.
+            2. Bridge discipline: no direct `@tauri-apps/api` import outside `bridge.ts`; no `listen` outside `events.ts`.
+            3. IPC contract: Rust type, TS mirror, TS type guard, and `dev/fixtures/ipc/` fixture all moved together.
+            4. Error isolation: a failure in one manager still leaves the others populated, with the prior snapshot retained and marked stale.
+            5. Purity: parsers stay pure and fixture-grounded; a parse failure yields `ParseFailed` with an excerpt rather than a panic.
+            6. Test seams: new nondeterminism routed through an existing seam; no real process spawn, network call, or sleep in a default-suite test.
+            7. Rust hygiene: would `cargo clippy --all-targets -- -D warnings` pass; no `unwrap()` on a fallible path a user can reach; lock poisoning handled consistently with the surrounding code.
+            8. Frontend: hooks before early returns, `useEffect` cleanup for subscriptions and timers, correct dependency arrays, no fabricated version delta when `latest` is null.
+            9. Versioning: no hand-edited version in the five release-please-owned files; commit messages are conventional.
+            10. Regression risk: loading, empty, error, and absent-manager states still render; keyboard map and focus behavior intact.
+
+            ## Output Format
+
+            Use `gh pr comment` to post your review with this structure:
+
+            - Summary: brief overview of the change.
+            - Issues Found: critical or blocking issues that should be fixed, with file and line references.
+            - Suggestions: non-blocking improvements.
+            - Positive Feedback: what was done well.
+
+            If there are no blocking issues, say that clearly.
+
+          claude_args: '--model claude-opus-4-8[1m] --allowed-tools "mcp__github_inline_comment__create_inline_comment,Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
