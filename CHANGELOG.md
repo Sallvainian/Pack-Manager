@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.4](https://github.com/Sallvainian/Pack-Manager/compare/v0.2.3...v0.2.4) (2026-07-22)
+
+
+### Bug Fixes
+
+* **ci:** find the release PR by label instead of the action output ([9f6c152](https://github.com/Sallvainian/Pack-Manager/commit/9f6c152d6b35100a05d20aa95a9c250be4f35ca6))
+* **ui:** drop the duplicate Refresh All / Update Everything from the dashboard ([17c8ccb](https://github.com/Sallvainian/Pack-Manager/commit/17c8ccb730f008f22a7da8e816ac75119a1a513c))
+
 ## [0.2.3](https://github.com/Sallvainian/Pack-Manager/compare/v0.2.2...v0.2.3) (2026-07-22)
 
 

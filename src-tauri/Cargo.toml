@@ -1,6 +1,6 @@
 [package]
 name = "pack-manager"
-version = "0.2.3"
+version = "0.2.4"
 description = "Pack-Manager"
 authors = ["sallvain"]
 edition = "2021"
