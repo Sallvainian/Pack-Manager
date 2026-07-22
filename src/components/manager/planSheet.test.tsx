@@ -225,6 +225,38 @@ describe("stale_plan_refresh_requires_renewed_confirmation", () => {
     expect(fakeIpc.callsFor("build_upgrade_plan")).toHaveLength(0);
     expect(useUiStore.getState().dialog).toEqual({ kind: "none" });
   });
+
+  it("clears selections when a successful execution returns after Cancel unmounts it", async () => {
+    const pending = deferred<{ opIds: string[] }>();
+    fakeIpc.respond("execute_plan", () => pending.promise);
+
+    function DialogHarness() {
+      const dialog = useUiStore((s) => s.dialog);
+      return dialog.kind === "upgradePlan" ? <UpgradePlanSheet plan={dialog.plan} /> : null;
+    }
+
+    usePackagesStore.getState().setSelection("brew", ["formula:dolt"]);
+    usePackagesStore.getState().setSelection("npm", ["globalPackage:typescript"]);
+    useUiStore.getState().openDialog({ kind: "upgradePlan", plan: basePlan });
+    render(<DialogHarness />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Upgrade" }));
+    await vi.waitFor(() => expect(fakeIpc.callsFor("execute_plan")).toHaveLength(1));
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await vi.waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    await act(async () => {
+      pending.resolve({ opIds: ["op-after-cancel"] });
+      await pending.promise;
+    });
+
+    await vi.waitFor(() => {
+      expect(usePackagesStore.getState().selection.brew?.size ?? 0).toBe(0);
+      expect(usePackagesStore.getState().selection.npm?.size ?? 0).toBe(0);
+    });
+    expect(useUiStore.getState().dialog).toEqual({ kind: "none" });
+  });
 });
 
 describe("plan_rebuild_readiness_gate", () => {

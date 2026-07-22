@@ -70,9 +70,10 @@ export function UpgradePlanSheet({ plan: initialPlan }: UpgradePlanSheetProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [closeDialog]);
 
-  // Ignore every late continuation after the sheet has been dismissed. This
+  // Ignore every late UI continuation after the sheet has been dismissed. This
   // covers both an in-flight rebuild and execute_plan rejecting as stale after
-  // Cancel has already unmounted the dialog.
+  // Cancel has already unmounted the dialog. Successful enqueue still performs
+  // its store-level selection cleanup in confirm().
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -151,10 +152,12 @@ export function UpgradePlanSheet({ plan: initialPlan }: UpgradePlanSheetProps) {
     setSubmitting(true);
     try {
       await executePlan(plan);
-      if (!mounted.current) return;
 
-      // Selection clears after enqueue (SPEC §F5).
+      // Selection clears after enqueue even if the sheet was dismissed while
+      // the backend was responding (SPEC §F5).
       for (const g of plan.groups) clearSelection(g.subject);
+
+      if (!mounted.current) return;
       closeDialog();
     } catch (error) {
       if (!mounted.current) return;
