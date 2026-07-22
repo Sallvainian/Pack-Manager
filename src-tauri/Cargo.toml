@@ -39,6 +39,8 @@ time = { version = "0.3.54", features = ["formatting", "serde-well-known"] }
 
 [dev-dependencies]
 tempfile = "3.27.0"
+# Paused-time tests (`#[tokio::test(start_paused = true)]`) per SPEC §7.
+tokio = { version = "1.53.1", features = ["test-util"] }
 
 [features]
 # Enables test doubles (e.g. process::fake::FakeRunner) outside `cfg(test)`.

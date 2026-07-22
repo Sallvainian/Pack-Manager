@@ -1,0 +1,66 @@
+{
+  "name": "lib",
+  "dependencies": {
+    "@google/gemini-cli": {
+      "version": "0.51.0",
+      "overridden": false
+    },
+    "@just-every/code": {
+      "version": "0.6.149",
+      "overridden": false
+    },
+    "@playwright/cli": {
+      "version": "0.1.17",
+      "overridden": false
+    },
+    "@vtsls/language-server": {
+      "version": "0.3.0",
+      "overridden": false
+    },
+    "cchistory": {
+      "version": "0.3.0",
+      "overridden": false
+    },
+    "class-points": {
+      "version": "0.1.0",
+      "resolved": "file:../../../../../../../../Projects/ClassPoints",
+      "overridden": false
+    },
+    "corepack": {
+      "version": "0.35.0",
+      "overridden": false
+    },
+    "dmux": {
+      "version": "5.10.0",
+      "overridden": false
+    },
+    "docx": {
+      "version": "9.7.1",
+      "overridden": false
+    },
+    "localtunnel": {
+      "version": "2.0.2",
+      "overridden": false
+    },
+    "npm": {
+      "version": "12.0.1",
+      "overridden": false
+    },
+    "pyright": {
+      "version": "1.1.411",
+      "overridden": false
+    },
+    "sudocode": {
+      "version": "1.2.0",
+      "overridden": false
+    },
+    "typescript-language-server": {
+      "version": "5.3.0",
+      "overridden": false
+    },
+    "typescript": {
+      "version": "7.0.2",
+      "overridden": false
+    }
+  }
+}

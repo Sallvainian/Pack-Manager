@@ -1,0 +1,152 @@
+{
+  "bun": [
+    {
+      "version": "1.3.14",
+      "requested_version": "latest",
+      "install_path": "/Users/sallvain/.local/share/mise/installs/bun/1.3.14",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/sallvain/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    }
+  ],
+  "deno": [
+    {
+      "version": "2.9.3",
+      "requested_version": "latest",
+      "install_path": "/Users/sallvain/.local/share/mise/installs/deno/2.9.3",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/sallvain/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    }
+  ],
+  "fnox": [
+    {
+      "version": "1.31.0",
+      "requested_version": "latest",
+      "install_path": "/Users/sallvain/.local/share/mise/installs/fnox/1.31.0",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/sallvain/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    }
+  ],
+  "go": [
+    {
+      "version": "1.26.0",
+      "requested_version": "1.26.0",
+      "install_path": "/Users/sallvain/.local/share/mise/installs/go/1.26.0",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/sallvain/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    }
+  ],
+  "node": [
+    {
+      "version": "24.18.0",
+      "requested_version": "24",
+      "install_path": "/Users/sallvain/.local/share/mise/installs/node/24.18.0",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/sallvain/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    },
+    {
+      "version": "25.9.0",
+      "install_path": "/Users/sallvain/.local/share/mise/installs/node/25.9.0",
+      "installed": true,
+      "active": false
+    }
+  ],
+  "npm:prettier": [
+    {
+      "version": "3.9.5",
+      "requested_version": "latest",
+      "install_path": "/Users/sallvain/.local/share/mise/installs/npm-prettier/3.9.5",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/sallvain/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    }
+  ],
+  "python": [
+    {
+      "version": "3.13.0",
+      "requested_version": "3.13.0",
+      "install_path": "/Users/sallvain/.local/share/mise/installs/python/3.13.0",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/sallvain/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    }
+  ],
+  "ruby": [
+    {
+      "version": "4.0.6",
+      "requested_version": "latest",
+      "install_path": "/Users/sallvain/.local/share/mise/installs/ruby/4.0.6",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/sallvain/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    }
+  ],
+  "ruff": [
+    {
+      "version": "0.15.22",
+      "requested_version": "latest",
+      "install_path": "/Users/sallvain/.local/share/mise/installs/ruff/0.15.22",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/sallvain/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    }
+  ],
+  "rust": [
+    {
+      "version": "stable",
+      "requested_version": "stable",
+      "install_path": "/Users/sallvain/.local/share/mise/installs/rust/stable",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/sallvain/.config/mise/config.toml"
+      },
+      "symlinked_to": "/Users/sallvain/.local/share/mise/installs/rust/stable",
+      "installed": true,
+      "active": true
+    }
+  ],
+  "uv": [
+    {
+      "version": "0.11.30",
+      "requested_version": "latest",
+      "install_path": "/Users/sallvain/.local/share/mise/installs/uv/0.11.30",
+      "source": {
+        "type": "mise.toml",
+        "path": "/Users/sallvain/.config/mise/config.toml"
+      },
+      "installed": true,
+      "active": true
+    }
+  ]
+}

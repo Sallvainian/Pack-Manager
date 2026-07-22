@@ -1,0 +1,51 @@
+{
+  "rust": {
+    "name": "rust",
+    "requested": "stable",
+    "current": "stable",
+    "latest": "stable",
+    "source": { "type": "mise.toml", "path": "~/.config/mise/config.toml" }
+  },
+  "deno": {
+    "name": "deno",
+    "requested": "latest",
+    "current": "2.9.0",
+    "latest": "2.9.3",
+    "source": { "type": "mise.toml", "path": "~/.config/mise/config.toml" }
+  },
+  "ruby": {
+    "name": "ruby",
+    "requested": "latest",
+    "current": "4.0.5",
+    "latest": "4.0.6",
+    "source": { "type": "mise.toml", "path": "~/.config/mise/config.toml" }
+  },
+  "fnox": {
+    "name": "fnox",
+    "requested": "latest",
+    "current": "1.28.0",
+    "latest": "1.31.0",
+    "source": { "type": "mise.toml", "path": "~/.config/mise/config.toml" }
+  },
+  "ruff": {
+    "name": "ruff",
+    "requested": "latest",
+    "current": "0.15.20",
+    "latest": "0.15.22",
+    "source": { "type": "mise.toml", "path": "~/.config/mise/config.toml" }
+  },
+  "npm:prettier": {
+    "name": "npm:prettier",
+    "requested": "latest",
+    "current": "3.9.4",
+    "latest": "3.9.5",
+    "source": { "type": "mise.toml", "path": "~/.config/mise/config.toml" }
+  },
+  "uv": {
+    "name": "uv",
+    "requested": "latest",
+    "current": "0.11.26",
+    "latest": "0.11.30",
+    "source": { "type": "mise.toml", "path": "~/.config/mise/config.toml" }
+  }
+}

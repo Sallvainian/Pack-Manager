@@ -1,0 +1,37 @@
+{
+  "@google/gemini-cli": {
+    "current": "0.49.0",
+    "wanted": "0.51.0",
+    "latest": "0.51.0",
+    "location": "node_modules/@google/gemini-cli",
+    "dependent": "global"
+  },
+  "@just-every/code": {
+    "current": "0.6.134",
+    "wanted": "0.6.149",
+    "latest": "0.6.149",
+    "location": "node_modules/@just-every/code",
+    "dependent": "global"
+  },
+  "dmux": {
+    "current": "5.9.0",
+    "wanted": "5.10.0",
+    "latest": "5.10.0",
+    "location": "node_modules/dmux",
+    "dependent": "global"
+  },
+  "npm": {
+    "current": "11.16.0",
+    "wanted": "12.0.1",
+    "latest": "12.0.1",
+    "location": "node_modules/npm",
+    "dependent": "global"
+  },
+  "typescript": {
+    "current": "6.0.3",
+    "wanted": "7.0.2",
+    "latest": "7.0.2",
+    "location": "node_modules/typescript",
+    "dependent": "global"
+  }
+}
