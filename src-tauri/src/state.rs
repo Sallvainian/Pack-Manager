@@ -6,6 +6,7 @@
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 
+use crate::app_update::AppUpdater;
 use crate::detect::{self, DetectionOutcome};
 use crate::events::{AppEvent, EventSink, TauriSink};
 use crate::journal::{self, Journal};
@@ -35,6 +36,9 @@ pub struct AppState {
     pub runner: Arc<dyn CommandRunner>,
     pub sink: Arc<dyn EventSink>,
     pub logging: Arc<Mutex<Option<LoggingHandle>>>,
+    /// Pack-Manager updating itself (DECISIONS D25) — deliberately outside the
+    /// queue: it holds no manager lock and is not an `Operation`.
+    pub app_update: Arc<AppUpdater>,
 }
 
 impl AppState {
@@ -128,6 +132,8 @@ impl AppState {
             aging_guard: queue::AGING_GUARD,
         });
 
+        let app_update = Arc::new(AppUpdater::new(env!("CARGO_PKG_VERSION"), sink.clone()));
+
         AppState {
             settings,
             settings_path: Arc::new(settings_path),
@@ -139,6 +145,7 @@ impl AppState {
             runner,
             sink,
             logging: Arc::new(Mutex::new(logging_handle)),
+            app_update,
         }
     }
 

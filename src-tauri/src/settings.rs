@@ -33,6 +33,9 @@ pub struct Settings {
     pub log_level: LogLevel,
     pub auto_open_drawer: bool,
     pub include_greedy_by_default: bool,
+    /// Check for a new Pack-Manager release at launch and every 6h. Manual
+    /// checks (menu bar → "Check for Updates…") work regardless.
+    pub auto_check_for_updates: bool,
 }
 
 impl Default for Settings {
@@ -45,6 +48,7 @@ impl Default for Settings {
             log_level: LogLevel::Debug, // 'debug' for our own crate (SPEC F11)
             auto_open_drawer: true,
             include_greedy_by_default: false,
+            auto_check_for_updates: true,
         }
     }
 }
@@ -68,6 +72,8 @@ pub struct SettingsPatch {
     pub auto_open_drawer: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub include_greedy_by_default: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auto_check_for_updates: Option<bool>,
 }
 
 impl Settings {
@@ -167,6 +173,9 @@ impl Settings {
         }
         if let Some(v) = patch.include_greedy_by_default {
             self.include_greedy_by_default = v;
+        }
+        if let Some(v) = patch.auto_check_for_updates {
+            self.auto_check_for_updates = v;
         }
     }
 }

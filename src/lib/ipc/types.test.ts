@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   isAppState,
+  isAppUpdateStatus,
   isDetectionReport,
   isIpcError,
   isManagerSnapshot,
@@ -25,6 +26,7 @@ import {
 
 const GUARDS: Record<string, (v: unknown) => boolean> = {
   "app_state.json": isAppState,
+  "event_app_update_status.json": isAppUpdateStatus,
   "detection_report.json": isDetectionReport,
   "event_op_output.json": isOpOutputEvent,
   "event_op_stalled.json": isOpStalledEvent,

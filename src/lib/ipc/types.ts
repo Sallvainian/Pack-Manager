@@ -268,10 +268,43 @@ export interface Settings {
   logLevel: LogLevel;
   autoOpenDrawer: boolean;
   includeGreedyByDefault: boolean;
+  /**
+   * Check for a new Pack-Manager release at launch and every 6h. Manual checks
+   * (menu bar -> "Check for Updates...") work regardless.
+   */
+  autoCheckForUpdates: boolean;
 }
 
 export interface DiagnosticsResult {
   zipPath: string;
+}
+
+// ---------------------------------------------------------------------------
+// In-app update (Pack-Manager updating itself, not a managed package)
+// ---------------------------------------------------------------------------
+
+/**
+ * Why a check ran. Manual checks report "you're up to date" and failures to the
+ * user; automatic ones stay silent so a flaky network never nags on a timer.
+ */
+export type UpdateCheckTrigger = "manual" | "automatic";
+
+/** Discriminated union on `kind`, same convention as {@link SelfUpdateRoute}. */
+export type AppUpdateState =
+  | { kind: "idle" }
+  | { kind: "checking" }
+  | { kind: "upToDate" }
+  | { kind: "downloading"; version: string; received: number; total: number | null }
+  | { kind: "readyToInstall"; version: string; notes: string | null }
+  | { kind: "manualInstallRequired"; version: string; reason: string }
+  | { kind: "error"; message: string };
+
+export interface AppUpdateStatus {
+  /** The running build. */
+  currentVersion: string;
+  state: AppUpdateState;
+  /** Trigger of the check that produced `state`; null before the first one. */
+  lastTrigger: UpdateCheckTrigger | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -283,6 +316,7 @@ export const EVENT_SNAPSHOT_UPDATED = "snapshot:updated";
 export const EVENT_OP_STATUS = "op:status";
 export const EVENT_OP_OUTPUT = "op:output";
 export const EVENT_OP_STALLED = "op:stalled";
+export const EVENT_APP_UPDATE_STATUS = "appUpdate:status";
 
 /** Payload of `snapshot:updated` (health rides in the snapshot). */
 export interface SnapshotUpdatedEvent {
@@ -589,7 +623,8 @@ export function isSettings(v: unknown): v is Settings {
     isNum(v.upgradeHardCapMins) &&
     isLogLevel(v.logLevel) &&
     isBool(v.autoOpenDrawer) &&
-    isBool(v.includeGreedyByDefault)
+    isBool(v.includeGreedyByDefault) &&
+    isBool(v.autoCheckForUpdates)
   );
 }
 
@@ -607,6 +642,39 @@ export function isAppState(v: unknown): v is AppState {
 
 export function isDiagnosticsResult(v: unknown): v is DiagnosticsResult {
   return isRec(v) && isStr(v.zipPath);
+}
+
+export function isUpdateCheckTrigger(v: unknown): v is UpdateCheckTrigger {
+  return v === "manual" || v === "automatic";
+}
+
+export function isAppUpdateState(v: unknown): v is AppUpdateState {
+  if (!isRec(v)) return false;
+  switch (v.kind) {
+    case "idle":
+    case "checking":
+    case "upToDate":
+      return true;
+    case "downloading":
+      return isStr(v.version) && isNum(v.received) && (v.total === null || isNum(v.total));
+    case "readyToInstall":
+      return isStr(v.version) && (v.notes === null || isStr(v.notes));
+    case "manualInstallRequired":
+      return isStr(v.version) && isStr(v.reason);
+    case "error":
+      return isStr(v.message);
+    default:
+      return false;
+  }
+}
+
+export function isAppUpdateStatus(v: unknown): v is AppUpdateStatus {
+  return (
+    isRec(v) &&
+    isStr(v.currentVersion) &&
+    isAppUpdateState(v.state) &&
+    (v.lastTrigger === null || isUpdateCheckTrigger(v.lastTrigger))
+  );
 }
 
 export function isSnapshotUpdatedEvent(v: unknown): v is SnapshotUpdatedEvent {

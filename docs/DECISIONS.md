@@ -73,3 +73,36 @@ Detection returns Absent on this machine (verified `zsh: command not found: mas`
 
 ## D24. Fixed-stack review (required by the brief)
 No fixed decision is fatally flawed. Tauri 2 + Rust backend suits process orchestration; React/TS/Vite/Tailwind suits an event-driven table UI. Watch-items, not flaws: (a) Tauri/wry on macOS 27 beta WebKit — keep the UI free of exotic WebView APIs so regressions stay cosmetic; (b) Tailwind v4 CSS-first `@theme` is already in the scaffold, so tokens live in one CSS file either way.
+
+## D25. Pack-Manager updates itself in-app: check → auto-download → user-clicked restart
+`tauri-plugin-updater` against a static `latest.json` on the GitHub Release. Checks run
+on launch, every 6h, and on demand from the macOS app menu ("Pack-Manager → Check for
+Updates…"); a found update downloads automatically in the background, and the bottom-left
+StatusBar indicator turns into the button that installs it and relaunches. Downloading
+automatically is safe; installing is not, so the click is the gate — SPEC §1's "No
+auto-upgrades without user action" is about mutating the machine, which only install does.
+The state machine lives in Rust (`app_update.rs`) behind an `UpdateSource`/`PendingRelease`
+seam mirroring `CommandRunner`/`FakeRunner`, so the menu handler and the IPC command share
+one code path and the whole flow is testable offline. **Rejected:** the `@tauri-apps/plugin-updater`
+JS API (a second direct-to-Tauri surface next to `bridge.ts`, and it would have needed two
+events instead of one); a Homebrew cask (no in-app prompt); silent auto-install (never).
+
+### D25a. Consequences accepted
+- **A sixth event.** `appUpdate:status` breaks D16's five-event surface. Justified: it is
+  not manager state, and folding it into `op:status` would put a non-`Operation` into
+  History and the queue.
+- **The app menu is rebuilt by hand.** `app.set_menu` replaces Tauri's default wholesale,
+  so `lib.rs` re-declares the Edit and Window submenus; without them ⌘X/⌘C/⌘V/⌘A die in
+  the package search field and every `CopyableCommand`.
+- **No admin prompt, ever.** The plugin's macOS installer falls back to AppleScript `with
+  administrator privileges` when the bundle's parent directory is not writable. That would
+  break SPEC §1 invariant 4, so `app_update.rs` pre-flights with `access(2)` and parks in
+  `manualInstallRequired` instead of letting the prompt appear.
+- **D20 is superseded.** It said notarization was out of scope; `release.yml` has notarized
+  since, and the updater depends on it — an un-stapled auto-update would install an app
+  that phones Apple on first launch. The Package step asserts the archived `.app` is
+  stapled rather than trusting bundler ordering.
+- **CI build-smoke needs `--no-sign`.** With a `pubkey` configured, the CLI refuses to
+  bundle without `TAURI_SIGNING_PRIVATE_KEY` ("A public key has been found, but no private
+  key"), and a throwaway key fails too because the CLI checks it against the configured
+  pubkey.

@@ -22,6 +22,7 @@ export const defaultSettings: Settings = {
   logLevel: "debug",
   autoOpenDrawer: true,
   includeGreedyByDefault: false,
+  autoCheckForUpdates: true,
 };
 
 // --- Manager infos (detection results on this machine) ----------------------

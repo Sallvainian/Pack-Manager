@@ -128,6 +128,7 @@
     "upgradeHardCapMins": 30,
     "logLevel": "debug",
     "autoOpenDrawer": true,
-    "includeGreedyByDefault": false
+    "includeGreedyByDefault": false,
+    "autoCheckForUpdates": true
   }
 }

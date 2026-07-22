@@ -19,7 +19,11 @@ export type Dialog =
   | { kind: "none" }
   | { kind: "upgradePlan"; plan: UpgradePlan }
   | { kind: "stalled"; opId: string; silentForSecs: number }
-  | { kind: "quitGuard"; opIds: string[] };
+  /**
+   * Running operations block a quit — and equally an update restart, which
+   * kills the same child processes (DECISIONS D25).
+   */
+  | { kind: "quitGuard"; opIds: string[]; reason?: "quit" | "update" };
 
 export type ToastKind = "success" | "error" | "info";
 

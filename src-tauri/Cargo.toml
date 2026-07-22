@@ -27,7 +27,9 @@ thiserror = "2.0.19"
 async-trait = "0.1.91"
 tracing = "0.1.44"
 tracing-appender = "0.2.5"
-nix = { version = "0.31.3", features = ["signal", "process"] }
+# `fs` adds access(2) — used to test whether the app bundle can be replaced
+# without an admin prompt before offering the in-app update (app_update.rs).
+nix = { version = "0.31.3", features = ["signal", "process", "fs"] }
 regex = "1.13.1"
 dirs = "6.0.0"
 which = "8.0.5"
@@ -36,6 +38,7 @@ tauri-plugin-opener = "2.5.4"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json", "registry"] }
 uuid = { version = "1.24.0", features = ["v7", "serde"] }
 time = { version = "0.3.54", features = ["formatting", "serde-well-known"] }
+tauri-plugin-updater = "2"
 
 [dev-dependencies]
 tempfile = "3.27.0"

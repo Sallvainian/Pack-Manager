@@ -1,8 +1,8 @@
-//! Event surface (SPEC §5.9 events table): `EventSink` trait, the five event
-//! payload structs, `VecSink` for tests, the batching emitter (`op:output`
-//! flushed every 50ms / 64 lines / 8KiB, whichever first), and the
-//! Tauri-backed sink. Core logic emits through `EventSink` and never touches
-//! `tauri::AppHandle`.
+//! Event surface (SPEC §5.9 events table, plus `appUpdate:status` per
+//! DECISIONS D25): `EventSink` trait, the event payload structs, `VecSink` for
+//! tests, the batching emitter (`op:output` flushed every 50ms / 64 lines /
+//! 8KiB, whichever first), and the Tauri-backed sink. Core logic emits through
+//! `EventSink` and never touches `tauri::AppHandle`.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -13,7 +13,9 @@ use tokio::sync::mpsc;
 use tokio::time::Instant;
 
 use crate::error::IpcError;
-use crate::ipc::{DetectionReport, LogLine, ManagerId, ManagerSnapshot, OpKind, OpStatus};
+use crate::ipc::{
+    AppUpdateStatus, DetectionReport, LogLine, ManagerId, ManagerSnapshot, OpKind, OpStatus,
+};
 
 // ---------------------------------------------------------------------------
 // Event payloads (wire contract; mirrored in src/lib/ipc/types.ts)
@@ -77,8 +79,9 @@ pub const EVENT_SNAPSHOT_UPDATED: &str = "snapshot:updated";
 pub const EVENT_OP_STATUS: &str = "op:status";
 pub const EVENT_OP_OUTPUT: &str = "op:output";
 pub const EVENT_OP_STALLED: &str = "op:stalled";
+pub const EVENT_APP_UPDATE_STATUS: &str = "appUpdate:status";
 
-/// One of the five events, name + typed payload.
+/// One of the six events, name + typed payload.
 #[derive(Debug, Clone, PartialEq)]
 pub enum AppEvent {
     DetectionUpdated(DetectionReport),
@@ -86,6 +89,9 @@ pub enum AppEvent {
     OpStatus(OpStatusEvent),
     OpOutput(OpOutputEvent),
     OpStalled(OpStalledEvent),
+    /// Pack-Manager updating itself (DECISIONS D25) — unrelated to `op:*`,
+    /// which only ever describe package-manager operations.
+    AppUpdateStatus(AppUpdateStatus),
 }
 
 impl AppEvent {
@@ -96,6 +102,7 @@ impl AppEvent {
             AppEvent::OpStatus(_) => EVENT_OP_STATUS,
             AppEvent::OpOutput(_) => EVENT_OP_OUTPUT,
             AppEvent::OpStalled(_) => EVENT_OP_STALLED,
+            AppEvent::AppUpdateStatus(_) => EVENT_APP_UPDATE_STATUS,
         }
     }
 
@@ -106,6 +113,7 @@ impl AppEvent {
             AppEvent::OpStatus(p) => serde_json::to_value(p),
             AppEvent::OpOutput(p) => serde_json::to_value(p),
             AppEvent::OpStalled(p) => serde_json::to_value(p),
+            AppEvent::AppUpdateStatus(p) => serde_json::to_value(p),
         }
         .expect("event payloads are plain data and always serialize")
     }

@@ -11,8 +11,9 @@ use tauri::State;
 use crate::detect::DetectStatus;
 use crate::error::{IpcError, PmError};
 use crate::ipc::{
-    AppState as AppStateWire, DetectionReport, DiagnosticsResult, ManagerId, OpIds, OpRef,
-    OperationDetail, OperationRecord, PlanRequest, SelfUpdateRoute, UpgradePlan,
+    AppState as AppStateWire, AppUpdateStatus, DetectionReport, DiagnosticsResult, ManagerId,
+    OpIds, OpRef, OperationDetail, OperationRecord, PlanRequest, SelfUpdateRoute,
+    UpdateCheckTrigger, UpgradePlan,
 };
 use crate::paths::ToolEnv;
 use crate::queue::{self, PlanSources};
@@ -574,6 +575,56 @@ pub async fn log_frontend_event(args: LogFrontendEventArgs) -> Result<(), IpcErr
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// In-app update (DECISIONS D25)
+// ---------------------------------------------------------------------------
+
+/// Current state, for rehydration on mount. Every later transition arrives on
+/// `appUpdate:status`.
+#[tauri::command]
+pub async fn get_app_update_state(state: State<'_, AppState>) -> Result<AppUpdateStatus, IpcError> {
+    Ok(state.app_update.status())
+}
+
+/// Manual check (menu bar → "Check for Updates…", Settings → "Check now").
+/// Returns as soon as the check is under way; the outcome arrives as events, so
+/// a slow network never blocks the click.
+#[tauri::command]
+pub async fn check_for_app_update(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), IpcError> {
+    let updater = state.app_update.clone();
+    tauri::async_runtime::spawn(async move {
+        let source = crate::app_update::TauriUpdateSource::new(app);
+        updater
+            .check_and_download(&source, UpdateCheckTrigger::Manual)
+            .await;
+    });
+    Ok(())
+}
+
+/// Installs the downloaded update over the running bundle and relaunches.
+///
+/// The frontend is responsible for cancelling in-flight operations first (it
+/// routes this through the quit guard); by the time this runs, restarting is
+/// already the user's decision. `restart` does not return.
+#[tauri::command]
+pub async fn install_app_update(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), IpcError> {
+    state.app_update.install().map_err(|detail| {
+        IpcError::from(PmError::Io {
+            detail: format!("update install failed: {detail}"),
+        })
+    })?;
+    // Same kill hook as a normal quit: children must never outlive the app.
+    state.shutdown();
+    tracing::info!("restarting into the updated build");
+    app.restart();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -662,6 +713,10 @@ mod tests {
             runner: fake.clone(),
             sink: sink.clone(),
             logging: Arc::new(Mutex::new(None)),
+            app_update: Arc::new(crate::app_update::AppUpdater::new(
+                "0.0.0-test",
+                sink.clone(),
+            )),
         };
         Harness {
             state,

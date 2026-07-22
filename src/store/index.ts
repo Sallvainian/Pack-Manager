@@ -5,11 +5,13 @@
  * stored (SPEC §5.9 "Frontend derives per-manager phase from op records").
  */
 import type { ManagerId } from "../lib/ipc/types";
+import { useAppUpdateStore } from "./appUpdate";
 import { useManagersStore } from "./managers";
 import { useOperationsStore, type OperationsState, type OpView } from "./operations";
 import { outdatedCount, usePackagesStore } from "./packages";
 import { useUiStore } from "./ui";
 
+export * from "./appUpdate";
 export * from "./managers";
 export * from "./packages";
 export * from "./operations";
@@ -61,4 +63,5 @@ export function resetStores(): void {
   usePackagesStore.getState().reset();
   useOperationsStore.getState().reset();
   useUiStore.getState().reset();
+  useAppUpdateStore.getState().reset();
 }
