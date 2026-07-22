@@ -1,23 +1,30 @@
 name: Release Please
 
-# PR-based release flow.
+# Fully automatic PR-based release flow.
 #
 # How it works:
 #   1. On every push to main, release-please reads the conventional-commit
 #      history and opens/updates a "chore(main): release X.Y.Z" PR that bumps
 #      package.json, package-lock.json, src-tauri/tauri.conf.json,
 #      src-tauri/Cargo.toml + Cargo.lock, and writes CHANGELOG.md.
-#   2. You review that PR. Merging it IS the release approval (this is the
-#      human gate).
-#   3. On merge, release-please creates the git tag + a published GitHub
-#      Release with the changelog notes.
-#   4. This workflow then calls release.yml (as a reusable workflow) to build,
-#      sign, and notarize the app and attach the .dmg/.zip to that release.
+#   2. That PR is squash-merged automatically by the step below — there is NO
+#      human gate. Any `fix:` or `feat:` reaching main ships a public,
+#      signed, notarized release without further approval. To hold a change
+#      back, keep it off main (or land it as chore:/docs:/ci:/refactor:/test:,
+#      none of which trigger a release).
+#   3. release-please then runs a SECOND time in this same job to create the
+#      git tag and the published GitHub Release.
+#   4. The build job calls release.yml (reusable) to build, sign, and notarize
+#      the app and attach the .dmg/.zip/.app.tar.gz/latest.json to it.
 #
-# Note: the release + tag are created with GITHUB_TOKEN, which deliberately
-# does NOT trigger other workflows (GitHub blocks that to avoid recursion).
-# That's why the build runs via the reusable call below instead of a tag
-# trigger — no personal access token required.
+# Why release-please runs twice instead of relying on the merge to re-trigger
+# this workflow: pushes made with GITHUB_TOKEN deliberately do NOT trigger
+# other workflows (GitHub blocks that to avoid recursion). The merge in step 2
+# is such a push, so nothing would re-run and the tag would never be cut —
+# main would carry a version bump with no release behind it. Invoking the
+# action again in-process keeps the whole flow inside one run and needs no
+# personal access token. The verification step below turns that failure mode
+# into a loud one if it ever regresses.
 
 on:
   push:
@@ -25,20 +32,55 @@ on:
 
 permissions:
   contents: write        # create the release + tag, and upload assets
-  pull-requests: write   # open/update the release PR
+  pull-requests: write   # open/update AND merge the release PR
 
 jobs:
   release-please:
     runs-on: ubuntu-latest
     outputs:
-      release_created: ${{ steps.rp.outputs.release_created }}
-      tag_name: ${{ steps.rp.outputs.tag_name }}
+      # The tag only exists after the second invocation, which is the one that
+      # sees the merged release commit.
+      release_created: ${{ steps.rp_after_merge.outputs.release_created }}
+      tag_name: ${{ steps.rp_after_merge.outputs.tag_name }}
     steps:
-      - name: Run release-please
+      - name: Open or update the release PR
         id: rp
         uses: googleapis/release-please-action@v5
         # Config + last-released version live in release-please-config.json and
         # .release-please-manifest.json (the action's default filenames).
+
+      # Squash, not merge: a merge commit repeats the original commit message
+      # in its body, so release-please counts the same fix twice and the
+      # changelog lists it under two SHAs (see 0.2.0 through 0.2.3).
+      - name: Merge the release PR
+        id: merge
+        if: steps.rp.outputs.pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ steps.rp.outputs.pr }}
+        run: |
+          set -euo pipefail
+          number=$(jq -r '.number' <<<"$PR")
+          echo "Merging release PR #$number"
+          gh pr merge "$number" \
+            --repo "${{ github.repository }}" \
+            --squash \
+            --delete-branch
+
+      - name: Cut the tag and GitHub Release
+        id: rp_after_merge
+        if: steps.merge.outcome == 'success'
+        uses: googleapis/release-please-action@v5
+
+      # Without this, a merge that failed to produce a release would look like
+      # a green run while main silently carries an unreleased version bump.
+      - name: Verify the merge produced a release
+        if: steps.merge.outcome == 'success' && steps.rp_after_merge.outputs.release_created != 'true'
+        run: |
+          echo "::error::Release PR was merged but no release was created. main now" \
+               "carries a version bump with no tag behind it. Re-run this workflow;" \
+               "release-please is idempotent and will cut the release on the next pass."
+          exit 1
 
   # Build the app and attach it to the release release-please just made.
   build:
