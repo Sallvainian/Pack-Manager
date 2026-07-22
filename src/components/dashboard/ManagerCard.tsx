@@ -177,16 +177,19 @@ export function ManagerCard({ info }: ManagerCardProps) {
         </div>
       ) : !snapshot ? (
         <div className="mt-4 flex items-baseline gap-2">
-          <div className="h-8 w-12 animate-pulse rounded bg-bg-raised" data-testid="numeral-skeleton" />
+          <div className="h-4 w-6 animate-pulse rounded bg-bg-raised" data-testid="numeral-skeleton" />
           <span className="text-[12px] text-text-muted">Refreshing…</span>
         </div>
       ) : (
         <>
-          <div className="mt-4 flex items-end gap-2">
+          <div className="mt-4 flex items-baseline gap-1.5">
             {outdated > 0 ? (
               <>
-                <span className="text-[28px] font-bold leading-none text-warning">{outdated}</span>
-                <span className="pb-1 text-[12px] text-text-secondary">
+                {/* Same size/weight as the "Up to date" line below: the two are
+                    peer states of one card, so neither should outweigh the other
+                    (and neither should outweigh the page's 20px h1). */}
+                <span className="text-[15px] font-semibold text-warning">{outdated}</span>
+                <span className="text-[12px] text-text-secondary">
                   update{outdated === 1 ? "" : "s"} available
                 </span>
               </>
