@@ -1,6 +1,8 @@
 /**
- * 1:1 TypeScript mirror of `src-tauri/src/ipc.rs` (+ event payloads from
- * `events.rs` and `IpcError` from `error.rs`) — SPEC §5.9/§5.10.
+ * TypeScript mirror of the serialized frontend wire contract from
+ * `src-tauri/src/ipc.rs` (+ event payloads from `events.rs` and `IpcError` from
+ * `error.rs`) — SPEC §5.9/§5.10. Backend-only `#[serde(skip)]` fields are
+ * intentionally omitted here.
  *
  * Drift between the two sides is guarded by the contract fixtures in
  * `dev/fixtures/ipc/*.json`: Rust asserts serialization byte-equality
@@ -72,6 +74,7 @@ export const ERROR_CODES = [
   "parse_failed",
   "cancelled",
   "self_update_unavailable",
+  "plan_stale",
   "env_capture_failed",
   "io",
   "internal",
@@ -200,6 +203,8 @@ export interface ExcludedPackage {
 
 export interface UpgradePlan {
   planId: string;
+  /** Echoed for stale-plan UI refresh; execution trusts only the backend cache. */
+  request: PlanRequest;
   groups: PlanGroup[];
   excluded: ExcludedPackage[];
   notes: string[];
@@ -552,6 +557,7 @@ export function isUpgradePlan(v: unknown): v is UpgradePlan {
   return (
     isRec(v) &&
     isStr(v.planId) &&
+    isPlanRequest(v.request) &&
     Array.isArray(v.groups) &&
     v.groups.every(isPlanGroup) &&
     Array.isArray(v.excluded) &&

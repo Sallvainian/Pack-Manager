@@ -61,7 +61,8 @@ impl From<std::io::Error> for PmError {
 
 /// Wire codes, snake_case:
 /// `tool_not_found | spawn_failed | timeout | non_zero_exit | brew_lock_busy |
-///  parse_failed | cancelled | self_update_unavailable | env_capture_failed | io | internal`
+///  parse_failed | cancelled | self_update_unavailable | plan_stale |
+///  env_capture_failed | io | internal`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ErrorCode {
@@ -73,13 +74,14 @@ pub enum ErrorCode {
     ParseFailed,
     Cancelled,
     SelfUpdateUnavailable,
+    PlanStale,
     EnvCaptureFailed,
     Io,
     Internal,
 }
 
-/// The serialized error shape all 17 commands return in their `Err` arm and
-/// that rides inside `OperationRecord.error` / `op:status`.
+/// The serialized error shape commands return in their `Err` arm and that
+/// rides inside `OperationRecord.error` / `op:status`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IpcError {
@@ -268,6 +270,14 @@ mod tests {
         assert_eq!(
             ipc.message,
             "Homebrew is busy in another terminal. Retry when it finishes."
+        );
+    }
+
+    #[test]
+    fn plan_stale_uses_the_stable_snake_case_wire_code() {
+        assert_eq!(
+            serde_json::to_string(&ErrorCode::PlanStale).unwrap(),
+            "\"plan_stale\""
         );
     }
 }

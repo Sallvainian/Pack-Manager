@@ -1,5 +1,19 @@
 {
   "planId": "01981f2e-0000-7000-8000-5f8cff3fb96b",
+  "request": {
+    "selection": [
+      {
+        "managerId": "brew",
+        "packageId": "formula:dolt"
+      },
+      {
+        "managerId": "npm",
+        "packageId": "globalPackage:typescript"
+      }
+    ],
+    "includeSelfUpdates": true,
+    "includeGreedyCasks": false
+  },
   "groups": [
     {
       "subject": "brew",

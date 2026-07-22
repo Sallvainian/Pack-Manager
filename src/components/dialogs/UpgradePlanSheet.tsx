@@ -2,16 +2,23 @@
  * UpgradePlanSheet — the trust device (SPEC §4.10, §F4, §D6). Previews the EXACT
  * commands the backend will spawn (never a bare `brew upgrade`), the two toggles
  * (self-updates on / greedy off), the excluded list with reasons, and any
- * warnings. Confirm calls `execute_plan` with the currently-displayed plan;
- * toggling rebuilds the plan through `build_upgrade_plan` so what is shown is
- * always what will run.
+ * warnings. Confirm calls `execute_plan` with the currently-displayed, ready
+ * plan. Toggling invalidates that readiness until `build_upgrade_plan` returns,
+ * so a pending or failed rebuild can never execute an older preview.
  *
  * Mounted by DialogHost (U8) for `ui.dialog.kind === "upgradePlan"`, receiving
  * that dialog's `plan`.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { errorCopy } from "../../lib/errors";
 import { buildUpgradePlan, executePlan } from "../../lib/ipc/client";
-import type { ExcludeReason, ManagerId, PlanSelection, UpgradePlan } from "../../lib/ipc/types";
+import {
+  isIpcError,
+  type ExcludeReason,
+  type ManagerId,
+  type PlanRequest,
+  type UpgradePlan,
+} from "../../lib/ipc/types";
 import { managerInfo, useManagersStore } from "../../store/managers";
 import { usePackagesStore } from "../../store/packages";
 import { useUiStore } from "../../store/ui";
@@ -24,19 +31,6 @@ const REASON_LABEL: Record<ExcludeReason, string> = {
   alreadyRunning: "already running",
 };
 
-/** Rebuild the full candidate selection from a plan (groups + everything excluded),
- * so a toggle change re-filters against the same set the backend last considered. */
-function reconstructSelection(plan: UpgradePlan): PlanSelection[] {
-  const selection: PlanSelection[] = [];
-  for (const g of plan.groups) {
-    for (const packageId of g.packageIds) selection.push({ managerId: g.subject, packageId });
-  }
-  for (const e of plan.excluded) {
-    selection.push({ managerId: e.managerId, packageId: e.packageId });
-  }
-  return selection;
-}
-
 /** Best-effort display name for a packageId (`${kind}:${name}`, split on first ':'). */
 function packageName(packageId: string): string {
   const i = packageId.indexOf(":");
@@ -47,18 +41,25 @@ export interface UpgradePlanSheetProps {
   plan: UpgradePlan;
 }
 
+type PlanReadiness = "ready" | "pending" | "failed";
+
 export function UpgradePlanSheet({ plan: initialPlan }: UpgradePlanSheetProps) {
   const detection = useManagersStore((s) => s.detection);
-  const settings = useUiStore((s) => s.settings);
   const closeDialog = useUiStore((s) => s.closeDialog);
   const clearSelection = usePackagesStore((s) => s.clearSelection);
 
   const [plan, setPlan] = useState<UpgradePlan>(initialPlan);
-  const [includeSelfUpdates, setIncludeSelfUpdates] = useState(true);
-  const [includeGreedyCasks, setIncludeGreedyCasks] = useState(
-    settings?.includeGreedyByDefault ?? false,
+  const [includeSelfUpdates, setIncludeSelfUpdates] = useState(
+    initialPlan.request.includeSelfUpdates,
   );
+  const [includeGreedyCasks, setIncludeGreedyCasks] = useState(
+    initialPlan.request.includeGreedyCasks,
+  );
+  const mounted = useRef(true);
+  const rebuildSequence = useRef(0);
+  const [planReadiness, setPlanReadiness] = useState<PlanReadiness>("ready");
   const [submitting, setSubmitting] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState<string | null>(null);
 
   // Local Escape-to-close (SPEC §4.11); harmless alongside U8's global handler.
   useEffect(() => {
@@ -69,33 +70,117 @@ export function UpgradePlanSheet({ plan: initialPlan }: UpgradePlanSheetProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [closeDialog]);
 
+  // Ignore every late UI continuation after the sheet has been dismissed. This
+  // covers both an in-flight rebuild and execute_plan rejecting as stale after
+  // Cancel has already unmounted the dialog. Successful enqueue still performs
+  // its store-level selection cleanup in confirm().
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      rebuildSequence.current += 1;
+    };
+  }, []);
+
   function displayName(id: ManagerId): string {
     return managerInfo(detection, id)?.displayName ?? id;
   }
 
-  async function applyToggles(nextSelf: boolean, nextGreedy: boolean) {
-    setIncludeSelfUpdates(nextSelf);
-    setIncludeGreedyCasks(nextGreedy);
+  async function rebuildPlan(
+    request: PlanRequest,
+    successMessage: string | null,
+    failureMessage: string,
+  ) {
+    if (!mounted.current) return;
+
+    const sequence = ++rebuildSequence.current;
+    setPlanReadiness("pending");
+    setReviewMessage(null);
+
     try {
-      const next = await buildUpgradePlan({
-        selection: reconstructSelection(plan),
-        includeSelfUpdates: nextSelf,
-        includeGreedyCasks: nextGreedy,
-      });
+      const next = await buildUpgradePlan(request);
+      if (!mounted.current || sequence !== rebuildSequence.current) return;
+
       setPlan(next);
-    } catch {
-      // Keep the current preview; the toggles reflect the requested intent.
+      setIncludeSelfUpdates(next.request.includeSelfUpdates);
+      setIncludeGreedyCasks(next.request.includeGreedyCasks);
+      setPlanReadiness("ready");
+      setReviewMessage(successMessage);
+    } catch (error) {
+      if (!mounted.current || sequence !== rebuildSequence.current) return;
+
+      setPlanReadiness("failed");
+      setReviewMessage(
+        isIpcError(error) ? errorCopy(error).message : failureMessage,
+      );
     }
   }
 
+  function applyToggles(nextSelf: boolean, nextGreedy: boolean) {
+    if (submitting) return;
+
+    setIncludeSelfUpdates(nextSelf);
+    setIncludeGreedyCasks(nextGreedy);
+    void rebuildPlan(
+      {
+        selection: plan.request.selection,
+        includeSelfUpdates: nextSelf,
+        includeGreedyCasks: nextGreedy,
+      },
+      null,
+      "The plan could not be refreshed. Retry before upgrading.",
+    );
+  }
+
+  function retryRefresh() {
+    if (submitting || planReadiness === "pending") return;
+
+    void rebuildPlan(
+      {
+        selection: plan.request.selection,
+        includeSelfUpdates,
+        includeGreedyCasks,
+      },
+      "The plan was refreshed. Review it before upgrading.",
+      "The plan could not be refreshed. Retry before upgrading.",
+    );
+  }
+
   async function confirm() {
+    if (submitting || planReadiness !== "ready") return;
+
     setSubmitting(true);
     try {
       await executePlan(plan);
-      // Selection clears after enqueue (SPEC §F5).
+
+      // Selection clears after enqueue even if the sheet was dismissed while
+      // the backend was responding (SPEC §F5).
       for (const g of plan.groups) clearSelection(g.subject);
+
+      if (!mounted.current) return;
       closeDialog();
-    } catch {
+    } catch (error) {
+      if (!mounted.current) return;
+
+      if (isIpcError(error) && error.code === "plan_stale") {
+        const staleMessage = errorCopy(error).message;
+        setSubmitting(false);
+        await rebuildPlan(
+          plan.request,
+          staleMessage,
+          "The plan changed, but the current plan could not be loaded. Retry before upgrading.",
+        );
+        return;
+      } else {
+        // The one-use capability may have been consumed even if enqueueing
+        // failed. Require a fresh plan instead of retrying it speculatively.
+        setPlanReadiness("failed");
+        setReviewMessage(
+          isIpcError(error)
+            ? errorCopy(error).message
+            : "The upgrade could not be queued. Review the plan and retry.",
+        );
+      }
       setSubmitting(false);
     }
   }
@@ -104,6 +189,7 @@ export function UpgradePlanSheet({ plan: initialPlan }: UpgradePlanSheetProps) {
   const selfUpdateCount = plan.groups.filter((g) => g.selfUpdate).length;
   const greedyExcludedCount = plan.excluded.filter((e) => e.reason === "greedyCask").length;
   const hasCommands = plan.groups.some((g) => g.commands.length > 0);
+  const controlsBusy = submitting || planReadiness === "pending";
 
   return (
     <div
@@ -114,6 +200,7 @@ export function UpgradePlanSheet({ plan: initialPlan }: UpgradePlanSheetProps) {
         role="dialog"
         aria-modal="true"
         aria-label="Upgrade plan"
+        aria-busy={controlsBusy}
         onClick={(e) => e.stopPropagation()}
         className="flex max-h-[85vh] w-[560px] max-w-full flex-col overflow-hidden rounded-card border border-border-strong bg-bg-overlay shadow-2xl"
       >
@@ -130,7 +217,8 @@ export function UpgradePlanSheet({ plan: initialPlan }: UpgradePlanSheetProps) {
               <input
                 type="checkbox"
                 checked={includeSelfUpdates}
-                onChange={(e) => void applyToggles(e.target.checked, includeGreedyCasks)}
+                disabled={controlsBusy}
+                onChange={(e) => applyToggles(e.target.checked, includeGreedyCasks)}
                 aria-label="Include manager self-updates"
                 className="h-4 w-4 rounded-[4px] border border-border-strong bg-bg-raised accent-accent"
               />
@@ -140,7 +228,8 @@ export function UpgradePlanSheet({ plan: initialPlan }: UpgradePlanSheetProps) {
               <input
                 type="checkbox"
                 checked={includeGreedyCasks}
-                onChange={(e) => void applyToggles(includeSelfUpdates, e.target.checked)}
+                disabled={controlsBusy}
+                onChange={(e) => applyToggles(includeSelfUpdates, e.target.checked)}
                 aria-label="Include self-updating casks"
                 className="h-4 w-4 rounded-[4px] border border-border-strong bg-bg-raised accent-accent"
               />
@@ -191,6 +280,32 @@ export function UpgradePlanSheet({ plan: initialPlan }: UpgradePlanSheetProps) {
             </div>
           )}
 
+          {/* Review required after a stale plan or rebuild failure */}
+          {reviewMessage && (
+            <div
+              role="alert"
+              className="mt-4 rounded-control border border-warning/30 bg-warning/12 px-3 py-2 text-[12px] text-warning"
+            >
+              <div>{reviewMessage}</div>
+              {planReadiness === "failed" && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="mt-2"
+                  onClick={retryRefresh}
+                >
+                  Refresh plan
+                </Button>
+              )}
+            </div>
+          )}
+
+          {planReadiness === "pending" && (
+            <div role="status" className="mt-4 text-[12px] text-text-muted">
+              Refreshing plan…
+            </div>
+          )}
+
           {/* Warnings */}
           {plan.warnings.length > 0 && (
             <div className="mt-4 rounded-control border border-warning/30 bg-warning/12 px-3 py-2">
@@ -222,7 +337,12 @@ export function UpgradePlanSheet({ plan: initialPlan }: UpgradePlanSheetProps) {
             <Button variant="ghost" size="md" onClick={closeDialog}>
               Cancel
             </Button>
-            <Button variant="primary" size="md" disabled={submitting || !hasCommands} onClick={() => void confirm()}>
+            <Button
+              variant="primary"
+              size="md"
+              disabled={submitting || planReadiness !== "ready" || !hasCommands}
+              onClick={() => void confirm()}
+            >
               Upgrade
             </Button>
           </div>

@@ -3,6 +3,7 @@
 //! `AppState` is `Clone` (all shared pieces are `Arc`s) so the async startup
 //! task and the Tauri managed-state cell can hold the same instance.
 
+use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 
@@ -17,6 +18,173 @@ use crate::process::CommandRunner;
 use crate::queue::{self, Queue, QueueDeps, RefreshFactory, RouteRecheck};
 use crate::registry::Registry;
 use crate::settings::Settings;
+
+/// Maximum number of unconsumed upgrade-plan capabilities retained in one
+/// app session. Oldest-first eviction keeps memory bounded and makes an
+/// evicted `planId` fail closed just like an unknown or replayed one.
+pub const ISSUED_PLAN_LIMIT: usize = 64;
+
+#[derive(Debug, Clone)]
+pub struct IssuedPlan {
+    pub request: crate::ipc::PlanRequest,
+    pub plan: crate::ipc::UpgradePlan,
+    /// Canonical-state revision against which this capability was built.
+    pub revision: u64,
+}
+
+/// Session-local, one-use plan capabilities.
+#[derive(Debug)]
+pub struct IssuedPlanStore {
+    limit: usize,
+    order: VecDeque<String>,
+    plans: HashMap<String, IssuedPlan>,
+}
+
+/// One transaction boundary for every input that can change an upgrade plan.
+///
+/// Queue record mutations, refresh publication, redetection, settings, plan
+/// issuance, and atomic plan submission all take this mutex. The revision is
+/// deliberately monotonic for the process lifetime: even if an operation
+/// finishes before another prebuilt plan is validated, the earlier batch's
+/// enqueue permanently invalidated that second capability.
+#[derive(Debug, Default)]
+pub struct PlanCoordinator {
+    revision: u64,
+    state_updates_in_progress: u32,
+    issued_plans: IssuedPlanStore,
+}
+
+impl PlanCoordinator {
+    pub fn revision(&self) -> u64 {
+        self.revision
+    }
+
+    pub fn bump_revision(&mut self) {
+        self.revision = self
+            .revision
+            .checked_add(1)
+            .expect("plan revision exhausted");
+    }
+
+    pub fn begin_state_update(&mut self) {
+        self.state_updates_in_progress = self
+            .state_updates_in_progress
+            .checked_add(1)
+            .expect("state update counter exhausted");
+        self.bump_revision();
+    }
+
+    pub fn finish_state_update(&mut self) {
+        self.state_updates_in_progress = self
+            .state_updates_in_progress
+            .checked_sub(1)
+            .expect("state update finished without a matching begin");
+        self.bump_revision();
+    }
+
+    pub fn state_update_in_progress(&self) -> bool {
+        self.state_updates_in_progress != 0
+    }
+
+    pub fn insert_plan(&mut self, issued: IssuedPlan) {
+        self.issued_plans.insert(issued);
+    }
+
+    pub fn take_plan(&mut self, plan_id: &str) -> Option<IssuedPlan> {
+        self.issued_plans.take(plan_id)
+    }
+}
+
+/// Cancellation-safe ownership of one in-progress canonical state update.
+/// The lease holds no mutex while async detection runs. Successful callers
+/// publish through [`StateUpdateLease::complete`]; dropping a pending future
+/// clears the in-progress barrier and advances the revision so old plans still
+/// fail closed without permanently wedging future execution.
+struct StateUpdateLease {
+    coordinator: Arc<Mutex<PlanCoordinator>>,
+    active: bool,
+}
+
+impl StateUpdateLease {
+    fn begin(coordinator: Arc<Mutex<PlanCoordinator>>) -> Self {
+        coordinator
+            .lock()
+            .expect("plan coordinator poisoned")
+            .begin_state_update();
+        Self {
+            coordinator,
+            active: true,
+        }
+    }
+
+    fn complete(mut self, publish: impl FnOnce()) {
+        let coordinator = self.coordinator.clone();
+        let mut coordinator = coordinator.lock().expect("plan coordinator poisoned");
+        publish();
+        coordinator.finish_state_update();
+        self.active = false;
+    }
+}
+
+impl Drop for StateUpdateLease {
+    fn drop(&mut self) {
+        if self.active {
+            self.coordinator
+                .lock()
+                .expect("plan coordinator poisoned")
+                .finish_state_update();
+            self.active = false;
+        }
+    }
+}
+
+impl Default for IssuedPlanStore {
+    fn default() -> Self {
+        Self::new(ISSUED_PLAN_LIMIT)
+    }
+}
+
+impl IssuedPlanStore {
+    pub fn new(limit: usize) -> Self {
+        Self {
+            limit,
+            order: VecDeque::new(),
+            plans: HashMap::new(),
+        }
+    }
+
+    pub fn insert(&mut self, issued: IssuedPlan) {
+        let plan_id = issued.plan.plan_id.clone();
+        if self.limit == 0 {
+            return;
+        }
+        if self.plans.remove(&plan_id).is_some() {
+            self.order.retain(|id| id != &plan_id);
+        }
+        while self.plans.len() >= self.limit {
+            if let Some(oldest) = self.order.pop_front() {
+                self.plans.remove(&oldest);
+            } else {
+                break;
+            }
+        }
+        self.order.push_back(plan_id.clone());
+        self.plans.insert(plan_id, issued);
+    }
+
+    /// Atomically consumes a capability. Failed validation never restores it,
+    /// so tampering and stale state cannot be retried with the same plan.
+    pub fn take(&mut self, plan_id: &str) -> Option<IssuedPlan> {
+        let issued = self.plans.remove(plan_id)?;
+        self.order.retain(|id| id != plan_id);
+        Some(issued)
+    }
+
+    #[cfg(test)]
+    fn len(&self) -> usize {
+        self.plans.len()
+    }
+}
 
 /// Quit-guard bound: SIGTERM → 5s grace → SIGKILL plus scheduling headroom.
 /// The exit path blocks at most this long for running ops to finalize.
@@ -39,6 +207,9 @@ pub struct AppState {
     /// Pack-Manager updating itself (DECISIONS D25) — deliberately outside the
     /// queue: it holds no manager lock and is not an `Operation`.
     pub app_update: Arc<AppUpdater>,
+    /// Coherent canonical-state revision plus bounded, one-use plan
+    /// capabilities. Queue batch admission shares this exact mutex.
+    pub plan_coordinator: Arc<Mutex<PlanCoordinator>>,
 }
 
 impl AppState {
@@ -83,6 +254,7 @@ impl AppState {
         )));
         let settings = Arc::new(RwLock::new(settings));
         let detection: Arc<RwLock<Option<DetectionOutcome>>> = Arc::new(RwLock::new(None));
+        let plan_coordinator = Arc::new(Mutex::new(PlanCoordinator::default()));
 
         // Auto re-refresh factory: builds a refresh submission from the
         // CURRENT detection + settings + ToolEnv.
@@ -128,6 +300,7 @@ impl AppState {
             ops_dir: logging::operations_dir(),
             refresh_factory: Some(factory),
             route_recheck: Some(route_recheck),
+            plan_coordinator: plan_coordinator.clone(),
             max_concurrency: queue::MAX_CONCURRENCY,
             aging_guard: queue::AGING_GUARD,
         });
@@ -146,6 +319,7 @@ impl AppState {
             sink,
             logging: Arc::new(Mutex::new(logging_handle)),
             app_update,
+            plan_coordinator,
         }
     }
 
@@ -164,14 +338,21 @@ impl AppState {
     /// picked up by the same click). Idempotent: re-running with an unchanged
     /// machine state stores and emits an equivalent report.
     ///
-    /// No lock guard is held across an await: detection completes first, then
-    /// the guards are taken briefly for the writes.
+    /// No lock guard is held across an await: a cancellation-safe lease marks
+    /// the update, detection runs, then the coordinator is reacquired briefly
+    /// for coherent publication.
     pub async fn redetect(&self, env: ToolEnv) -> DetectionOutcome {
+        // Reserve a new epoch before the async probe. Plans issued while the
+        // machine is being re-detected may still be previewed, but execution
+        // fails closed until the coherent publication below completes.
+        let update = StateUpdateLease::begin(self.plan_coordinator.clone());
         let outcome = detect::detect_all(&env, self.runner.as_ref()).await;
-        *self.tool_env.write().expect("tool_env poisoned") = env;
-        self.registry.set_routes_from(&outcome.report);
         let report = outcome.report.clone();
-        *self.detection.write().expect("detection poisoned") = Some(outcome.clone());
+        update.complete(|| {
+            *self.tool_env.write().expect("tool_env poisoned") = env;
+            self.registry.set_routes_from(&outcome.report);
+            *self.detection.write().expect("detection poisoned") = Some(outcome.clone());
+        });
         self.sink.emit(AppEvent::DetectionUpdated(report));
         outcome
     }
@@ -202,5 +383,46 @@ impl AppState {
         } else {
             tracing::warn!("app exit: shutdown grace elapsed with operations still running");
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ipc::{PlanRequest, UpgradePlan};
+
+    fn issued(id: &str) -> IssuedPlan {
+        let request = PlanRequest {
+            selection: None,
+            include_self_updates: false,
+            include_greedy_casks: false,
+        };
+        IssuedPlan {
+            request: request.clone(),
+            revision: 0,
+            plan: UpgradePlan {
+                plan_id: id.into(),
+                request,
+                groups: vec![],
+                excluded: vec![],
+                notes: vec![],
+                warnings: vec![],
+            },
+        }
+    }
+
+    #[test]
+    fn issued_plan_store_is_bounded_oldest_first_and_one_use() {
+        let mut store = IssuedPlanStore::new(2);
+        store.insert(issued("one"));
+        store.insert(issued("two"));
+        store.insert(issued("three"));
+
+        assert_eq!(store.len(), 2);
+        assert!(store.take("one").is_none(), "oldest capability is evicted");
+        assert!(store.take("two").is_some());
+        assert!(store.take("two").is_none(), "capability cannot be replayed");
+        assert!(store.take("three").is_some());
+        assert_eq!(store.len(), 0);
     }
 }

@@ -30,6 +30,11 @@ beforeEach(() => {
   fakeIpc.respond("refresh_all", () => ({ opIds: [] }));
   fakeIpc.respond("build_upgrade_plan", () => ({
     planId: "p",
+    request: {
+      selection: null,
+      includeSelfUpdates: true,
+      includeGreedyCasks: false,
+    },
     groups: [],
     excluded: [],
     notes: [],

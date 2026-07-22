@@ -151,26 +151,30 @@ impl ManagerAdapter for NpmAdapter {
         // (fixture row `npm 11.16.0 12.0.1 12.0.1`) — without this rule npm
         // would misroute to mise (SPEC §5.3 rule 1, DECISIONS D5).
         if own_outdated_row.is_some() {
-            return SelfUpdateRoute::InBand {
-                command_preview: "npm install -g npm@latest".into(),
+            return SelfUpdateRoute::in_band(
+                "npm",
+                vec!["install".into(), "-g".into(), "npm@latest".into()],
                 note,
-            };
+            );
         }
         match managed_by {
-            ManagedBy::Mise => SelfUpdateRoute::Routed {
-                executor: ManagerId::Mise,
-                command_preview: "mise upgrade npm".into(),
-                why: "npm is managed by mise".into(),
-            },
-            ManagedBy::Brew => SelfUpdateRoute::Routed {
-                executor: ManagerId::Brew,
-                command_preview: "brew upgrade npm".into(),
-                why: "npm is managed by Homebrew".into(),
-            },
-            _ => SelfUpdateRoute::InBand {
-                command_preview: "npm install -g npm@latest".into(),
+            ManagedBy::Mise => SelfUpdateRoute::routed(
+                ManagerId::Mise,
+                "mise",
+                vec!["upgrade".into(), "npm".into()],
+                "npm is managed by mise",
+            ),
+            ManagedBy::Brew => SelfUpdateRoute::routed(
+                ManagerId::Brew,
+                "brew",
+                vec!["upgrade".into(), "npm".into()],
+                "npm is managed by Homebrew",
+            ),
+            _ => SelfUpdateRoute::in_band(
+                "npm",
+                vec!["install".into(), "-g".into(), "npm@latest".into()],
                 note,
-            },
+            ),
         }
     }
 
@@ -392,6 +396,7 @@ mod tests {
             SelfUpdateRoute::InBand {
                 command_preview,
                 note,
+                ..
             } => {
                 assert_eq!(command_preview, "npm install -g npm@latest");
                 assert_eq!(note.as_deref(), Some(NPM_MISE_RESET_NOTE));

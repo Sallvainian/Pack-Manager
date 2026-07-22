@@ -122,11 +122,12 @@ impl ManagerAdapter for MasAdapter {
     ) -> SelfUpdateRoute {
         // SPEC §5.3 native rule: Unavailable unless brew-managed.
         match managed_by {
-            ManagedBy::Brew => SelfUpdateRoute::Routed {
-                executor: ManagerId::Brew,
-                command_preview: "brew upgrade mas".into(),
-                why: "mas is managed by Homebrew".into(),
-            },
+            ManagedBy::Brew => SelfUpdateRoute::routed(
+                ManagerId::Brew,
+                "brew",
+                vec!["upgrade".into(), "mas".into()],
+                "mas is managed by Homebrew",
+            ),
             _ => SelfUpdateRoute::Unavailable {
                 reason: "mas has no self-update mechanism".into(),
             },

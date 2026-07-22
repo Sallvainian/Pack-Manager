@@ -1,5 +1,5 @@
-//! All 17 IPC command handlers (SPEC §5.9) — completed by U5 against
-//! `state::AppState`. Handlers stay thin: the logic lives in `queue.rs` /
+//! IPC command handlers (SPEC §5.9) against `state::AppState`. Handlers stay
+//! thin: the logic lives in `queue.rs` /
 //! `journal.rs` / `diagnostics.rs`, all unit-tested there.
 
 use std::collections::BTreeSet;
@@ -8,17 +8,17 @@ use std::path::PathBuf;
 use serde::Deserialize;
 use tauri::State;
 
-use crate::detect::DetectStatus;
+use crate::detect::{adapter_for, DetectStatus, DetectionOutcome};
 use crate::error::{IpcError, PmError};
 use crate::ipc::{
-    AppState as AppStateWire, AppUpdateStatus, DetectionReport, DiagnosticsResult, ManagerId,
-    OpIds, OpRef, OperationDetail, OperationRecord, PlanRequest, SelfUpdateRoute,
+    AppState as AppStateWire, AppUpdateStatus, DetectionReport, DiagnosticsResult, ErrorCode,
+    ManagerId, OpIds, OpRef, OperationDetail, OperationRecord, PlanRequest, SelfUpdateRoute,
     UpdateCheckTrigger, UpgradePlan,
 };
 use crate::paths::ToolEnv;
 use crate::queue::{self, PlanSources};
 use crate::settings::{Settings, SettingsPatch};
-use crate::state::AppState;
+use crate::state::{AppState, IssuedPlan};
 
 fn placeholder_detection_report(env: &ToolEnv) -> DetectionReport {
     DetectionReport {
@@ -50,6 +50,59 @@ fn merged_records(state: &AppState) -> Vec<OperationRecord> {
 
 fn detection_not_ready() -> IpcError {
     IpcError::internal("detection has not completed yet")
+}
+
+fn plan_stale(detail: impl Into<String>) -> IpcError {
+    IpcError::from_code(
+        ErrorCode::PlanStale,
+        "The available updates changed. Review the refreshed plan and confirm again.",
+    )
+    .with_detail(detail)
+}
+
+/// Point-in-time inputs for canonical plan validation and subsequent
+/// submission construction. Synchronous guards are released before any queue
+/// submission is awaited.
+struct CurrentPlanState {
+    outcome: DetectionOutcome,
+    snapshots: Vec<crate::ipc::ManagerSnapshot>,
+    records: Vec<OperationRecord>,
+    settings: Settings,
+    env: ToolEnv,
+}
+
+/// Caller must hold `state.plan_coordinator`; every writer follows the same
+/// coordinator-first lock order, so these separately stored values represent
+/// one canonical epoch rather than a mixed-time collection.
+fn current_plan_state(state: &AppState) -> Result<CurrentPlanState, IpcError> {
+    let outcome = state
+        .detection
+        .read()
+        .expect("detection poisoned")
+        .as_ref()
+        .cloned()
+        .ok_or_else(detection_not_ready)?;
+    Ok(CurrentPlanState {
+        outcome,
+        snapshots: state.registry.all(),
+        records: state.queue.records(),
+        settings: state.settings.read().expect("settings poisoned").clone(),
+        env: state.tool_env.read().expect("tool_env poisoned").clone(),
+    })
+}
+
+fn canonical_plan(request: &PlanRequest, current: &CurrentPlanState) -> UpgradePlan {
+    let busy = queue::busy_package_ids(&current.records);
+    let stale = queue::stale_managers(&current.records);
+    queue::build_upgrade_plan(
+        request,
+        &PlanSources {
+            report: &current.outcome.report,
+            snapshots: &current.snapshots,
+            busy: &busy,
+            stale: &stale,
+        },
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -228,27 +281,34 @@ pub async fn refresh_all_with_env(state: &AppState, env: ToolEnv) -> Result<OpId
     Ok(OpIds { op_ids })
 }
 
-/// PURE preview — the trust device (SPEC F4).
+/// Issues a backend capability for the pure plan preview (SPEC F4).
 #[tauri::command]
 pub async fn build_upgrade_plan(
     state: State<'_, AppState>,
     args: PlanRequest,
 ) -> Result<UpgradePlan, IpcError> {
-    let det = state.detection.read().expect("detection poisoned");
-    let outcome = det.as_ref().ok_or_else(detection_not_ready)?;
-    let snapshots = state.registry.all();
-    let records = state.queue.records();
-    let busy = queue::busy_package_ids(&records);
-    let stale = queue::stale_managers(&records);
-    Ok(queue::build_upgrade_plan(
-        &args,
-        &PlanSources {
-            report: &outcome.report,
-            snapshots: &snapshots,
-            busy: &busy,
-            stale: &stale,
-        },
-    ))
+    issue_upgrade_plan(&state, args).await
+}
+
+/// Core issuance path with no Tauri dependency (deterministic tests).
+pub async fn issue_upgrade_plan(
+    state: &AppState,
+    request: PlanRequest,
+) -> Result<UpgradePlan, IpcError> {
+    let request = queue::canonicalize_plan_request(request).map_err(IpcError::from)?;
+    let mut coordinator = state
+        .plan_coordinator
+        .lock()
+        .expect("plan coordinator poisoned");
+    let current = current_plan_state(state)?;
+    let plan = canonical_plan(&request, &current);
+    let revision = coordinator.revision();
+    coordinator.insert_plan(IssuedPlan {
+        request,
+        plan: plan.clone(),
+        revision,
+    });
+    Ok(plan)
 }
 
 /// Re-validates and enqueues the previewed plan. Commands are re-derived from
@@ -259,58 +319,122 @@ pub async fn execute_plan(
     state: State<'_, AppState>,
     args: ExecutePlanArgs,
 ) -> Result<OpIds, IpcError> {
-    let mut subs = Vec::new();
-    {
-        let det = state.detection.read().expect("detection poisoned");
-        let outcome = det.as_ref().ok_or_else(detection_not_ready)?;
-        let settings = state.settings.read().expect("settings poisoned").clone();
-        let env = state.tool_env.read().expect("tool_env poisoned").clone();
-        for group in &args.plan.groups {
+    execute_issued_plan(&state, args.plan).await
+}
+
+fn submission_matches_group(sub: &queue::OpSubmission, group: &crate::ipc::PlanGroup) -> bool {
+    let kind_matches = if group.self_update {
+        matches!(sub.kind, crate::ops::OpKind::SelfUpdate)
+    } else {
+        matches!(sub.kind, crate::ops::OpKind::Upgrade { .. })
+            && sub.kind.package_ids() == group.package_ids
+    };
+    let previews: Vec<String> = sub
+        .commands
+        .iter()
+        .map(|command| {
+            crate::ipc::command_preview(adapter_for(sub.executor).binary_name(), &command.spec.args)
+        })
+        .collect();
+    let displayed: Vec<&str> = group
+        .commands
+        .iter()
+        .map(|command| command.argv_preview.as_str())
+        .collect();
+    kind_matches
+        && sub.executor == group.executor
+        && sub.subject == group.subject
+        && sub.locks.iter().copied().collect::<Vec<_>>() == group.locks
+        && previews.iter().map(String::as_str).collect::<Vec<_>>() == displayed
+}
+
+/// Consumes and re-validates a backend-issued plan against one canonical
+/// revision, then asks the scheduler to atomically re-check that revision and
+/// enqueue the complete batch. No synchronous guard crosses an await.
+pub async fn execute_issued_plan(
+    state: &AppState,
+    submitted: UpgradePlan,
+) -> Result<OpIds, IpcError> {
+    let (subs, expected_revision) = {
+        let mut coordinator = state
+            .plan_coordinator
+            .lock()
+            .expect("plan coordinator poisoned");
+        let issued = coordinator
+            .take_plan(&submitted.plan_id)
+            .ok_or_else(|| plan_stale("unknown, evicted, or already-used planId"))?;
+        if submitted != issued.plan || issued.plan.request != issued.request {
+            return Err(plan_stale("submitted plan differs from the issued plan"));
+        }
+        if coordinator.state_update_in_progress() {
+            return Err(plan_stale("canonical state is currently being refreshed"));
+        }
+        if issued.revision != coordinator.revision() {
+            return Err(plan_stale("canonical state revision changed after preview"));
+        }
+
+        let current = current_plan_state(state)
+            .map_err(|_| plan_stale("current detection state is unavailable"))?;
+        if current.records.iter().any(|record| {
+            record.kind == crate::ipc::OpKind::Refresh
+                && matches!(
+                    record.status,
+                    crate::ipc::OpStatus::Queued | crate::ipc::OpStatus::Running
+                )
+        }) {
+            return Err(plan_stale("a package-manager refresh is active"));
+        }
+        let mut fresh = canonical_plan(&issued.request, &current);
+        // UUID generation is the only nondeterministic plan field. Normalizing
+        // it lets exact equality cover every authenticated preview field.
+        fresh.plan_id.clone_from(&issued.plan.plan_id);
+        if fresh != issued.plan {
+            return Err(plan_stale("package-manager state changed after preview"));
+        }
+
+        let mut subs = Vec::new();
+        for group in &fresh.groups {
             if group.self_update {
-                let info = outcome
+                let info = current
+                    .outcome
                     .report
                     .managers
                     .iter()
-                    .find(|m| m.id == group.subject);
-                let Some(info) = info else { continue };
+                    .find(|m| m.id == group.subject)
+                    .ok_or_else(|| plan_stale("self-update subject is no longer detected"))?;
                 match &info.self_update {
                     SelfUpdateRoute::ViaRefresh { .. } => {
-                        if let Some(status) = outcome.statuses.get(&group.subject) {
-                            if let Some(sub) = queue::make_refresh_submission(
-                                group.subject,
-                                status,
-                                &settings,
-                                &env,
-                            ) {
-                                subs.push(sub);
-                            }
-                        }
+                        return Err(plan_stale("self-update route changed to refresh"));
                     }
-                    SelfUpdateRoute::Unavailable { reason } => {
-                        tracing::warn!(
-                            manager = %group.subject,
-                            %reason,
-                            "self-update no longer available; skipped"
-                        );
+                    SelfUpdateRoute::Unavailable { .. } => {
+                        return Err(plan_stale("self-update route became unavailable"));
                     }
                     route => {
                         let sub = queue::make_self_update_submission(
                             group.subject,
                             route,
-                            &outcome.statuses,
-                            &settings,
-                            &env,
+                            &current.outcome.statuses,
+                            &current.settings,
+                            &current.env,
                         )
                         .map_err(IpcError::from)?;
+                        if !submission_matches_group(&sub, group) {
+                            return Err(plan_stale(
+                                "re-derived self-update command differs from preview",
+                            ));
+                        }
                         subs.push(sub);
                     }
                 }
             } else {
-                let status = outcome.statuses.get(&group.executor).cloned().unwrap_or(
-                    DetectStatus::Absent {
+                let status = current
+                    .outcome
+                    .statuses
+                    .get(&group.executor)
+                    .cloned()
+                    .unwrap_or(DetectStatus::Absent {
                         reason: format!("{} was not detected", group.executor),
-                    },
-                );
+                    });
                 // Greedy casks reached the group only when opted in.
                 let include_greedy = group
                     .package_ids
@@ -321,18 +445,39 @@ pub async fn execute_plan(
                     &group.package_ids,
                     include_greedy,
                     &status,
-                    &settings,
-                    &env,
+                    &current.settings,
+                    &current.env,
                 )
                 .map_err(IpcError::from)?;
+                if !submission_matches_group(&sub, group) {
+                    return Err(plan_stale(
+                        "re-derived upgrade command differs from preview",
+                    ));
+                }
                 subs.push(sub);
             }
         }
-    }
-    let mut op_ids = Vec::with_capacity(subs.len());
-    for sub in subs {
-        op_ids.push(state.queue.submit(sub).await.map_err(IpcError::from)?);
-    }
+        (subs, coordinator.revision())
+    };
+    let op_ids = state
+        .queue
+        .submit_plan_batch(subs, expected_revision)
+        .await
+        .map_err(|error| match error {
+            queue::PlanBatchError::SchedulerGone => IpcError::internal("scheduler is unavailable"),
+            queue::PlanBatchError::RevisionChanged => {
+                plan_stale("canonical state revision changed before queue admission")
+            }
+            queue::PlanBatchError::ActiveRefresh => {
+                plan_stale("a package-manager refresh became active before queue admission")
+            }
+            queue::PlanBatchError::MutatingOperationConflict => plan_stale(
+                "an earlier package-manager mutation conflicts with this plan's lock set",
+            ),
+            queue::PlanBatchError::StateUpdateInProgress => {
+                plan_stale("canonical state update began before queue admission")
+            }
+        })?;
     Ok(OpIds { op_ids })
 }
 
@@ -475,14 +620,7 @@ pub async fn set_settings(
     state: State<'_, AppState>,
     args: SetSettingsArgs,
 ) -> Result<Settings, IpcError> {
-    let merged = {
-        let mut settings = state.settings.write().expect("settings poisoned");
-        settings.apply_patch(&args.patch);
-        settings.clone()
-    };
-    merged
-        .save_to(&state.settings_path)
-        .map_err(IpcError::from)?;
+    let merged = set_settings_core(&state, &args.patch)?;
     if args.patch.log_level.is_some() {
         if let Some(handle) = state.logging.lock().expect("logging poisoned").as_ref() {
             let applied = handle.apply_settings_level(merged.log_level);
@@ -490,6 +628,25 @@ pub async fn set_settings(
         }
     }
     tracing::info!("settings updated");
+    Ok(merged)
+}
+
+/// Persist-then-publish settings transaction, separated from the Tauri
+/// wrapper so revision and failure behavior can be proven directly.
+fn set_settings_core(state: &AppState, patch: &SettingsPatch) -> Result<Settings, IpcError> {
+    let mut coordinator = state
+        .plan_coordinator
+        .lock()
+        .expect("plan coordinator poisoned");
+    let mut merged = state.settings.read().expect("settings poisoned").clone();
+    merged.apply_patch(patch);
+    // Persist before publishing: a failed write leaves both the in-memory
+    // settings and the canonical plan revision unchanged.
+    merged
+        .save_to(&state.settings_path)
+        .map_err(IpcError::from)?;
+    *state.settings.write().expect("settings poisoned") = merged.clone();
+    coordinator.bump_revision();
     Ok(merged)
 }
 
@@ -644,11 +801,39 @@ mod tests {
     use std::sync::{Arc, Mutex, RwLock};
 
     use crate::events::{AppEvent, VecSink};
-    use crate::ipc::{ManagerStatus, OpKind, PathSource};
+    use crate::ipc::{
+        ErrorCode, ManagedBy, ManagerInfo, ManagerSnapshot, ManagerStatus, OpKind, Package,
+        PackageKind, PathSource, PlanSelection, SelfStatus,
+    };
     use crate::journal::Journal;
     use crate::process::fake::FakeRunner;
     use crate::queue::{Queue, QueueDeps};
     use crate::registry::Registry;
+
+    struct PendingDetectionRunner {
+        started: Arc<tokio::sync::Notify>,
+    }
+
+    #[async_trait::async_trait]
+    impl crate::process::CommandRunner for PendingDetectionRunner {
+        async fn run(
+            &self,
+            _spec: &crate::process::CommandSpec,
+            _cancel: tokio_util::sync::CancellationToken,
+        ) -> Result<crate::process::CommandOutput, PmError> {
+            self.started.notify_one();
+            std::future::pending().await
+        }
+
+        async fn run_streaming(
+            &self,
+            _spec: &crate::process::CommandSpec,
+            _sink: crate::process::LineSink,
+            _cancel: tokio_util::sync::CancellationToken,
+        ) -> Result<crate::process::CommandOutput, PmError> {
+            std::future::pending().await
+        }
+    }
 
     /// The placeholder report used before detection completes carries the
     /// current ToolEnv so the Environment Report is never blank.
@@ -704,6 +889,7 @@ mod tests {
         let fake = Arc::new(FakeRunner::new());
         let sink = Arc::new(VecSink::new());
         let registry = Arc::new(Registry::new());
+        let plan_coordinator = Arc::new(Mutex::new(crate::state::PlanCoordinator::default()));
         let queue = Queue::new(QueueDeps {
             runner: fake.clone(),
             sink: sink.clone(),
@@ -712,6 +898,7 @@ mod tests {
             ops_dir: dir.path().join("ops"),
             refresh_factory: None,
             route_recheck: None,
+            plan_coordinator: plan_coordinator.clone(),
             max_concurrency: queue::MAX_CONCURRENCY,
             aging_guard: queue::AGING_GUARD,
         });
@@ -730,6 +917,7 @@ mod tests {
                 "0.0.0-test",
                 sink.clone(),
             )),
+            plan_coordinator,
         };
         Harness {
             state,
@@ -942,5 +1130,688 @@ mod tests {
                 .wait_until_idle(std::time::Duration::from_secs(10))
                 .await
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // Backend-issued upgrade-plan capabilities and current-state validation.
+    // -----------------------------------------------------------------------
+
+    async fn prepare_brew_upgrade(h: &Harness) {
+        make_exec(&h.bin.join("brew"));
+        h.fake.on("brew", &["--version"]).ok("Homebrew 4.5.2\n");
+        h.state.redetect(h.env.clone()).await;
+        h.state.registry.upsert(ManagerSnapshot {
+            manager_id: ManagerId::Brew,
+            refreshed_at: "2026-07-22T14:00:00Z".into(),
+            packages: vec![
+                Package {
+                    id: "formula:dolt".into(),
+                    name: "dolt".into(),
+                    kind: PackageKind::Formula,
+                    installed: Some("2.2.1".into()),
+                    latest: Some("2.2.2".into()),
+                    outdated: true,
+                    pinned: false,
+                    meta: None,
+                },
+                Package {
+                    id: "formula:deno".into(),
+                    name: "deno".into(),
+                    kind: PackageKind::Formula,
+                    installed: Some("2.9.0".into()),
+                    latest: Some("2.9.3".into()),
+                    outdated: true,
+                    pinned: true,
+                    meta: None,
+                },
+            ],
+            self_status: None,
+            health: vec![],
+        });
+    }
+
+    fn prepare_brew_upgrade_with_routed_mise_self_update(h: &Harness) {
+        make_exec(&h.bin.join("brew"));
+        make_exec(&h.bin.join("mise"));
+        let report = DetectionReport {
+            managers: vec![
+                ManagerInfo {
+                    id: ManagerId::Brew,
+                    display_name: "Homebrew".into(),
+                    status: ManagerStatus::Present,
+                    binary_path: Some(h.bin.join("brew").to_string_lossy().into_owned()),
+                    canonical_path: Some(h.bin.join("brew").to_string_lossy().into_owned()),
+                    version: Some("4.5.2".into()),
+                    managed_by: ManagedBy::Standalone,
+                    evidence: Some("test standalone Homebrew".into()),
+                    self_update: SelfUpdateRoute::ViaRefresh {
+                        note: "brew update runs as part of every refresh".into(),
+                    },
+                    install_hint: None,
+                },
+                ManagerInfo {
+                    id: ManagerId::Mise,
+                    display_name: "mise".into(),
+                    status: ManagerStatus::Present,
+                    binary_path: Some(h.bin.join("mise").to_string_lossy().into_owned()),
+                    canonical_path: Some(h.bin.join("mise").to_string_lossy().into_owned()),
+                    version: Some("2026.1.0".into()),
+                    managed_by: ManagedBy::Brew,
+                    evidence: Some("test route via Homebrew".into()),
+                    self_update: SelfUpdateRoute::routed(
+                        ManagerId::Brew,
+                        "brew",
+                        vec!["upgrade".into(), "mise".into()],
+                        "mise is managed by Homebrew",
+                    ),
+                    install_hint: None,
+                },
+            ],
+            env: h.env.env_info(),
+        };
+        let mut statuses = std::collections::BTreeMap::new();
+        statuses.insert(
+            ManagerId::Brew,
+            DetectStatus::Present {
+                binary_path: h.bin.join("brew"),
+                canonical_path: h.bin.join("brew"),
+                version: Some("4.5.2".into()),
+                managed_by: ManagedBy::Standalone,
+                evidence: "test standalone Homebrew".into(),
+            },
+        );
+        statuses.insert(
+            ManagerId::Mise,
+            DetectStatus::Present {
+                binary_path: h.bin.join("mise"),
+                canonical_path: h.bin.join("mise"),
+                version: Some("2026.1.0".into()),
+                managed_by: ManagedBy::Brew,
+                evidence: "test route via Homebrew".into(),
+            },
+        );
+        h.state.registry.set_routes_from(&report);
+        *h.state.detection.write().unwrap() = Some(DetectionOutcome { report, statuses });
+        h.state.registry.upsert(ManagerSnapshot {
+            manager_id: ManagerId::Brew,
+            refreshed_at: "2026-07-22T14:00:00Z".into(),
+            packages: vec![Package {
+                id: "formula:dolt".into(),
+                name: "dolt".into(),
+                kind: PackageKind::Formula,
+                installed: Some("2.2.1".into()),
+                latest: Some("2.2.2".into()),
+                outdated: true,
+                pinned: false,
+                meta: None,
+            }],
+            self_status: None,
+            health: vec![],
+        });
+        h.state.registry.upsert(ManagerSnapshot {
+            manager_id: ManagerId::Mise,
+            refreshed_at: "2026-07-22T14:00:00Z".into(),
+            packages: vec![],
+            self_status: Some(SelfStatus {
+                installed: Some("2026.1.0".into()),
+                latest: Some("2026.2.0".into()),
+                update_available: true,
+            }),
+            health: vec![],
+        });
+    }
+
+    fn dolt_request() -> PlanRequest {
+        PlanRequest {
+            selection: Some(vec![
+                PlanSelection {
+                    manager_id: ManagerId::Brew,
+                    package_id: "formula:dolt".into(),
+                },
+                PlanSelection {
+                    manager_id: ManagerId::Brew,
+                    package_id: "formula:deno".into(),
+                },
+            ]),
+            include_self_updates: false,
+            include_greedy_casks: false,
+        }
+    }
+
+    async fn assert_plan_rejected_without_submission(state: &AppState, plan: UpgradePlan) {
+        let before = state.queue.records().len();
+        let error = execute_issued_plan(state, plan).await.unwrap_err();
+        assert_eq!(error.code, ErrorCode::PlanStale);
+        assert_eq!(state.queue.records().len(), before);
+    }
+
+    #[tokio::test]
+    async fn issued_plan_executes_once_and_replay_submits_nothing() {
+        let h = harness();
+        prepare_brew_upgrade(&h).await;
+        h.fake.on_streaming("brew", &["upgrade", "dolt"]).exit(0);
+
+        let plan = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        assert_eq!(plan.request, dolt_request());
+        let wire = serde_json::to_string(&plan).unwrap();
+        let round_tripped: UpgradePlan = serde_json::from_str(&wire).unwrap();
+        assert_eq!(round_tripped, plan);
+        let result = execute_issued_plan(&h.state, round_tripped).await.unwrap();
+        assert_eq!(result.op_ids.len(), 1);
+        assert_eq!(h.state.queue.records().len(), 1);
+
+        assert_plan_rejected_without_submission(&h.state, plan).await;
+        assert!(
+            h.state
+                .queue
+                .wait_until_idle(std::time::Duration::from_secs(10))
+                .await
+        );
+    }
+
+    #[tokio::test]
+    async fn round_tripped_multi_group_plan_executes_routed_self_update_structurally() {
+        let h = harness();
+        prepare_brew_upgrade_with_routed_mise_self_update(&h);
+        h.fake.on_streaming("brew", &["upgrade", "dolt"]).exit(0);
+        h.fake.on_streaming("brew", &["upgrade", "mise"]).exit(0);
+        let request = PlanRequest {
+            selection: Some(vec![PlanSelection {
+                manager_id: ManagerId::Brew,
+                package_id: "formula:dolt".into(),
+            }]),
+            include_self_updates: true,
+            include_greedy_casks: false,
+        };
+
+        let issued = issue_upgrade_plan(&h.state, request).await.unwrap();
+        assert_eq!(issued.groups.len(), 2);
+        let upgrade = issued
+            .groups
+            .iter()
+            .find(|group| !group.self_update)
+            .unwrap();
+        assert_eq!(upgrade.locks, vec![ManagerId::Brew]);
+        let self_update = issued
+            .groups
+            .iter()
+            .find(|group| group.self_update)
+            .unwrap();
+        assert_eq!(self_update.executor, ManagerId::Brew);
+        assert_eq!(self_update.subject, ManagerId::Mise);
+        assert_eq!(self_update.locks, vec![ManagerId::Brew, ManagerId::Mise]);
+
+        let wire = serde_json::to_string(&issued).unwrap();
+        let round_tripped: UpgradePlan = serde_json::from_str(&wire).unwrap();
+        let result = execute_issued_plan(&h.state, round_tripped).await.unwrap();
+        assert_eq!(result.op_ids.len(), 2);
+        assert!(
+            h.state
+                .queue
+                .wait_until_idle(std::time::Duration::from_secs(10))
+                .await
+        );
+
+        let records = h.state.queue.records();
+        assert_eq!(records.len(), 2);
+        assert_eq!(records[0].op_id, result.op_ids[0]);
+        assert_eq!(records[0].kind, OpKind::Upgrade);
+        assert_eq!(records[0].executor, ManagerId::Brew);
+        assert_eq!(records[0].subject, ManagerId::Brew);
+        assert_eq!(records[1].op_id, result.op_ids[1]);
+        assert_eq!(records[1].kind, OpKind::SelfUpdate);
+        assert_eq!(records[1].executor, ManagerId::Brew);
+        assert_eq!(records[1].subject, ManagerId::Mise);
+        let calls = h.fake.calls();
+        assert_eq!(calls.len(), 2);
+        assert_eq!(calls[0].basename, "brew");
+        assert_eq!(calls[0].args, vec!["upgrade", "dolt"]);
+        assert_eq!(calls[0].purpose, crate::process::CmdPurpose::Upgrade);
+        assert_eq!(calls[1].basename, "brew");
+        assert_eq!(calls[1].args, vec!["upgrade", "mise"]);
+        assert_eq!(calls[1].purpose, crate::process::CmdPurpose::SelfUpdate);
+    }
+
+    #[tokio::test]
+    async fn later_group_missing_backend_argv_submits_no_partial_batch() {
+        let h = harness();
+        prepare_brew_upgrade_with_routed_mise_self_update(&h);
+        let request = PlanRequest {
+            selection: Some(vec![PlanSelection {
+                manager_id: ManagerId::Brew,
+                package_id: "formula:dolt".into(),
+            }]),
+            include_self_updates: true,
+            include_greedy_casks: false,
+        };
+        let issued = issue_upgrade_plan(&h.state, request).await.unwrap();
+        let wire = serde_json::to_string(&issued).unwrap();
+        let round_tripped: UpgradePlan = serde_json::from_str(&wire).unwrap();
+
+        // Deliberately bypass the coordinator in this test to model corrupted
+        // backend-only route data without triggering the earlier revision
+        // guard. The ordinary Brew group derives first; the later self-update
+        // must still fail before the scheduler sees any group.
+        {
+            let mut detection = h.state.detection.write().unwrap();
+            let mise = detection
+                .as_mut()
+                .unwrap()
+                .report
+                .managers
+                .iter_mut()
+                .find(|manager| manager.id == ManagerId::Mise)
+                .unwrap();
+            match &mut mise.self_update {
+                SelfUpdateRoute::Routed { command_args, .. } => command_args.clear(),
+                _ => panic!("expected routed mise self-update"),
+            }
+        }
+
+        let error = execute_issued_plan(&h.state, round_tripped)
+            .await
+            .unwrap_err();
+        assert_eq!(error.code, ErrorCode::Internal);
+        assert!(h.state.queue.records().is_empty());
+        assert!(h.sink.events().is_empty());
+        assert!(h.fake.calls().is_empty());
+    }
+
+    #[tokio::test]
+    async fn every_round_tripped_plan_section_is_authenticated() {
+        let h = harness();
+        prepare_brew_upgrade(&h).await;
+
+        let mut plan = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        plan.plan_id = "unknown-plan-id".into();
+        assert_plan_rejected_without_submission(&h.state, plan).await;
+
+        let mut plan = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        plan.request.include_greedy_casks = true;
+        assert_plan_rejected_without_submission(&h.state, plan).await;
+
+        let mut plan = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        plan.groups[0].locks.push(ManagerId::Mise);
+        assert_plan_rejected_without_submission(&h.state, plan).await;
+
+        let mut plan = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        plan.groups[0].subject = ManagerId::Mise;
+        assert_plan_rejected_without_submission(&h.state, plan).await;
+
+        let mut plan = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        plan.groups[0].executor = ManagerId::Mise;
+        assert_plan_rejected_without_submission(&h.state, plan).await;
+
+        let mut plan = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        plan.groups[0].package_ids.push("formula:attacker".into());
+        assert_plan_rejected_without_submission(&h.state, plan).await;
+
+        let mut plan = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        plan.groups[0].commands[0].argv_preview = "brew upgrade attacker".into();
+        assert_plan_rejected_without_submission(&h.state, plan).await;
+
+        let mut plan = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        plan.groups[0].self_update = true;
+        assert_plan_rejected_without_submission(&h.state, plan).await;
+
+        let mut plan = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        plan.excluded.clear();
+        assert_plan_rejected_without_submission(&h.state, plan).await;
+
+        let mut plan = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        plan.notes.push("frontend-added note".into());
+        assert_plan_rejected_without_submission(&h.state, plan).await;
+
+        let mut plan = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        plan.warnings.push("frontend-added warning".into());
+        assert_plan_rejected_without_submission(&h.state, plan).await;
+    }
+
+    #[tokio::test]
+    async fn snapshot_drift_consumes_plan_and_submits_nothing() {
+        let h = harness();
+        prepare_brew_upgrade(&h).await;
+        let plan = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+
+        let mut current = h.state.registry.get(ManagerId::Brew).unwrap();
+        current
+            .packages
+            .iter_mut()
+            .find(|package| package.id == "formula:dolt")
+            .unwrap()
+            .outdated = false;
+        h.state.registry.upsert(current);
+
+        assert_plan_rejected_without_submission(&h.state, plan.clone()).await;
+        assert_plan_rejected_without_submission(&h.state, plan).await;
+    }
+
+    #[tokio::test]
+    async fn issued_plan_echoes_deduplicated_request_and_rejects_oversized_selection() {
+        let h = harness();
+        prepare_brew_upgrade(&h).await;
+        let duplicate_request = PlanRequest {
+            selection: Some(vec![
+                PlanSelection {
+                    manager_id: ManagerId::Brew,
+                    package_id: "formula:dolt".into(),
+                },
+                PlanSelection {
+                    manager_id: ManagerId::Brew,
+                    package_id: "formula:dolt".into(),
+                },
+            ]),
+            include_self_updates: false,
+            include_greedy_casks: false,
+        };
+        let plan = issue_upgrade_plan(&h.state, duplicate_request)
+            .await
+            .unwrap();
+        assert_eq!(plan.request.selection.as_ref().unwrap().len(), 1);
+        assert_eq!(plan.groups[0].package_ids, vec!["formula:dolt"]);
+        assert_eq!(plan.groups[0].commands[0].argv_preview, "brew upgrade dolt");
+
+        let oversized = PlanRequest {
+            selection: Some(
+                (0..=queue::MAX_PLAN_SELECTIONS)
+                    .map(|index| PlanSelection {
+                        manager_id: ManagerId::Brew,
+                        package_id: format!("formula:pkg-{index}"),
+                    })
+                    .collect(),
+            ),
+            include_self_updates: false,
+            include_greedy_casks: false,
+        };
+        let error = issue_upgrade_plan(&h.state, oversized).await.unwrap_err();
+        assert_eq!(error.code, ErrorCode::Internal);
+        assert!(h.state.queue.records().is_empty());
+    }
+
+    #[tokio::test]
+    async fn redetection_revision_drift_consumes_plan_and_submits_nothing() {
+        let h = harness();
+        prepare_brew_upgrade(&h).await;
+        let plan = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+
+        // Even an equivalent re-detection is a new canonical epoch: routes,
+        // binary ownership, and ToolEnv were re-probed after review.
+        h.state.redetect(h.env.clone()).await;
+
+        assert_plan_rejected_without_submission(&h.state, plan).await;
+    }
+
+    #[tokio::test]
+    async fn cancelled_pending_redetection_releases_revision_barrier() {
+        let mut h = harness();
+        prepare_brew_upgrade(&h).await;
+        let before_cancel = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+
+        let started = Arc::new(tokio::sync::Notify::new());
+        h.state.runner = Arc::new(PendingDetectionRunner {
+            started: started.clone(),
+        });
+        let task_state = h.state.clone();
+        let env = h.env.clone();
+        let redetect = tokio::spawn(async move { task_state.redetect(env).await });
+        started.notified().await;
+        assert!(h
+            .state
+            .plan_coordinator
+            .lock()
+            .unwrap()
+            .state_update_in_progress());
+
+        redetect.abort();
+        assert!(redetect.await.unwrap_err().is_cancelled());
+        assert!(
+            !h.state
+                .plan_coordinator
+                .lock()
+                .unwrap()
+                .state_update_in_progress(),
+            "dropping redetect must not leave execution blocked forever"
+        );
+        assert_plan_rejected_without_submission(&h.state, before_cancel).await;
+
+        h.fake.on_streaming("brew", &["upgrade", "dolt"]).exit(0);
+        let fresh = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        let result = execute_issued_plan(&h.state, fresh).await.unwrap();
+        assert_eq!(result.op_ids.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn plan_issued_during_active_refresh_is_rejected_without_upgrade() {
+        let h = harness();
+        prepare_brew_upgrade(&h).await;
+        let gate = Arc::new(tokio::sync::Notify::new());
+        h.fake
+            .on("brew", &["update"])
+            .gate(gate.clone())
+            .ok("Already up-to-date.\n");
+        h.fake
+            .on("brew", &["list", "--versions"])
+            .fixture("brew_list_versions_2026-07-22.txt");
+        h.fake
+            .on("brew", &["list", "--cask", "--versions"])
+            .fixture("brew_list_cask_versions_2026-07-22.txt");
+        h.fake
+            .on("brew", &["outdated", "--json=v2"])
+            .fixture("brew_outdated.json");
+        h.fake
+            .on("brew", &["outdated", "--json=v2", "--greedy"])
+            .fixture("brew_outdated_greedy.json");
+
+        let before_refresh = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        let refresh = refresh_submission_from_cache(&h.state, ManagerId::Brew).unwrap();
+        let refresh_id = h.state.queue.submit(refresh).await.unwrap();
+        assert_plan_rejected_without_submission(&h.state, before_refresh).await;
+
+        let during_refresh = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        let before = h.state.queue.records().len();
+
+        let error = execute_issued_plan(&h.state, during_refresh)
+            .await
+            .unwrap_err();
+        assert_eq!(error.code, ErrorCode::PlanStale);
+        assert_eq!(h.state.queue.records().len(), before);
+        assert_eq!(before, 1, "only the active refresh is queued/running");
+
+        gate.notify_one();
+        assert!(
+            h.state
+                .queue
+                .wait_until_idle(std::time::Duration::from_secs(10))
+                .await
+        );
+        assert_eq!(
+            h.state.queue.record(&refresh_id).unwrap().status,
+            crate::ipc::OpStatus::Succeeded
+        );
+    }
+
+    #[tokio::test]
+    async fn plan_cannot_queue_behind_earlier_direct_mutation_on_same_lock() {
+        let h = harness();
+        prepare_brew_upgrade(&h).await;
+        let baseline_calls = h.fake.calls().len();
+        let gate = Arc::new(tokio::sync::Notify::new());
+        h.fake
+            .on_streaming("brew", &["upgrade", "other"])
+            .gate(gate.clone())
+            .exit(0);
+        let status =
+            h.state.detection.read().unwrap().as_ref().unwrap().statuses[&ManagerId::Brew].clone();
+        let direct = queue::make_upgrade_submission(
+            ManagerId::Brew,
+            &["formula:other".into()],
+            false,
+            &status,
+            &h.state.settings.read().unwrap(),
+            &h.env,
+        )
+        .unwrap();
+        let direct_id = h.state.queue.submit(direct).await.unwrap();
+        for _ in 0..100 {
+            if h.fake.calls().len() == baseline_calls + 1 {
+                break;
+            }
+            tokio::task::yield_now().await;
+        }
+        assert_eq!(h.fake.calls().len(), baseline_calls + 1);
+
+        let plan = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        let error = execute_issued_plan(&h.state, plan).await.unwrap_err();
+        assert_eq!(error.code, ErrorCode::PlanStale);
+        assert_eq!(h.state.queue.records().len(), 1);
+        assert_eq!(h.fake.calls().len(), baseline_calls + 1);
+
+        gate.notify_one();
+        assert!(
+            h.state
+                .queue
+                .wait_until_idle(std::time::Duration::from_secs(10))
+                .await
+        );
+        assert_eq!(
+            h.state.queue.record(&direct_id).unwrap().status,
+            crate::ipc::OpStatus::Succeeded
+        );
+    }
+
+    #[tokio::test]
+    async fn settings_change_after_issue_invalidates_plan_without_submission() {
+        let h = harness();
+        prepare_brew_upgrade(&h).await;
+        let plan = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        let before_revision = h.state.plan_coordinator.lock().unwrap().revision();
+
+        let updated = set_settings_core(
+            &h.state,
+            &SettingsPatch {
+                stall_after_secs: Some(321),
+                ..SettingsPatch::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(updated.stall_after_secs, 321);
+        assert_eq!(
+            h.state.plan_coordinator.lock().unwrap().revision(),
+            before_revision + 1
+        );
+
+        assert_plan_rejected_without_submission(&h.state, plan).await;
+        assert!(h.state.queue.records().is_empty());
+    }
+
+    #[tokio::test]
+    async fn failed_settings_persistence_changes_neither_memory_nor_revision() {
+        let mut h = harness();
+        let file_where_directory_is_required = h.bin.join("not-a-directory");
+        std::fs::write(&file_where_directory_is_required, "block parent creation").unwrap();
+        h.state.settings_path = Arc::new(file_where_directory_is_required.join("settings.json"));
+        let before_settings = h.state.settings.read().unwrap().clone();
+        let before_revision = h.state.plan_coordinator.lock().unwrap().revision();
+
+        let error = set_settings_core(
+            &h.state,
+            &SettingsPatch {
+                stall_after_secs: Some(321),
+                ..SettingsPatch::default()
+            },
+        )
+        .unwrap_err();
+
+        assert_eq!(error.code, ErrorCode::Io);
+        assert_eq!(*h.state.settings.read().unwrap(), before_settings);
+        assert_eq!(
+            h.state.plan_coordinator.lock().unwrap().revision(),
+            before_revision
+        );
+    }
+
+    #[tokio::test]
+    async fn oldest_plan_is_stale_after_bounded_cache_eviction() {
+        let h = harness();
+        prepare_brew_upgrade(&h).await;
+        let oldest = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        for _ in 0..crate::state::ISSUED_PLAN_LIMIT {
+            issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        }
+        assert_plan_rejected_without_submission(&h.state, oldest).await;
+    }
+
+    #[tokio::test]
+    async fn overlapping_prebuilt_plans_serialize_validation_through_enqueue() {
+        let h = harness();
+        prepare_brew_upgrade(&h).await;
+        let gate = Arc::new(tokio::sync::Notify::new());
+        h.fake
+            .on_streaming("brew", &["upgrade", "dolt"])
+            .gate(gate.clone())
+            .exit(0);
+
+        let first = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        let second = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+
+        let first_state = h.state.clone();
+        let second_state = h.state.clone();
+        let first_task =
+            tokio::spawn(async move { execute_issued_plan(&first_state, first).await });
+        let second_task =
+            tokio::spawn(async move { execute_issued_plan(&second_state, second).await });
+        let (first_result, second_result) = tokio::join!(first_task, second_task);
+        let results = [first_result.unwrap(), second_result.unwrap()];
+        assert_eq!(results.iter().filter(|result| result.is_ok()).count(), 1);
+        assert_eq!(
+            results
+                .iter()
+                .filter(|result| matches!(result, Err(error) if error.code == ErrorCode::PlanStale))
+                .count(),
+            1
+        );
+        assert!(results
+            .iter()
+            .filter_map(|result| result.as_ref().ok())
+            .all(|ids| ids.op_ids.len() == 1));
+        assert_eq!(h.state.queue.records().len(), 1);
+
+        gate.notify_one();
+        assert!(
+            h.state
+                .queue
+                .wait_until_idle(std::time::Duration::from_secs(10))
+                .await
+        );
+    }
+
+    #[tokio::test]
+    async fn fast_terminal_first_plan_still_invalidates_second_prebuilt_plan() {
+        let h = harness();
+        prepare_brew_upgrade(&h).await;
+        h.fake.on_streaming("brew", &["upgrade", "dolt"]).exit(0);
+
+        let first = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+        let second = issue_upgrade_plan(&h.state, dolt_request()).await.unwrap();
+
+        let first_result = execute_issued_plan(&h.state, first).await.unwrap();
+        assert_eq!(first_result.op_ids.len(), 1);
+        assert!(
+            h.state
+                .queue
+                .wait_until_idle(std::time::Duration::from_secs(10))
+                .await
+        );
+        assert_eq!(
+            h.state
+                .queue
+                .record(&first_result.op_ids[0])
+                .unwrap()
+                .status,
+            crate::ipc::OpStatus::Succeeded
+        );
+
+        assert_plan_rejected_without_submission(&h.state, second).await;
+        assert_eq!(h.state.queue.records().len(), 1);
     }
 }

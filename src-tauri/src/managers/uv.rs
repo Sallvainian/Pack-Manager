@@ -126,26 +126,22 @@ impl ManagerAdapter for UvAdapter {
         own_outdated_row: Option<&Package>,
     ) -> SelfUpdateRoute {
         if own_outdated_row.is_some() {
-            return SelfUpdateRoute::InBand {
-                command_preview: "uv self update".into(),
-                note: None,
-            };
+            return SelfUpdateRoute::in_band("uv", vec!["self".into(), "update".into()], None);
         }
         match managed_by {
-            ManagedBy::Mise => SelfUpdateRoute::Routed {
-                executor: ManagerId::Mise,
-                command_preview: "mise upgrade uv".into(),
-                why: "uv is managed by mise".into(),
-            },
-            ManagedBy::Brew => SelfUpdateRoute::Routed {
-                executor: ManagerId::Brew,
-                command_preview: "brew upgrade uv".into(),
-                why: "uv is managed by Homebrew".into(),
-            },
-            _ => SelfUpdateRoute::InBand {
-                command_preview: "uv self update".into(),
-                note: None,
-            },
+            ManagedBy::Mise => SelfUpdateRoute::routed(
+                ManagerId::Mise,
+                "mise",
+                vec!["upgrade".into(), "uv".into()],
+                "uv is managed by mise",
+            ),
+            ManagedBy::Brew => SelfUpdateRoute::routed(
+                ManagerId::Brew,
+                "brew",
+                vec!["upgrade".into(), "uv".into()],
+                "uv is managed by Homebrew",
+            ),
+            _ => SelfUpdateRoute::in_band("uv", vec!["self".into(), "update".into()], None),
         }
     }
 

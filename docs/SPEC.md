@@ -36,7 +36,7 @@ Columns: checkbox, name, installed, latest (version-delta treatment §4.6), stat
 **Acceptance:** npm fixture data renders 4 package rows (self `npm` row hoisted to the SelfUpdateCard); mise fixture renders 6 outdated rows (`rust stable stable stable` is not outdated); pinned/greedy exclusions hold under select-all.
 
 ### F4 (P0) Upgrade All via plan sheet
-Dashboard "Update Everything" and per-manager "Upgrade all (k)" open the Upgrade Plan Sheet: per-manager sections showing the EXACT commands (`brew upgrade dolt`, `mise upgrade deno ruby fnox ruff npm:prettier uv`, `npm install -g typescript@latest …`), toggles `Include manager self-updates (n)` (default on) and `Include self-updating casks (n)` (default off), an `excluded` list with reasons, and warnings (e.g. stale check). Confirm calls `execute_plan`; managers run in parallel, serialized per lock set.
+Dashboard "Update Everything" and per-manager "Upgrade all (k)" open the Upgrade Plan Sheet: per-manager sections showing the EXACT commands (`brew upgrade dolt`, `mise upgrade deno ruby fnox ruff npm:prettier uv`, `npm install -g typescript@latest …`), toggles `Include manager self-updates (n)` (default on) and `Include self-updating casks (n)` (default off), an `excluded` list with reasons, and warnings (e.g. stale check). Each returned `planId` is a bounded, one-use backend capability. Before issuance, an explicit selection is bounded to 2,048 entries and 512 bytes per package ID, then exact `(managerId, packageId)` duplicates are removed first-seen-order; `selection: null` remains the distinct “all outdated” intent. Confirm calls `execute_plan`, which authenticates the exact round-tripped plan, rebuilds it from current state, and enqueues only if both plans match; a stale plan is replaced in the sheet and requires another confirmation. Dismissing the sheet while confirmation is pending invalidates every late UI continuation; a successful enqueue still performs the required selection cleanup. Managers run in parallel, serialized per lock set.
 **Acceptance:** the sheet's command strings are byte-equal to what the backend spawns (asserted via plan-builder tests + transcript header); rust-dedup rule (§5.7) applies; nothing runs that the sheet did not display.
 
 ### F5 (P0) Multi-select upgrade
@@ -62,13 +62,13 @@ Every operation writes a transcript (§6) and start/finish records to the crash-
 Dark theme is the only MVP theme (tokens §4.1, structured for a future light theme). Icon: programmatic 1024px PNG via `dev/icon/generate_icon.py` (Pillow) piped into `npx tauri icon`; generated set committed under `src-tauri/icons/`. `npm run tauri build` produces an ad-hoc-signed `.app` — that is the shipping deliverable; notarized DMG is explicitly out of scope (macOS 27 beta + Xcode-beta).
 
 ### F11 (P0) Settings
-Persisted at `~/Library/Application Support/Pack-Manager/settings.json`: `runBrewUpdateOnRefresh` (default true), `autoRefreshOnLaunch` (true), `stallAfterSecs` (120), `upgradeHardCapMins` (30), `logLevel` ('debug' for own crate), `autoOpenDrawer` (true), `includeGreedyByDefault` (false). Plus read-only Environment Report (search path + source, per-tool path/version/managedBy/evidence, Copy button) and Open Logs Folder / Export diagnostics / Re-detect.
+Persisted at `~/Library/Application Support/Pack-Manager/settings.json`: `runBrewUpdateOnRefresh` (default true), `autoRefreshOnLaunch` (true), `stallAfterSecs` (120), `upgradeHardCapMins` (30), `logLevel` ('debug' for own crate), `autoOpenDrawer` (true), `includeGreedyByDefault` (false). A patch is persisted before in-memory settings and the canonical-state revision advance; failed persistence leaves both unchanged. Plus read-only Environment Report (search path + source, per-tool path/version/managedBy/evidence, Copy button) and Open Logs Folder / Export diagnostics / Re-detect.
 
 ### F12 (P0) Deterministic test suite
 `cargo test` and `npm test` pass offline on a clean checkout. Full plan in §7.
 
 ### P1 (after all P0 green)
-- **F13 Health fixes:** uv broken tool environments (fixture warning line) render as HealthBanner with copyable fix command — this part is P0 via F2 — plus a "Run fix" button enqueuing `uv tool install <name> --reinstall` on the uv lane (`run_health_fix`).
+- **F13 Health fixes:** uv broken tool environments (fixture warning line) render as HealthBanner. Only an exact recognized `uv tool install <name> --reinstall` suggestion receives a copyable fix command and backend-only argv; altered, missing, or malformed suggestions remain warning detail with no copy/run affordance. The "Run fix" button enqueues the structured argv on the uv lane (`run_health_fix`).
 - **F14 Snapshot cache:** persist last snapshots; render instantly on launch with "stale — refreshing…".
 - **F15 Toasts→native notifications** when backgrounded.
 - **F16 Package detail popover** (uv executables, mise source path, npm dependedBy, brew pinned version).
@@ -203,7 +203,7 @@ Pane states: loading (header immediate from detection + 8 skeleton rows); clean 
 **SettingsView**: per F11.
 
 ### 4.10 Dialogs & toasts
-`UpgradePlanSheet` (overlay, 560px): title "Upgrade N packages", per-manager mono command blocks, toggles (self-updates on / greedy off), excluded list with reasons, warnings, footer note "Managers run in parallel; each manager runs one command at a time.", Cancel / `Upgrade` (primary). `StalledOperationDialog` per F7. `QuitGuardDialog`: quitting with running ops lists them; "Cancel operations and quit" (danger) / "Keep running". `ToastHost` (top-right, stack ≤3): success auto-dismiss 4s ("brew: 1 package upgraded"); failure persists with `View log` (opens drawer to that op); info ("Refresh complete — 12 updates available"); routed self-update enqueue ("Update uv queued via mise").
+`UpgradePlanSheet` (overlay, 560px): title "Upgrade N packages", per-manager mono command blocks, toggles (self-updates on / greedy off), excluded list with reasons, warnings, footer note "Managers run in parallel; each manager runs one command at a time.", Cancel / `Upgrade` (primary). A pending or failed rebuild disables Upgrade; any execute error consumes the attempted capability and requires a fresh plan, and late execute/rebuild results are ignored after dismissal. `StalledOperationDialog` per F7. `QuitGuardDialog`: quitting with running ops lists them; "Cancel operations and quit" (danger) / "Keep running". `ToastHost` (top-right, stack ≤3): success auto-dismiss 4s ("brew: 1 package upgraded"); failure persists with `View log` (opens drawer to that op); info ("Refresh complete — 12 updates available"); routed self-update enqueue ("Update uv queued via mise").
 
 ### 4.11 Keyboard map
 Cmd+R refresh current manager (Dashboard: all) · Cmd+Shift+R refresh all · Cmd+U upgrade selected (opens sheet) · Cmd+Shift+U Update Everything (sheet) · Cmd+A select all visible selectable rows · Space toggle focused row · Esc clear selection / close sheet / close drawer · Cmd+L toggle drawer · Cmd+F focus search · Cmd+1..9 sidebar jump. Roving tabindex in tables; live region announces op completions; all color states carry text/icon equivalents; text contrast ≥4.5:1 on its surface.
@@ -320,7 +320,7 @@ All parsers read **stdout only** for data (uv additionally scans stderr for `war
 - **brew list --versions**: `name ver1 [ver2…]` per line, last version wins. (Fixture captured in U3 before implementation.)
 - **mise outdated JSON**: `{}` = clean (verified). Populated shape UNVERIFIED → `*_synthetic` fixture with values copied verbatim from the text capture; text parser is the wired recovery. Text format (verified, NO header row in fixture): whitespace columns `tool requested current latest source` — 7 rows; `rust stable stable stable` → NOT outdated (current == latest); `npm:prettier` name preserved verbatim (split ids on first `:` only); source path → `meta.source`. A first line starting with `Tool` is skipped if present.
 - **npm outdated JSON**: `{}` = clean (verified); populated shape `{ name: { current, wanted, latest, location, dependent } }` UNVERIFIED → synthetic fixture from the verified text capture (header `Package Current Wanted Latest Location Depended by`, 5 rows). Display uses `latest`; `wanted` → meta. The `npm` entry becomes `selfPackage`.
-- **uv tool list**: `warning:` lines from either stream → `HealthIssue` (extract tool name between backticks; fix command from the parenthetical: fixture line 1 `warning: Tool \`aider-chat\` environment not found (run \`uv tool install aider-chat --reinstall\` to reinstall)`). Tool lines `^(\S+) v(\S+)$`; `- exe` lines accumulate into `meta.executables` (verified: 12 tools in each capture; `claude-code-tools` has 17 executables in `uv_tool_list.txt`; `serena-agent v1.6.2.dev0` proves non-semver versions). `--outdated`: empty output = clean (0-byte capture); any `(vX available)`-style suffix captured leniently as `latest`, unknown suffixes degrade to `latest: null` → UI shows "update available" without a fabricated delta. WARN-log on non-empty until the format is captured.
+- **uv tool list**: `warning:` lines from either stream → `HealthIssue` (extract tool name between backticks independently of the optional reinstall suffix; the fixture line `warning: Tool \`aider-chat\` environment not found (run \`uv tool install aider-chat --reinstall\` to reinstall)` is runnable only because its suggestion exactly matches the allowlisted command derived from the safe tool name). Altered, missing, or malformed suggestions remain in `detail` but set neither `fixCommand` nor backend fix argv. Tool lines `^(\S+) v(\S+)$`; `- exe` lines accumulate into `meta.executables` (verified: 12 tools in each capture; `claude-code-tools` has 17 executables in `uv_tool_list.txt`; `serena-agent v1.6.2.dev0` proves non-semver versions). `--outdated`: empty output = clean (0-byte capture); any `(vX available)`-style suffix captured leniently as `latest`, unknown suffixes degrade to `latest: null` → UI shows "update available" without a fabricated delta. WARN-log on non-empty until the format is captured.
 - **rustup check**: line regex `^(?P<name>\S+)\s+-\s+(?:Update available\s*:\s*(?P<from>\S+).*?->\s*(?P<to>\S+)|up to date\s*:\s*(?P<cur>\S+))` — the flexible `\s*:\s*` is load-bearing: verified fixtures contain BOTH `up to date: 1.97.1 (8bab26f4f 2026-07-14)` and `rustup - up to date : 1.29.0` within one file. Toolchain rows → packages; the `rustup` row → self-update state (`1.28.2 → 1.29.0` in the outdated fixture). Hashes/dates → meta.
 - **rustup toolchain list**: `name [(default)]` per line. (Fixture captured in U3.)
 - **mas**: list `^(\d+)\s+(.+?)\s+\((\S+)\)$`; outdated `^(\d+)\s+(.+?)\s+\((\S+) -> (\S+)\)$` — from docs, UNVERIFIED live (mas absent), synthetic fixtures labeled; failure mode is ParseFailed-with-excerpt, never a crash. `zsh: command not found: mas` never reaches a parser (detection gates it); a defensive test documents this.
@@ -354,7 +354,7 @@ Lock rules:
 - Routed self-update adds the subject: `brew upgrade mise` holds `{Brew, Mise}` — no mise op runs while its binary is replaced.
 - Shared-tree guards: npm ops add `Mise` when npm is mise-managed (`npm -g` writes inside mise's node tree); uv ops add `Mise` when uv is mise-managed. Correctness over throughput on exactly this machine's topology.
 Scheduler: single tokio task owning `pending: VecDeque`, `held: BTreeSet<ManagerId>`, `running` map. On submit/completion, scan front-to-back and start every op whose `locks ∩ held = ∅` (FIFO with skip-ahead), bounded by a global `Semaphore(4)` (16GB headroom). Lock acquisition is atomic inside the single scheduler task → no deadlock possible; no ordered acquisition needed. **Starvation guard**: skip-ahead is disabled past any op that has waited >120s. Duplicate `refresh_manager` for a manager with a queued/running refresh coalesces (returns the existing opId). Spec execution is serial per op; a `Failure` classification aborts remaining specs. Terminal state → `op:status finished`, journal finish record, transcript footer; successful Upgrade/SelfUpdate/HealthFix auto-enqueues Refresh for `subject` (and `executor` if different).
-**Plan builder** (`build_upgrade_plan`, pure): expands selection (or all-outdated when null) into per-manager groups with exact argv previews; excludes pinned (reason `pinned`) and greedy casks unless opted in (reason `greedyCask`); **rust-dedup rule**: a single plan never contains both mise's `tool:rust` and any rustup `toolchain:*` — the mise entry is dropped with reason `rustDedup` and a sheet note ("rust toolchains are handled by rustup in this plan"); warns when a manager's last check errored ("list may be stale"). `execute_plan` re-validates and enqueues.
+**Plan builder** (`queue::build_upgrade_plan`, pure): receives a canonical request whose explicit selection has at most 2,048 entries, package IDs of at most 512 bytes, and exact duplicate manager/package pairs removed first-seen-order (`null` remains all-outdated). It expands that request into per-manager groups with exact argv previews; excludes pinned (reason `pinned`) and greedy casks unless opted in (reason `greedyCask`); **rust-dedup rule**: a single plan never contains both mise's `tool:rust` and any rustup `toolchain:*` — the mise entry is dropped with reason `rustDedup` and a sheet note ("rust toolchains are handled by rustup in this plan"); warns when a manager's last check errored ("list may be stale"). The IPC handler stores at most 64 issued plans, each bound to a monotonic canonical-state revision covering detection/routes, snapshots, queue busy/stale state, settings, and ToolEnv. `execute_plan` consumes the capability, compares submitted/issued/fresh plans within one coherent revision, rejects active refreshes, and sends the complete derived operation set to the scheduler as one atomic all-or-none batch. Scheduler admission rechecks the expected revision and rejects the batch if any incoming lock intersects an already queued/running Upgrade, SelfUpdate, or HealthFix; overlaps among groups in the same incoming batch remain valid and serialize normally. Successful admission advances the revision, so every other prebuilt plan is invalidated even if the first batch finishes immediately.
 **Crash safety (`journal.rs`)**: append-only `~/Library/Application Support/Pack-Manager/operations.jsonl` — one line at start `{opId, kind, executor, subject, commandLine, pgid, startedAt}`, one at finish `{opId, outcome, exitCode, finishedAt}`, flushed each write; compacted to newest 1000 at startup. Start-without-finish → `Interrupted` in History. Recorded pgids are NEVER signaled on startup (pid reuse). This one file is both the crash journal and the History source.
 
 ### 5.8 Registry & cross-manager self-version join (`registry.rs`)
@@ -362,7 +362,7 @@ Scheduler: single tokio task owning `pending: VecDeque`, `held: BTreeSet<Manager
 
 ### 5.9 IPC contract (exact)
 
-Conventions: commands snake_case, all returning `Result<T, IpcError>`; every Rust payload struct in `ipc.rs` with `#[derive(Serialize, Deserialize)] #[serde(rename_all = "camelCase")]`; TS mirrors in `src/lib/ipc/types.ts`; drift guarded by the contract test (§7.4). Event names use Tauri-legal charset.
+Conventions: commands use snake_case and return `Result<T, IpcError>`; serialized struct fields use lowerCamelCase. Enum wire spellings are explicit—ordinary values are lowercase or lowerCamelCase as defined by the type, while stable `ErrorCode` values use snake_case. TypeScript mirrors serialized fields in `src/lib/ipc/types.ts` (backend-only `#[serde(skip)]` fields are omitted); drift is guarded by the contract test (§7.4). Event names use Tauri-legal charset.
 
 **Commands** (TS signatures in `client.ts`):
 ```ts
@@ -370,9 +370,9 @@ detect_managers(): Promise<DetectionReport>                       // also Re-det
 get_state(): Promise<AppState>                                    // rehydration on mount / dev reload
 refresh_manager(args: { managerId: ManagerId }): Promise<OpRef>   // coalesces duplicates
 refresh_all(): Promise<{ opIds: string[] }>
-build_upgrade_plan(args: PlanRequest): Promise<UpgradePlan>       // PURE preview — the trust device
+build_upgrade_plan(args: PlanRequest): Promise<UpgradePlan>       // issues one-use trust-device preview
 execute_plan(args: { plan: UpgradePlan }): Promise<{ opIds: string[] }>
-self_update_manager(args: { managerId: ManagerId }): Promise<OpRef>  // errors selfUpdateUnavailable
+self_update_manager(args: { managerId: ManagerId }): Promise<OpRef>  // errors self_update_unavailable
 run_health_fix(args: { managerId: ManagerId, issueId: string }): Promise<OpRef>
 cancel_operation(args: { opId: string }): Promise<void>
 get_operation(args: { opId: string }): Promise<OperationDetail>   // record + ring-buffer replay
@@ -385,7 +385,7 @@ export_diagnostics(): Promise<{ zipPath: string }>
 log_frontend_event(args: { level: 'warn'|'error', message: string }): Promise<void>
 ```
 
-**Types** (TS; Rust structs mirror 1:1):
+**Types** (TS mirrors serialized Rust fields; backend-only `#[serde(skip)]` fields are intentionally omitted):
 ```ts
 type ManagerId = 'brew'|'mise'|'npm'|'uv'|'rustup'|'mas';
 type ManagedBy = 'brew'|'mise'|'rustup'|'standalone';
@@ -431,6 +431,7 @@ interface PlanRequest {
 }
 interface UpgradePlan {
   planId: string;
+  request: PlanRequest;        // UI stale refresh only; execution trusts the cached request
   groups: { subject: ManagerId; executor: ManagerId; locks: ManagerId[];
             commands: { argvPreview: string; label: string }[];
             packageIds: string[]; selfUpdate: boolean }[];
@@ -482,7 +483,7 @@ pub enum PmError {
     Internal { detail: String },
 }
 ```
-Serialized as `IpcError { code, message, detail?, managerId?, opId?, logPath? }` with codes `tool_not_found | spawn_failed | timeout | non_zero_exit | brew_lock_busy | parse_failed | cancelled | self_update_unavailable | env_capture_failed | io | internal`. `logPath` is always populated for op-scoped errors — "View log" never dangles. Rules: `ExpectedNonZero` never becomes `NonZeroExit`. `ParseFailed` on refresh keeps the previous snapshot. `BrewLockBusy` is a distinct user-facing state — "Homebrew is busy in another terminal. Retry when it finishes." — with NO automatic retry. User-facing copy per code lives in `src/lib/errors.ts` (state what happened + next action, e.g. timeout → "Homebrew refresh timed out after 600s. Check your network and retry."); offline degrades to per-manager timeout/error cards with snapshots retained.
+Serialized as `IpcError { code, message, detail?, managerId?, opId?, logPath? }` with codes `tool_not_found | spawn_failed | timeout | non_zero_exit | brew_lock_busy | parse_failed | cancelled | self_update_unavailable | plan_stale | env_capture_failed | io | internal`. `plan_stale` covers unknown, evicted, replayed, altered, or current-state-mismatched bulk plans and requires review of a newly issued plan. `logPath` is always populated for op-scoped errors — "View log" never dangles. Rules: `ExpectedNonZero` never becomes `NonZeroExit`. `ParseFailed` on refresh keeps the previous snapshot. `BrewLockBusy` is a distinct user-facing state — "Homebrew is busy in another terminal. Retry when it finishes." — with NO automatic retry. User-facing copy per code lives in `src/lib/errors.ts` (state what happened + next action, e.g. timeout → "Homebrew refresh timed out after 600s. Check your network and retry."); offline degrades to per-manager timeout/error cards with snapshots retained.
 
 ### 5.11 Frontend state (zustand, `src/store/`)
 - `managers`: DetectionReport; derived phase per manager from ops; lastError per manager.

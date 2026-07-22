@@ -677,6 +677,7 @@ mod tests {
             self_update: SelfUpdateRoute::Routed {
                 executor: ManagerId::Mise,
                 command_preview: "mise upgrade npm".into(),
+                command_args: vec!["upgrade".into(), "npm".into()],
                 why: "npm is managed by mise".into(),
             },
             install_hint: None,
