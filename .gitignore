@@ -25,3 +25,10 @@ dist-ssr
 
 # Rust / Tauri
 src-tauri/target
+
+# Agent tooling, installed per-machine rather than vendored (~24MB of skill
+# files). Reinstallable, so it stays out of the repo.
+.agents/
+.claude/
+_bmad/
+.mcp.json
