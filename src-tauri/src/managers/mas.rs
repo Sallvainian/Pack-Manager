@@ -166,23 +166,40 @@ mod tests {
     }
 
     #[test]
-    fn synthetic_refresh_merges_list_and_outdated() {
+    fn refresh_merges_list_and_outdated() {
+        // Both fixtures come from the SAME live refresh, so the overlay is
+        // exercised against a self-consistent pair: list reports 5.20.0
+        // installed, outdated reports 5.20.0 -> 5.21.0.
         let outputs = vec![
-            out(&fixture("mas_list_synthetic.txt")),
-            out(&fixture("mas_outdated_synthetic.txt")),
+            out(&fixture("mas_list_2026-07-22.txt")),
+            out(&fixture("mas_outdated_2026-07-22.txt")),
         ];
         let snapshot = MasAdapter.parse_refresh(&outputs).expect("snapshot");
-        assert_eq!(snapshot.packages.len(), 3);
+        assert_eq!(snapshot.packages.len(), 12);
+
+        let canary = snapshot
+            .packages
+            .iter()
+            .find(|p| p.name == "Canary Mail")
+            .expect("canary row");
+        assert_eq!(canary.id, "app:1236045954");
+        assert_eq!(canary.installed.as_deref(), Some("5.20.0"));
+        assert!(canary.outdated);
+        assert_eq!(canary.latest.as_deref(), Some("5.21.0"));
+
+        // Only the 3 rows in the outdated overlay flip; the other 9 stay clean.
+        assert_eq!(snapshot.packages.iter().filter(|p| p.outdated).count(), 3);
         let xcode = snapshot
             .packages
             .iter()
             .find(|p| p.name == "Xcode")
             .expect("xcode row");
-        assert_eq!(xcode.id, "app:497799835");
-        // Synthetic list has 16.2 installed while outdated says 16.1 → 16.2;
-        // the overlay patches latest/outdated only.
-        assert!(xcode.outdated);
-        assert_eq!(xcode.latest.as_deref(), Some("16.2"));
+        assert!(!xcode.outdated);
+        // `parse_list` mirrors installed into latest, so an untouched row
+        // reports its own version rather than a null the UI would have to
+        // render as "update available".
+        assert_eq!(xcode.latest.as_deref(), Some("26.6"));
+        assert_eq!(xcode.installed.as_deref(), Some("26.6"));
     }
 
     #[test]

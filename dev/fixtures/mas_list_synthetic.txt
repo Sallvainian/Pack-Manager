@@ -1,3 +1,0 @@
-497799835 Xcode (16.2)
-1295203466 Microsoft Remote Desktop (10.9.5)
-409183694 Keynote (14.2)

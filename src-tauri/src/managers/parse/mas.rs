@@ -104,38 +104,55 @@ mod tests {
     use super::*;
 
     #[test]
-    fn mas_outdated_synthetic_parses() {
-        let rows = parse_outdated(&read_fixture("mas_outdated_synthetic.txt")).expect("parse");
-        assert_eq!(rows.len(), 2);
+    fn mas_outdated_parses_real_capture() {
+        let rows = parse_outdated(&read_fixture("mas_outdated_2026-07-22.txt")).expect("parse");
+        assert_eq!(rows.len(), 3);
 
-        let xcode = &rows[0];
-        assert_eq!(xcode.id, "app:497799835");
-        assert_eq!(xcode.name, "Xcode");
-        assert_eq!(xcode.installed.as_deref(), Some("16.1"));
-        assert_eq!(xcode.latest.as_deref(), Some("16.2"));
-        assert!(xcode.outdated);
+        let canary = &rows[0];
+        assert_eq!(canary.id, "app:1236045954");
+        assert_eq!(canary.name, "Canary Mail");
+        assert_eq!(canary.installed.as_deref(), Some("5.20.0"));
+        assert_eq!(canary.latest.as_deref(), Some("5.21.0"));
+        assert!(canary.outdated);
 
         // App name with spaces is handled.
-        let rdp = &rows[1];
-        assert_eq!(rdp.name, "Microsoft Remote Desktop");
-        assert_eq!(rdp.installed.as_deref(), Some("10.9.4"));
-        assert_eq!(rdp.latest.as_deref(), Some("10.9.5"));
+        assert_eq!(rows[1].name, "Proton Pass for Safari");
+
+        // The two shapes the retired `_synthetic` fixtures could not have
+        // guessed, both present in real output: mas right-aligns the app id, so
+        // short ids carry a LEADING space; and it pads the version column
+        // INSIDE the parens, so `installed` arrives with trailing spaces
+        // (`(4.2.2  -> 4.3.0)`). Both must be trimmed off.
+        let testflight = &rows[2];
+        assert_eq!(testflight.id, "app:899247664");
+        assert_eq!(testflight.name, "TestFlight");
+        assert_eq!(testflight.installed.as_deref(), Some("4.2.2"));
+        assert_eq!(testflight.latest.as_deref(), Some("4.3.0"));
     }
 
     #[test]
-    fn mas_list_synthetic_parses() {
-        let rows = parse_list(&read_fixture("mas_list_synthetic.txt")).expect("parse");
-        assert_eq!(rows.len(), 3);
-        let xcode = &rows[0];
-        assert_eq!(xcode.name, "Xcode");
-        assert_eq!(xcode.installed.as_deref(), Some("16.2"));
-        assert!(!xcode.outdated);
+    fn mas_list_parses_real_capture() {
+        let rows = parse_list(&read_fixture("mas_list_2026-07-22.txt")).expect("parse");
+        assert_eq!(rows.len(), 12);
+
+        let canary = &rows[0];
+        assert_eq!(canary.id, "app:1236045954");
+        assert_eq!(canary.name, "Canary Mail");
+        assert_eq!(canary.installed.as_deref(), Some("5.20.0"));
+        // `mas list` never reports outdatedness — that is the overlay's job.
+        assert!(!canary.outdated);
+
+        // Leading-space id (right-aligned 9-digit) and a name carrying both a
+        // hyphen and spaces — neither appears in hand-written examples.
+        assert_eq!(rows[1].id, "app:640199958");
+        assert_eq!(rows[3].name, "FireShot - Full web page screenshots");
     }
 
     #[test]
     fn mas_shell_error_never_reaches_parser() {
-        // Detection gates mas (`zsh: command not found: mas`); if that string
-        // ever reached a parser it degrades to ParseFailed, never a panic.
+        // Captured when mas was absent from the dev machine. Detection gates an
+        // absent manager, so this string never reaches a parser — but if it ever
+        // did it degrades to ParseFailed, never a panic.
         let err = parse_outdated(&read_fixture("mas_outdated.txt")).unwrap_err();
         match err {
             PmError::ParseFailed { excerpt, .. } => {

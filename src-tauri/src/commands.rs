@@ -746,10 +746,10 @@ mod tests {
             .fixture("brew_outdated.json");
         fake.on("brew", &["outdated", "--json=v2", "--greedy"])
             .fixture("brew_outdated_greedy.json");
-        fake.on("mas", &["--version"]).ok("1.9.0\n");
-        fake.on("mas", &["list"]).fixture("mas_list_synthetic.txt");
+        fake.on("mas", &["--version"]).ok("7.0.0\n");
+        fake.on("mas", &["list"]).fixture("mas_list_2026-07-22.txt");
         fake.on("mas", &["outdated"])
-            .fixture("mas_outdated_synthetic.txt");
+            .fixture("mas_outdated_2026-07-22.txt");
     }
 
     fn detection_updated_reports(sink: &VecSink) -> Vec<DetectionReport> {
