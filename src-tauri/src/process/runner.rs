@@ -1,9 +1,9 @@
 //! `CommandRunner` — the single seam for every child process (SPEC §5.6, §7).
 //!
 //! `RealRunner`: `tokio::process::Command` with `.process_group(0)`,
-//! `.stdin(Stdio::null())`, line readers with `\r` split and ANSI stripping,
-//! 512KiB caps, stall watchdog, absolute timeout, and SIGTERM → 5s grace →
-//! SIGKILL via `nix::killpg`.
+//! `.stdin(Stdio::null())`, line readers with `\r` split, ANSI stripping and
+//! an unterminated-notice split (D26), 512KiB caps, stall watchdog, absolute
+//! timeout, and SIGTERM → 5s grace → SIGKILL via `nix::killpg`.
 
 use std::process::Stdio;
 use std::sync::{Arc, OnceLock};
@@ -77,10 +77,52 @@ pub fn strip_ansi(s: &str) -> String {
     ansi_re().replace_all(s, "").into_owned()
 }
 
+/// Notices that a producer prints with NO line terminator at all — not `\n`,
+/// not `\r` — so the next line of real output concatenates onto them and both
+/// arrive in a single `read_until(b'\n')` buffer.
+///
+/// Splitting after one of these is the ONLY place Pack-Manager inserts a break
+/// the child never printed, so the list stays closed and literal: each entry is
+/// a verbatim string from a captured transcript, never a pattern. See D26.
+///
+/// - `Update progress cannot be displayed` — `mas` 7.0.0 emits this per app
+///   during `mas upgrade` when stdout is not a TTY and it cannot draw its
+///   progress bar. Captured at `operations/…_mas_upgrade.log`, which shows
+///   `displayed==> U` with no byte between.
+const UNTERMINATED_NOTICES: &[&str] = &["Update progress cannot be displayed"];
+
+/// Breaks a piece after any [`UNTERMINATED_NOTICES`] entry that has more output
+/// glued to it. A notice sitting at the very end of the piece was terminated
+/// normally and is left alone.
+fn split_unterminated_notices(piece: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut rest = piece;
+    'scan: loop {
+        for notice in UNTERMINATED_NOTICES {
+            let Some(pos) = rest.find(notice) else {
+                continue;
+            };
+            let end = pos + notice.len();
+            if end >= rest.len() {
+                continue; // properly terminated — nothing glued on
+            }
+            out.push(rest[..end].to_string());
+            rest = &rest[end..];
+            continue 'scan;
+        }
+        break;
+    }
+    if !rest.is_empty() || out.is_empty() {
+        out.push(rest.to_string());
+    }
+    out
+}
+
 /// Turns one raw `read_until(b'\n')` buffer into displayable line(s):
-/// lossy UTF-8, trailing `\n` stripped, ANSI stripped, then split on `\r`
-/// (progress repaints become their own lines). An entirely-empty raw line
-/// yields one empty line (blank output lines are legitimate).
+/// lossy UTF-8, trailing `\n` stripped, ANSI stripped, split on `\r`
+/// (progress repaints become their own lines), then split after any known
+/// unterminated notice. An entirely-empty raw line yields one empty line
+/// (blank output lines are legitimate).
 pub fn split_output_line(raw: &[u8]) -> Vec<String> {
     let mut text = String::from_utf8_lossy(raw).into_owned();
     if text.ends_with('\n') {
@@ -90,7 +132,7 @@ pub fn split_output_line(raw: &[u8]) -> Vec<String> {
     let pieces: Vec<String> = stripped
         .split('\r')
         .filter(|p| !p.is_empty())
-        .map(str::to_owned)
+        .flat_map(split_unterminated_notices)
         .collect();
     if pieces.is_empty() {
         vec![String::new()]
@@ -414,6 +456,51 @@ mod tests {
         // A blank line stays one blank line.
         assert_eq!(split_output_line(b"\n"), vec![""]);
         assert_eq!(split_output_line(b"\r\n"), vec![""]);
+    }
+
+    #[test]
+    fn split_output_line_breaks_after_an_unterminated_notice() {
+        // Verbatim from a `mas upgrade` transcript: mas prints the notice with
+        // no terminator, so `==> Updated …` glues onto it and both land in one
+        // `read_until(b'\n')` buffer.
+        assert_eq!(
+            split_output_line(
+                b"Update progress cannot be displayed==> Updated Canary Mail App (5.21.0) in /Applications/Canary Mail.app\n"
+            ),
+            vec![
+                "Update progress cannot be displayed",
+                "==> Updated Canary Mail App (5.21.0) in /Applications/Canary Mail.app",
+            ]
+        );
+    }
+
+    #[test]
+    fn split_output_line_leaves_a_terminated_notice_alone() {
+        // Same text, but mas terminated it properly — no synthetic break.
+        assert_eq!(
+            split_output_line(b"Update progress cannot be displayed\n"),
+            vec!["Update progress cannot be displayed"]
+        );
+        // Repeated notices in one buffer each end a line. The break goes AFTER
+        // the notice, so text preceding one stays on its line — which is what
+        // the real case wants (the notice comes first, `==> Updated …` glues
+        // on behind it).
+        assert_eq!(
+            split_output_line(
+                b"Update progress cannot be displayedaUpdate progress cannot be displayedb\n"
+            ),
+            vec![
+                "Update progress cannot be displayed",
+                "aUpdate progress cannot be displayed",
+                "b",
+            ]
+        );
+        // Output that merely mentions the notice mid-line still splits — the
+        // list is literal by design, and a false positive costs one line break.
+        assert_eq!(
+            split_output_line(b"prefix Update progress cannot be displayed suffix\n"),
+            vec!["prefix Update progress cannot be displayed", " suffix"]
+        );
     }
 
     #[test]
