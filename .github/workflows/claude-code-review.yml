@@ -6,7 +6,13 @@ on:
 
 jobs:
   review-with-tracking:
-    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    # Human-authored PRs only. The action hard-fails (exit 1) on a bot-authored
+    # PR rather than skipping — "Workflow initiated by non-human actor" — so
+    # release-please and dependabot PRs would each carry a red X for a review
+    # nobody wanted. Gating on `user.type` covers every bot without maintaining
+    # a login allowlist; the alternative (adding them to `allowed_bots`) would
+    # run the review instead of suppressing it.
+    if: github.event.pull_request.user.type != 'Bot'
     runs-on: ubuntu-latest
     permissions:
       contents: read
