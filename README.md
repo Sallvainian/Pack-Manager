@@ -69,13 +69,17 @@ Authoritative design docs: `docs/SPEC.md`, `docs/DECISIONS.md`,
 ## Dev commands
 
 ```sh
-npm install                          # frontend deps
-npm run tauri dev                    # run the app (dev)
-fnox exec -- npm run tauri build     # .app + .dmg + updater archive
-
+npm install                # frontend deps
+npm run tauri dev          # run the app (dev)
 npm test                   # Vitest suite
 npx tsc --noEmit           # typecheck
 cd src-tauri && cargo test # Rust suite (offline; live smoke is #[ignore])
+```
+
+Building the app bundle:
+
+```sh
+fnox exec -- npm run tauri build
 ```
 
 Build output lands under `src-tauri/target/release/bundle/` — the app and its
