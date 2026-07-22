@@ -625,6 +625,14 @@ pub async fn install_app_update(
     // LaunchServices, so it comes up behind every other window unless it
     // activates itself. The spawned process inherits this env var and acts on
     // it at `RunEvent::Ready`. Set last: it must not outlive a failed install.
+    //
+    // This is an async command, so it runs on a runtime worker rather than the
+    // main thread, and `set_var` can in principle race a concurrent `getenv`
+    // elsewhere — the reason edition 2024 makes it `unsafe`. Tolerated here:
+    // `shutdown()` has already run and `restart` never returns, so the process
+    // is milliseconds from exec. On an edition bump this needs an `unsafe`
+    // block plus that safety note; it fails to compile rather than silently
+    // changing behaviour, so the bump itself is the reminder.
     std::env::set_var(crate::RELAUNCH_FOCUS_ENV, "1");
     tracing::info!("restarting into the updated build");
     app.restart();

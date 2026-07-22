@@ -26,6 +26,21 @@ use tauri::Manager as _;
 /// Menu item id for the app menu's "Check for Updates…".
 const MENU_CHECK_FOR_UPDATES: &str = "check_for_updates";
 
+/// The window to pull forward after an update, preferring the configured label
+/// but never depending on it.
+///
+/// `tauri.conf.json` declares no explicit `label`, so Tauri assigns the default
+/// `"main"`. Looking that up directly worked, but silently returned `None` the
+/// moment anyone set a label — and a dropped focus request looks exactly like
+/// the bug this machinery exists to fix, with nothing to debug from. This app
+/// ships a single window, so falling back to whichever one exists is both
+/// unambiguous and label-independent.
+fn focus_target(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
+    use tauri::Manager as _;
+    app.get_webview_window("main")
+        .or_else(|| app.webview_windows().into_values().next())
+}
+
 /// Set by `commands::install_app_update` immediately before `restart`, and read
 /// back by the process that restart spawns — `Command::new` inherits the parent
 /// environment, so this survives the hand-off. Its presence means "you are the
@@ -252,12 +267,21 @@ pub fn run() {
                     // One-shot: a later self-restart must opt in again, and
                     // nothing downstream should inherit it.
                     std::env::remove_var(RELAUNCH_FOCUS_ENV);
-                    if let Some(window) = app_handle.get_webview_window("main") {
-                        if let Err(error) = window.set_focus() {
-                            // Losing focus is a papercut, never a reason to
-                            // fail the launch we just performed.
-                            tracing::warn!(%error, "could not focus the updated build");
+                    match focus_target(app_handle) {
+                        Some(window) => {
+                            if let Err(error) = window.set_focus() {
+                                // Losing focus is a papercut, never a reason to
+                                // fail the launch we just performed.
+                                tracing::warn!(%error, "could not focus the updated build");
+                            }
                         }
+                        // Loud on purpose: silently dropping the focus request
+                        // reproduces the exact bug this exists to fix, with
+                        // nothing in the logs to explain it.
+                        None => tracing::warn!(
+                            "no window to focus after update; the updated build \
+                             will stay behind other windows"
+                        ),
                     }
                 }
             }
