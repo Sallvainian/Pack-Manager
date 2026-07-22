@@ -27,8 +27,8 @@ dist-ssr
 src-tauri/target
 
 # Agent tooling, installed per-machine rather than vendored (~24MB of skill
-# files). Reinstallable, so it stays out of the repo.
+# files). Reinstallable, so it stays out of the repo. `.mcp.json` is tracked
+# deliberately — it is machine-independent and shared, not an install artifact.
 .agents/
 .claude/
 _bmad/
-.mcp.json
