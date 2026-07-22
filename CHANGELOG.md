@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/Sallvainian/Pack-Manager/compare/v0.1.0...v0.1.1) (2026-07-22)
+
+
+### Bug Fixes
+
+* **ui:** stop the status chip wrapping into the version delta column ([20fdce1](https://github.com/Sallvainian/Pack-Manager/commit/20fdce1693bc04f1eb338541cb48d0af88a8dcc6))
+
 ## 0.1.0 (2026-07-22)
 
 
