@@ -1,0 +1,56 @@
+{
+  "planId": "01981f2e-0000-7000-8000-5f8cff3fb96b",
+  "groups": [
+    {
+      "subject": "brew",
+      "executor": "brew",
+      "locks": [
+        "brew"
+      ],
+      "commands": [
+        {
+          "argvPreview": "brew upgrade dolt",
+          "label": "Upgrade 1 formula"
+        }
+      ],
+      "packageIds": [
+        "formula:dolt"
+      ],
+      "selfUpdate": false
+    },
+    {
+      "subject": "mise",
+      "executor": "brew",
+      "locks": [
+        "brew",
+        "mise"
+      ],
+      "commands": [
+        {
+          "argvPreview": "brew upgrade mise",
+          "label": "Self-update mise via Homebrew"
+        }
+      ],
+      "packageIds": [],
+      "selfUpdate": true
+    }
+  ],
+  "excluded": [
+    {
+      "managerId": "brew",
+      "packageId": "formula:deno",
+      "reason": "pinned"
+    },
+    {
+      "managerId": "mise",
+      "packageId": "tool:rust",
+      "reason": "rustDedup"
+    }
+  ],
+  "notes": [
+    "rust toolchains are handled by rustup in this plan"
+  ],
+  "warnings": [
+    "mise: list may be stale — last check errored"
+  ]
+}

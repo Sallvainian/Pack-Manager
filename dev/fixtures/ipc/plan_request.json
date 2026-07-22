@@ -1,0 +1,14 @@
+{
+  "selection": [
+    {
+      "managerId": "brew",
+      "packageId": "formula:dolt"
+    },
+    {
+      "managerId": "npm",
+      "packageId": "globalPackage:typescript"
+    }
+  ],
+  "includeSelfUpdates": true,
+  "includeGreedyCasks": false
+}

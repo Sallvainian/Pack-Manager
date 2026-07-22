@@ -1,0 +1,15 @@
+{
+  "opId": "01981f2e-6a3b-7c40-9d5e-1f2a3b4c5d6e",
+  "batch": [
+    {
+      "stream": "out",
+      "line": "added 1 package in 4s",
+      "tsMs": 1753192992104
+    },
+    {
+      "stream": "err",
+      "line": "npm warn deprecated inflight@1.0.6",
+      "tsMs": 1753192992371
+    }
+  ]
+}

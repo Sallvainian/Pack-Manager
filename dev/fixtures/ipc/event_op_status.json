@@ -1,0 +1,11 @@
+{
+  "opId": "01981f2e-6a3b-7c40-9d5e-1f2a3b4c5d6e",
+  "kind": "refresh",
+  "executor": "brew",
+  "subject": "brew",
+  "status": "running",
+  "phaseLabel": "Updating Homebrew metadata…",
+  "commandLine": "/opt/homebrew/bin/brew update",
+  "startedAt": "2026-07-22T14:03:11Z",
+  "logPath": "/Users/sallvain/Library/Logs/Pack-Manager/operations/2026-07-22T14-03-11_01981f2e_npm_upgrade.log"
+}

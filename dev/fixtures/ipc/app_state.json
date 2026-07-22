@@ -1,0 +1,133 @@
+{
+  "detection": {
+    "managers": [
+      {
+        "id": "brew",
+        "displayName": "Homebrew",
+        "status": "present",
+        "binaryPath": "/opt/homebrew/bin/brew",
+        "canonicalPath": "/opt/homebrew/bin/brew",
+        "version": "4.5.2",
+        "managedBy": "standalone",
+        "evidence": "resolved at /opt/homebrew/bin/brew — Homebrew's own tree",
+        "selfUpdate": {
+          "kind": "viaRefresh",
+          "note": "brew update runs as part of every refresh"
+        }
+      },
+      {
+        "id": "npm",
+        "displayName": "npm",
+        "status": "present",
+        "binaryPath": "/Users/sallvain/.local/share/mise/shims/npm",
+        "canonicalPath": "/opt/homebrew/bin/mise",
+        "version": "11.16.0",
+        "managedBy": "mise",
+        "evidence": "resolved at ~/.local/share/mise/shims/npm",
+        "selfUpdate": {
+          "kind": "inBand",
+          "commandPreview": "npm install -g npm@latest",
+          "note": "npm and all global packages live inside the mise-managed node — upgrading node via mise resets them."
+        }
+      },
+      {
+        "id": "uv",
+        "displayName": "uv",
+        "status": "present",
+        "binaryPath": "/Users/sallvain/.local/share/mise/shims/uv",
+        "canonicalPath": "/opt/homebrew/bin/mise",
+        "version": "0.11.26",
+        "managedBy": "mise",
+        "evidence": "resolved at ~/.local/share/mise/shims/uv",
+        "selfUpdate": {
+          "kind": "routed",
+          "executor": "mise",
+          "commandPreview": "mise upgrade uv",
+          "why": "uv is managed by mise"
+        }
+      },
+      {
+        "id": "mas",
+        "displayName": "mas",
+        "status": "absent",
+        "managedBy": "standalone",
+        "selfUpdate": {
+          "kind": "unavailable",
+          "reason": "mas is not installed"
+        },
+        "installHint": "brew install mas"
+      }
+    ],
+    "env": {
+      "path": "/Users/sallvain/.local/share/mise/shims:/opt/homebrew/bin:/opt/homebrew/sbin:/Users/sallvain/.cargo/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+      "entries": [
+        "/Users/sallvain/.local/share/mise/shims",
+        "/opt/homebrew/bin",
+        "/opt/homebrew/sbin",
+        "/Users/sallvain/.cargo/bin",
+        "/usr/local/bin",
+        "/usr/bin",
+        "/bin",
+        "/usr/sbin",
+        "/sbin"
+      ],
+      "source": "merged",
+      "home": "/Users/sallvain"
+    }
+  },
+  "snapshots": [
+    {
+      "managerId": "npm",
+      "refreshedAt": "2026-07-22T14:03:11Z",
+      "packages": [
+        {
+          "id": "globalPackage:typescript",
+          "name": "typescript",
+          "kind": "globalPackage",
+          "installed": "6.0.3",
+          "latest": "7.0.2",
+          "outdated": true,
+          "pinned": false,
+          "meta": {
+            "wanted": "7.0.2",
+            "dependedBy": "global"
+          }
+        }
+      ],
+      "selfStatus": {
+        "installed": "11.16.0",
+        "latest": "12.0.1",
+        "updateAvailable": true
+      },
+      "health": []
+    }
+  ],
+  "operations": [
+    {
+      "opId": "01981f2e-6a3b-7c40-9d5e-1f2a3b4c5d6e",
+      "kind": "upgrade",
+      "executor": "npm",
+      "subject": "npm",
+      "status": "queued",
+      "commandLine": "/Users/sallvain/.local/share/mise/shims/npm install -g typescript@latest",
+      "packageIds": [
+        "globalPackage:typescript"
+      ],
+      "queuedAt": "2026-07-22T14:03:11Z",
+      "startedAt": null,
+      "finishedAt": null,
+      "exitCode": null,
+      "error": null,
+      "logPath": "/Users/sallvain/Library/Logs/Pack-Manager/operations/2026-07-22T14-03-11_01981f2e_npm_upgrade.log"
+    }
+  ],
+  "settings": {
+    "runBrewUpdateOnRefresh": true,
+    "autoRefreshOnLaunch": true,
+    "stallAfterSecs": 120,
+    "upgradeHardCapMins": 30,
+    "logLevel": "debug",
+    "autoOpenDrawer": true,
+    "includeGreedyByDefault": false
+  }
+}

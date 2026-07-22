@@ -1,0 +1,52 @@
+{
+  "managerId": "uv",
+  "refreshedAt": "2026-07-22T14:05:00Z",
+  "packages": [
+    {
+      "id": "tool:ruff",
+      "name": "ruff",
+      "kind": "tool",
+      "installed": "0.15.20",
+      "latest": null,
+      "outdated": true,
+      "pinned": false,
+      "meta": {
+        "executables": [
+          "ruff"
+        ]
+      }
+    },
+    {
+      "id": "tool:serena-agent",
+      "name": "serena-agent",
+      "kind": "tool",
+      "installed": "1.6.2.dev0",
+      "latest": "1.6.2.dev0",
+      "outdated": false,
+      "pinned": false,
+      "meta": {
+        "executables": [
+          "serena",
+          "serena-agent",
+          "index-project"
+        ]
+      }
+    }
+  ],
+  "selfStatus": {
+    "installed": "0.11.26",
+    "latest": "0.11.30",
+    "updateAvailable": true
+  },
+  "health": [
+    {
+      "id": "uv:aider-chat",
+      "managerId": "uv",
+      "severity": "warning",
+      "title": "Tool `aider-chat` environment is broken.",
+      "detail": "warning: Tool `aider-chat` environment not found (run `uv tool install aider-chat --reinstall` to reinstall)",
+      "fixCommand": "uv tool install aider-chat --reinstall",
+      "fixable": true
+    }
+  ]
+}

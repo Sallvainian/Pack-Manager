@@ -1,0 +1,8 @@
+{
+  "code": "timeout",
+  "message": "Homebrew refresh timed out after 600s. Check your network and retry.",
+  "detail": "phase: brew update",
+  "managerId": "brew",
+  "opId": "01981f2e-6a3b-7c40-9d5e-1f2a3b4c5d6e",
+  "logPath": "/Users/sallvain/Library/Logs/Pack-Manager/operations/2026-07-22T14-03-11_01981f2e_npm_upgrade.log"
+}

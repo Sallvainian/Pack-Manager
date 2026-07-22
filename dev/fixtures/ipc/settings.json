@@ -1,0 +1,9 @@
+{
+  "runBrewUpdateOnRefresh": true,
+  "autoRefreshOnLaunch": true,
+  "stallAfterSecs": 120,
+  "upgradeHardCapMins": 30,
+  "logLevel": "debug",
+  "autoOpenDrawer": true,
+  "includeGreedyByDefault": false
+}

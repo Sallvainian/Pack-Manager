@@ -1,0 +1,17 @@
+{
+  "opId": "01981f2e-6a3b-7c40-9d5e-1f2a3b4c5d6e",
+  "kind": "upgrade",
+  "executor": "npm",
+  "subject": "npm",
+  "status": "succeeded",
+  "commandLine": "/Users/sallvain/.local/share/mise/shims/npm install -g typescript@latest",
+  "packageIds": [
+    "globalPackage:typescript"
+  ],
+  "queuedAt": "2026-07-22T14:03:11Z",
+  "startedAt": "2026-07-22T14:03:11Z",
+  "finishedAt": "2026-07-22T14:03:16Z",
+  "exitCode": 0,
+  "error": null,
+  "logPath": "/Users/sallvain/Library/Logs/Pack-Manager/operations/2026-07-22T14-03-11_01981f2e_npm_upgrade.log"
+}

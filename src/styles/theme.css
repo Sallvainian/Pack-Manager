@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+/* Design tokens (SPEC §4.1). Dark-only in MVP; tokens live in this one file so
+   a light theme is a value swap. */
+@theme {
+  /* Surfaces — dark blue-graphite ramp */
+  --color-bg-base:       #0B0E14;   /* window background */
+  --color-bg-surface:    #11151D;   /* sidebar, cards, table header */
+  --color-bg-raised:     #171C26;   /* hover rows, drawer, inputs */
+  --color-bg-overlay:    #1D2330;   /* dialogs, sheets, popovers */
+  --color-bg-inset:      #07090D;   /* log viewer background */
+  --color-border:        #232A36;
+  --color-border-strong: #303948;
+
+  /* Text */
+  --color-text-primary:   #E6E9EF;
+  --color-text-secondary: #9AA3B2;
+  --color-text-muted:     #5C6675;
+
+  /* Accent + status */
+  --color-accent:        #4F8CFF;   /* primary actions, focus, running */
+  --color-accent-hover:  #6BA0FF;
+  --color-accent-subtle: #4F8CFF1F; /* 12% — selected-row wash */
+  --color-success:       #3FB96B;
+  --color-warning:       #E5A53A;
+  --color-danger:        #E5564F;
+  --color-info:          #38BDF8;
+  /* Badges/banners use the status color at 12% alpha backgrounds. */
+
+  /* Version-delta severity (DISPLAY ONLY — never decides outdatedness) */
+  --color-sev-major: #E5564F;
+  --color-sev-minor: #E5A53A;
+  --color-sev-patch: #3FB96B;
+
+  /* Shape */
+  --radius-card: 10px; --radius-control: 6px;
+
+  /* Fonts */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* Base surface: the window is always the dark ramp. */
+body {
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+}
+
+/* prefers-reduced-motion disables all transitions (default 150ms ease). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

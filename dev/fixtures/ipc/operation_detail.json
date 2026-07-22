@@ -1,0 +1,39 @@
+{
+  "record": {
+    "opId": "01981f2e-6a3b-7c40-9d5e-1f2a3b4c5d6e",
+    "kind": "upgrade",
+    "executor": "npm",
+    "subject": "npm",
+    "status": "failed",
+    "commandLine": "/Users/sallvain/.local/share/mise/shims/npm install -g typescript@latest",
+    "packageIds": [
+      "globalPackage:typescript"
+    ],
+    "queuedAt": "2026-07-22T14:03:11Z",
+    "startedAt": "2026-07-22T14:03:11Z",
+    "finishedAt": "2026-07-22T14:03:16Z",
+    "exitCode": 1,
+    "error": {
+      "code": "brew_lock_busy",
+      "message": "Homebrew is busy in another terminal. Retry when it finishes.",
+      "detail": "Error: Another active Homebrew update process is already in progress.",
+      "managerId": "brew",
+      "opId": "01981f2e-6a3b-7c40-9d5e-1f2a3b4c5d6e",
+      "logPath": "/Users/sallvain/Library/Logs/Pack-Manager/operations/2026-07-22T14-03-11_01981f2e_npm_upgrade.log"
+    },
+    "logPath": "/Users/sallvain/Library/Logs/Pack-Manager/operations/2026-07-22T14-03-11_01981f2e_npm_upgrade.log"
+  },
+  "lines": [
+    {
+      "stream": "out",
+      "line": "==> Upgrading dolt",
+      "tsMs": 1753192991104
+    },
+    {
+      "stream": "err",
+      "line": "Error: Another active Homebrew update process is already in progress.",
+      "tsMs": 1753192991371
+    }
+  ],
+  "truncated": false
+}
