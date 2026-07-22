@@ -122,3 +122,10 @@ events instead of one); a Homebrew cask (no in-app prompt); silent auto-install 
   bundle without `TAURI_SIGNING_PRIVATE_KEY` ("A public key has been found, but no private
   key"), and a throwaway key fails too because the CLI checks it against the configured
   pubkey.
+
+## D26. One closed, literal list of unterminated notices may be split — nothing else
+`mas` 7.0.0 prints `Update progress cannot be displayed` per app during `mas upgrade` with **no line terminator at all** — not `\n`, not `\r`. Verified at the byte level: `od -c` over a captured transcript shows `d i s p l a y e d = = > U \n`, so the notice and the following `==> Updated …` arrive in one `read_until(b'\n')` buffer and render as one jammed line. The existing `\r` split (progress repaints) cannot help; there is nothing to split on.
+
+`runner.rs` carries `UNTERMINATED_NOTICES`, a const list of **verbatim strings, never patterns**, and breaks the line after any entry that has output glued behind it. A notice sitting at the end of a buffer was terminated normally and is left alone.
+
+This is the only place Pack-Manager inserts a line break the child never printed, which is why the rule is deliberately the least clever one available. **Accepted cost:** transcripts are no longer byte-identical to the child's stream for these lines — a break appears where the producer emitted none. Judged worth it: the alternative is an unreadable line every time an App Store app upgrades, and the inserted break is exactly the one the producer should have sent. **Rejected:** splitting before any mid-line `==>` (would corrupt legitimate output containing `==>`); regex/heuristic detection of "a new message probably started here" (unbounded false positives, and it would silently rewrite output from managers that are behaving correctly); doing nothing (the display bug is real and recurs on every `mas upgrade`).
