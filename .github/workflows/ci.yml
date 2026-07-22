@@ -88,7 +88,7 @@ jobs:
       - name: tauri build (debug)
         run: npm run tauri build -- --debug --no-sign
       - name: Upload .app
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Pack-Manager-debug-app
           path: src-tauri/target/debug/bundle/macos/Pack-Manager.app
