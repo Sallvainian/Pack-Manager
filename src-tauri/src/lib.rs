@@ -26,6 +26,15 @@ use tauri::Manager as _;
 /// Menu item id for the app menu's "Check for Updates…".
 const MENU_CHECK_FOR_UPDATES: &str = "check_for_updates";
 
+/// Set by `commands::install_app_update` immediately before `restart`, and read
+/// back by the process that restart spawns — `Command::new` inherits the parent
+/// environment, so this survives the hand-off. Its presence means "you are the
+/// updated build, pull yourself to the front"; see the `RunEvent::Ready` arm.
+///
+/// Only ever set on the restart path, so a normal launch (already frontmost)
+/// never calls `activateIgnoringOtherApps` and cannot steal focus.
+pub const RELAUNCH_FOCUS_ENV: &str = "PM_FOCUS_AFTER_UPDATE";
+
 /// Tauri's `Menu::default` has no room for a custom item, so the macOS menu is
 /// rebuilt here. Everything except "Check for Updates…" mirrors that default —
 /// notably the Edit submenu, without which ⌘X/⌘C/⌘V/⌘A stop working in the
@@ -229,14 +238,37 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|app_handle, event| {
+        .run(|app_handle, event| match event {
+            // Pull an updated build to the front. `AppHandle::restart` bare-
+            // spawns the new binary (tauri `process.rs`) rather than going
+            // through LaunchServices, so the replacement inherits no
+            // activation token and macOS opens it *behind* every other window.
+            // `Ready` is the earliest point that works: it fires inside the
+            // event loop, once NSApp has finished launching, so tao's
+            // `activateIgnoringOtherApps` actually takes. Called from `setup`
+            // it is silently dropped.
+            tauri::RunEvent::Ready => {
+                if std::env::var_os(RELAUNCH_FOCUS_ENV).is_some() {
+                    // One-shot: a later self-restart must opt in again, and
+                    // nothing downstream should inherit it.
+                    std::env::remove_var(RELAUNCH_FOCUS_ENV);
+                    if let Some(window) = app_handle.get_webview_window("main") {
+                        if let Err(error) = window.set_focus() {
+                            // Losing focus is a papercut, never a reason to
+                            // fail the launch we just performed.
+                            tracing::warn!(%error, "could not focus the updated build");
+                        }
+                    }
+                }
+            }
             // Quit-guard kill hook: on exit, cancel every running op so child
             // process groups are SIGTERMed and never outlive the app. The
             // confirm dialog lives in the frontend (QuitGuardDialog, U8).
-            if let tauri::RunEvent::Exit = event {
+            tauri::RunEvent::Exit => {
                 if let Some(state) = app_handle.try_state::<state::AppState>() {
                     state.shutdown();
                 }
             }
+            _ => {}
         });
 }
