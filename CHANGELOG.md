@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.3](https://github.com/Sallvainian/Pack-Manager/compare/v0.2.2...v0.2.3) (2026-07-22)
+
+
+### Bug Fixes
+
+* **log:** break the line after mas's unterminated progress notice ([373c6d8](https://github.com/Sallvainian/Pack-Manager/commit/373c6d8c636219bc7f9ae3bec17ab99aa71d2b33))
+* **log:** break the line after mas's unterminated progress notice ([83ae2b8](https://github.com/Sallvainian/Pack-Manager/commit/83ae2b833c9397b759be38df11b1581a4cf14316))
+
 ## [0.2.2](https://github.com/Sallvainian/Pack-Manager/compare/v0.2.1...v0.2.2) (2026-07-22)
 
 
