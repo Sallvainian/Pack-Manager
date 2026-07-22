@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.2](https://github.com/Sallvainian/Pack-Manager/compare/v0.2.1...v0.2.2) (2026-07-22)
+
+
+### Bug Fixes
+
+* **update:** bring the updated build to the front after restart ([88340d0](https://github.com/Sallvainian/Pack-Manager/commit/88340d07033fe35d9329151fa79d0fe4b0a5c925))
+* **update:** bring the updated build to the front after restart ([7430337](https://github.com/Sallvainian/Pack-Manager/commit/7430337070486d871ae5cee9ed809405fef2c80e))
+
 ## [0.2.1](https://github.com/Sallvainian/Pack-Manager/compare/v0.2.0...v0.2.1) (2026-07-22)
 
 
