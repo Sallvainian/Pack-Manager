@@ -3,6 +3,7 @@ import { activeOps, useOperationsStore } from "../../store/operations";
 import { usePackagesStore } from "../../store/packages";
 import { useManagersStore } from "../../store/managers";
 import { useUiStore } from "../../store/ui";
+import { UpdateStatusItem } from "./UpdateStatusItem";
 
 export function StatusBar() {
   const ops = useOperationsStore();
@@ -26,6 +27,7 @@ export function StatusBar() {
 
   return (
     <footer className="flex h-7 shrink-0 items-center gap-4 border-t border-border bg-bg-surface px-4 text-[11px] text-text-muted">
+      <UpdateStatusItem />
       <span>{lastRefresh ? `Last refresh ${lastRefresh}` : "No refresh yet"}</span>
 
       {firstUnhealthy && (

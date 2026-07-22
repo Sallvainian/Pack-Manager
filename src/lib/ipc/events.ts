@@ -12,6 +12,7 @@
  * and the ui-store toast/drawer APIs this unit provides, rather than living
  * here.
  */
+import { useAppUpdateStore } from "../../store/appUpdate";
 import { useManagersStore } from "../../store/managers";
 import { useOperationsStore } from "../../store/operations";
 import { usePackagesStore } from "../../store/packages";
@@ -20,11 +21,13 @@ import { describeError } from "../errors";
 import { listen, type UnlistenFn } from "./bridge";
 import { logFrontendEvent, refreshAll } from "./client";
 import {
+  EVENT_APP_UPDATE_STATUS,
   EVENT_DETECTION_UPDATED,
   EVENT_OP_OUTPUT,
   EVENT_OP_STALLED,
   EVENT_OP_STATUS,
   EVENT_SNAPSHOT_UPDATED,
+  type AppUpdateStatus,
   type DetectionReport,
   type OpOutputEvent,
   type OpStalledEvent,
@@ -109,6 +112,34 @@ export function onStalled(evt: OpStalledEvent): void {
     .openDialog({ kind: "stalled", opId: evt.opId, silentForSecs: evt.silentForSecs });
 }
 
+/**
+ * In-app update state (DECISIONS D25). Only *manual* checks speak up: an
+ * automatic check that finds nothing, or fails because the laptop is offline,
+ * must stay invisible. The StatusBar indicator reacts to every transition.
+ */
+export function onAppUpdate(status: AppUpdateStatus): void {
+  const previous = useAppUpdateStore.getState().status;
+  useAppUpdateStore.getState().setStatus(status);
+  if (status.lastTrigger !== "manual") return;
+  // Guard against re-toasting when a repeated payload arrives for the same
+  // terminal state (e.g. a second check that changes nothing).
+  if (previous?.state.kind === status.state.kind && previous.lastTrigger === "manual") return;
+
+  const ui = useUiStore.getState();
+  if (status.state.kind === "upToDate") {
+    ui.pushToast({
+      kind: "info",
+      message: `Pack-Manager ${status.currentVersion} is up to date`,
+    });
+  } else if (status.state.kind === "error") {
+    ui.pushToast({
+      kind: "error",
+      message: `Update check failed: ${status.state.message}`,
+      persistent: true,
+    });
+  }
+}
+
 /** Subscribe to all backend events. Returns a single unlisten for teardown. */
 export async function subscribeEvents(): Promise<UnlistenFn> {
   // allSettled (not all): if any listen() rejects, the ones that DID register
@@ -121,6 +152,7 @@ export async function subscribeEvents(): Promise<UnlistenFn> {
     listen<OpStatusEvent>(EVENT_OP_STATUS, (e) => onStatus(e.payload)),
     listen<OpOutputEvent>(EVENT_OP_OUTPUT, (e) => onOutput(e.payload)),
     listen<OpStalledEvent>(EVENT_OP_STALLED, (e) => onStalled(e.payload)),
+    listen<AppUpdateStatus>(EVENT_APP_UPDATE_STATUS, (e) => onAppUpdate(e.payload)),
   ]);
   const unlisteners = results
     .filter((r): r is PromiseFulfilledResult<UnlistenFn> => r.status === "fulfilled")

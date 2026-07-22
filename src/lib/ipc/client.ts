@@ -1,5 +1,6 @@
 /**
- * client.ts — typed wrappers for all 17 IPC commands (SPEC §5.9).
+ * client.ts — typed wrappers for every IPC command (SPEC §5.9, plus the
+ * in-app update trio per DECISIONS D25).
  *
  * Each Rust command takes a single parameter named `args` (see
  * `src-tauri/src/commands.rs`), so Tauri expects the invoke payload under the
@@ -10,6 +11,7 @@
 import { invoke } from "./bridge";
 import type {
   AppState,
+  AppUpdateStatus,
   DetectionReport,
   DiagnosticsResult,
   ManagerId,
@@ -104,4 +106,29 @@ export function exportDiagnostics(): Promise<DiagnosticsResult> {
 /** Forward a frontend warning/error into the backend structured log. */
 export function logFrontendEvent(level: "warn" | "error", message: string): Promise<void> {
   return invoke<void>("log_frontend_event", { args: { level, message } });
+}
+
+// ---------------------------------------------------------------------------
+// In-app update (DECISIONS D25)
+// ---------------------------------------------------------------------------
+
+/** Current update state, for rehydration on mount. */
+export function getAppUpdateState(): Promise<AppUpdateStatus> {
+  return invoke<AppUpdateStatus>("get_app_update_state");
+}
+
+/**
+ * Manual check. Resolves as soon as the check is under way — the outcome
+ * arrives on `appUpdate:status`, so a slow network never blocks the caller.
+ */
+export function checkForAppUpdate(): Promise<void> {
+  return invoke<void>("check_for_app_update");
+}
+
+/**
+ * Install the downloaded update and relaunch. Never resolves on success (the
+ * process restarts); cancel running operations before calling it.
+ */
+export function installAppUpdate(): Promise<void> {
+  return invoke<void>("install_app_update");
 }

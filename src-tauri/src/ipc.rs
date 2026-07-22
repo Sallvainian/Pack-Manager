@@ -414,6 +414,67 @@ pub struct DiagnosticsResult {
 }
 
 // ---------------------------------------------------------------------------
+// In-app update (Pack-Manager updating itself, not a managed package)
+// ---------------------------------------------------------------------------
+
+/// Why a check ran. Manual checks (menu bar → "Check for Updates…", Settings →
+/// "Check now") report "you're up to date" and failures to the user; automatic
+/// ones stay silent so a flaky network never nags on a timer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum UpdateCheckTrigger {
+    Manual,
+    Automatic,
+}
+
+/// Discriminated union on `kind`, same shape convention as [`SelfUpdateRoute`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum AppUpdateState {
+    /// Nothing has been checked yet this session.
+    Idle,
+    Checking,
+    UpToDate,
+    /// Downloading happens automatically once an update is found; installing
+    /// never does.
+    Downloading {
+        version: String,
+        received: u64,
+        total: Option<u64>,
+    },
+    /// Downloaded and verified; waiting for the user to click Restart.
+    ReadyToInstall {
+        version: String,
+        notes: Option<String>,
+    },
+    /// Downloaded, but the app bundle's directory is not writable, so the
+    /// plugin's install path would raise an admin-password prompt. Pack-Manager
+    /// never asks for a password (SPEC §1 invariant 4), so we stop here and
+    /// tell the user to move the app or install the DMG by hand.
+    ManualInstallRequired {
+        version: String,
+        reason: String,
+    },
+    Error {
+        message: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppUpdateStatus {
+    /// `env!("CARGO_PKG_VERSION")` — the running build.
+    pub current_version: String,
+    pub state: AppUpdateState,
+    /// Trigger of the check that produced `state`; `null` before the first one.
+    pub last_trigger: Option<UpdateCheckTrigger>,
+}
+
+// ---------------------------------------------------------------------------
 // Contract test (SPEC §7.4) — byte-equality against dev/fixtures/ipc/*.json.
 // Regenerate with `PM_UPDATE_CONTRACT=1 cargo test ipc_contract`.
 // ---------------------------------------------------------------------------
@@ -776,6 +837,21 @@ mod tests {
         );
 
         check("settings.json", &Settings::default());
+
+        // The in-app updater's richest state: a discriminated-union variant
+        // carrying data, so drift in the `kind` tag or the field casing fails
+        // here rather than in the status bar.
+        check(
+            "event_app_update_status.json",
+            &AppUpdateStatus {
+                current_version: "0.1.1".into(),
+                state: AppUpdateState::ReadyToInstall {
+                    version: "0.2.0".into(),
+                    notes: Some("Adds in-app updates.".into()),
+                },
+                last_trigger: Some(UpdateCheckTrigger::Automatic),
+            },
+        );
 
         check(
             "ipc_error.json",

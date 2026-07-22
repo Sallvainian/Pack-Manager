@@ -1,4 +1,5 @@
 import {
+  checkForAppUpdate,
   detectManagers,
   exportDiagnostics,
   revealLogsDir,
@@ -6,6 +7,7 @@ import {
 } from "../../lib/ipc/client";
 import type { LogLevel, Settings } from "../../lib/ipc/types";
 import { LOG_LEVELS } from "../../lib/ipc/types";
+import { useAppUpdateStore } from "../../store/appUpdate";
 import { useManagersStore } from "../../store/managers";
 import { useUiStore } from "../../store/ui";
 import { Button } from "../primitives/Button";
@@ -70,6 +72,7 @@ export function SettingsView() {
   const applySettings = useUiStore((s) => s.setSettings);
   const detection = useManagersStore((s) => s.detection);
   const setDetecting = useManagersStore((s) => s.setDetecting);
+  const updateStatus = useAppUpdateStore((s) => s.status);
 
   async function patch(p: Partial<Settings>) {
     const merged = await setSettingsCmd(p);
@@ -173,6 +176,32 @@ export function SettingsView() {
             ) : (
               <div className="text-[13px] text-text-muted">Loading settings…</div>
             )}
+          </section>
+
+          {/* --- Updates --------------------------------------------------- */}
+          <section aria-label="Updates">
+            <h2 className="mb-2 text-[15px] font-semibold text-text-primary">Updates</h2>
+            <div className="divide-y divide-border rounded-card border border-border bg-bg-surface px-4">
+              <div className="flex items-center gap-3 py-3">
+                <span className="flex-1">
+                  <span className="block text-[13px] text-text-primary">Pack-Manager version</span>
+                  <span className="block font-mono text-[12px] text-text-muted">
+                    {updateStatus?.currentVersion ?? "unknown"}
+                  </span>
+                </span>
+                <Button variant="secondary" size="sm" onClick={() => void checkForAppUpdate()}>
+                  Check now
+                </Button>
+              </div>
+              {settings && (
+                <ToggleRow
+                  label="Check for updates automatically"
+                  hint="At launch and every 6 hours. Updates download in the background; installing always waits for you."
+                  checked={settings.autoCheckForUpdates}
+                  onChange={(v) => void patch({ autoCheckForUpdates: v })}
+                />
+              )}
+            </div>
           </section>
 
           {/* --- Environment Report --------------------------------------- */}

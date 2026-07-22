@@ -35,6 +35,11 @@ describe("launch_refresh_waits_for_detection", () => {
     fakeIpc.respond("get_state", () => placeholderState);
     fakeIpc.respond("refresh_all", () => ({ opIds: [] }));
     fakeIpc.respond("log_frontend_event", () => undefined);
+    fakeIpc.respond("get_app_update_state", () => ({
+      currentVersion: "0.1.1",
+      state: { kind: "idle" },
+      lastTrigger: null,
+    }));
 
     render(<App />);
     await vi.waitFor(() => expect(fakeIpc.called("get_state")).toBe(true));
@@ -64,6 +69,11 @@ describe("bootstrap_failure_is_logged_and_recoverable", () => {
     });
     fakeIpc.respond("refresh_all", () => ({ opIds: [] }));
     fakeIpc.respond("log_frontend_event", () => undefined);
+    fakeIpc.respond("get_app_update_state", () => ({
+      currentVersion: "0.1.1",
+      state: { kind: "idle" },
+      lastTrigger: null,
+    }));
 
     render(<App />);
     await vi.waitFor(() => expect(fakeIpc.called("log_frontend_event")).toBe(true));

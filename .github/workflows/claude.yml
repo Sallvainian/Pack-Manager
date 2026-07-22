@@ -20,13 +20,15 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
-      issues: read
+      # write (not read) on both: this workflow answers by posting a comment,
+      # on issues as well as PRs, which the read-only defaults silently forbid.
+      pull-requests: write
+      issues: write
       id-token: write
-      actions: read # Required for Claude to read CI results on PRs
+      actions: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
@@ -35,16 +37,48 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-
-          # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
             actions: read
 
-          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
-          # prompt: 'Update the pull request description to include a summary of changes.'
+          # Optional: Configure Claude's behavior with CLI arguments
+          claude_args: |
+            --model claude-opus-4-8[1m]
 
-          # Optional: Add claude_args to customize behavior and configuration
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
-          # claude_args: '--allowed-tools Bash(gh pr *)'
+          # System prompt with project rules - Claude will follow these while executing the tagged comment
+          prompt: |
+            ## Pack-Manager Project Rules
 
+            macOS GUI for package managers. Tauri 2 + Rust backend (`src-tauri/`), React 19 + TypeScript + Vite 7 + Tailwind v4 frontend. `docs/SPEC.md` is authoritative; `docs/DECISIONS.md` records why each choice was made and what was rejected. Read the relevant section before changing behavior it covers.
+
+            ### Load-bearing invariants — never violate these
+            - The manager's `outdated` verdict is authoritative. Never compute a version comparison to decide outdatedness; real data includes `2.0.14-1`, `1.6.2.dev0`, `stable`, and rustup commit hashes. Version-delta highlighting is display-only.
+            - Who-manages-whom is derived from paths at detection time, never hardcoded. Classify the RAW resolved path BEFORE canonicalizing — mise shims are symlinks to the mise binary, so canonicalize-first misroutes uv and npm to brew.
+            - Every operation declares a lock set. All brew-binary operations hold the Brew lock; npm/uv operations add the Mise lock when mise-managed.
+            - No sudo, no password entry, ever. Child stdin is `/dev/null`.
+            - One failing manager never blanks the others — per-manager isolation, prior snapshot retained and marked stale.
+            - Nothing runs that was not shown: bulk upgrades go through the plan sheet, and its command strings must be byte-equal to what the backend spawns.
+
+            ### Architecture seams
+            - `src/lib/ipc/bridge.ts` is the ONLY importer of `@tauri-apps/api` — it is the single Vitest mock seam. Never import Tauri APIs elsewhere.
+            - Components never call `listen`; `src/lib/ipc/events.ts` owns the one subscription.
+            - IPC types live in `src-tauri/src/ipc.rs` (camelCase serde), mirrored 1:1 in `src/lib/ipc/types.ts` with a type guard, and guarded by fixtures in `dev/fixtures/ipc/` (regenerate with `PM_UPDATE_CONTRACT=1 cargo test ipc_contract`). Move all four together.
+            - Core Rust logic emits through `EventSink`, never `tauri::AppHandle` directly.
+            - Child processes go through `CommandRunner` (`FakeRunner` in tests), spawned by absolute path with a constructed env — never an inherited `PATH`.
+            - Parsers under `src-tauri/src/managers/parse/` are pure, fixture-grounded, and never log. Parse failures yield `ParseFailed` with an excerpt, never a panic.
+            - Nondeterminism seams: processes to `CommandRunner`, time to `#[tokio::test(start_paused = true)]` / `vi.useFakeTimers()`, IPC to `bridge.ts`, paths to constructor params. Default suites run offline with no real processes, no network, no sleeps.
+
+            ### Versioning
+            - Never hand-edit a version. release-please owns `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, plus `CHANGELOG.md` and `.release-please-manifest.json`.
+            - Use conventional commits — the next release version is computed from them.
+
+            ### Style
+            - Design tokens live in `src/styles/theme.css` (Tailwind v4 `@theme`); dark is the only theme. No hardcoded hex outside that file.
+            - Color-carrying states need a text or icon equivalent; chips never wrap.
+
+            ### Before you claim it works
+            Rust: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test --locked` (from `src-tauri/`).
+            Web: `npx tsc --noEmit`, `npx vitest run`, `npm run build`.
+
+            ---
+
+            Now execute the task from the comment that tagged you.

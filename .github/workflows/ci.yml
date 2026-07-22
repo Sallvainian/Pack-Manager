@@ -78,8 +78,15 @@ jobs:
           workspaces: src-tauri
       - name: npm ci
         run: npm ci
+      # --no-sign skips BOTH code signing and updater signing. Without it this
+      # job now fails: `plugins > updater > pubkey` is set in tauri.conf.json,
+      # and the CLI refuses to bundle when it finds a public key with no
+      # TAURI_SIGNING_PRIVATE_KEY ("A public key has been found, but no private
+      # key"). A throwaway key would not help — the CLI also rejects a private
+      # key that does not match the configured pubkey. The smoke test only
+      # needs to prove the app compiles and bundles.
       - name: tauri build (debug)
-        run: npm run tauri build -- --debug
+        run: npm run tauri build -- --debug --no-sign
       - name: Upload .app
         uses: actions/upload-artifact@v4
         with:

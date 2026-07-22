@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { AppLayout } from "./components/shell/AppLayout";
 import { describeError } from "./lib/errors";
-import { getState, logFrontendEvent } from "./lib/ipc/client";
+import { getAppUpdateState, getState, logFrontendEvent } from "./lib/ipc/client";
 import { scheduleLaunchRefresh, subscribeEvents } from "./lib/ipc/events";
+import { useAppUpdateStore } from "./store/appUpdate";
 import { useManagersStore } from "./store/managers";
 import { useOperationsStore } from "./store/operations";
 import { usePackagesStore } from "./store/packages";
@@ -36,6 +37,13 @@ export async function bootstrap(): Promise<void> {
   } catch (e) {
     void logFrontendEvent("error", `bootstrap failed: ${describeError(e)}`);
     autoRefresh = useUiStore.getState().settings?.autoRefreshOnLaunch ?? true;
+  }
+  // Independent of hydration: a stale update state is worse than none, and a
+  // failure here must not affect the launch refresh (DECISIONS D25).
+  try {
+    useAppUpdateStore.getState().setStatus(await getAppUpdateState());
+  } catch (e) {
+    void logFrontendEvent("error", `app update state hydration failed: ${describeError(e)}`);
   }
   if (autoRefresh) scheduleLaunchRefresh();
 }

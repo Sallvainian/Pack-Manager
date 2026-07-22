@@ -26,6 +26,11 @@ describe("App shell", () => {
   it("renders the full shell against fake data and hydrates from get_state", async () => {
     fakeIpc.respond("get_state", () => appState);
     fakeIpc.respond("refresh_all", () => ({ opIds: [] }));
+    fakeIpc.respond("get_app_update_state", () => ({
+      currentVersion: "0.1.1",
+      state: { kind: "idle" },
+      lastTrigger: null,
+    }));
 
     render(<App />);
 

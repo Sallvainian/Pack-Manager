@@ -159,13 +159,29 @@ jobs:
       # compiles both arches, lipo-merges, signs with APPLE_SIGNING_IDENTITY,
       # and (when the APPLE_API_* env vars are set) notarizes and staples the
       # .app before packaging the .dmg.
+      #
+      # TAURI_SIGNING_PRIVATE_KEY is the updater's minisign key — unrelated to
+      # the Apple Developer ID above. `bundle.createUpdaterArtifacts` in
+      # tauri.conf.json makes this build also emit Pack-Manager.app.tar.gz and
+      # its detached .sig; without the key present, that step fails the build.
       - name: Build app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri build -- --target universal-apple-darwin
 
-      # Normalize artifact names into dist/ and make sure BOTH artifacts carry
-      # a notarization ticket, re-notarizing whatever tauri didn't cover.
+      # Normalize artifact names into dist/ and make sure every artifact
+      # carries a notarization ticket, re-notarizing whatever tauri didn't
+      # cover. Also emits the updater archive + latest.json.
       - name: Package
         shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Set on the release-please path only; latest.json then carries the
+          # changelog release-please wrote. Empty on manual runs.
+          RELEASE_TAG: ${{ inputs.attach_to_tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -o pipefail
           notarize() {
@@ -225,6 +241,63 @@ jobs:
           ditto -c -k --keepParent "$APP" "dist/Pack-Manager-$VERSION.zip"
           echo "APP_PATH=$APP" >> "$GITHUB_ENV"
 
+          # --- Updater archive -------------------------------------------
+          # The bundler wrote Pack-Manager.app.tar.gz + .sig during the build,
+          # i.e. potentially BEFORE `ensure_stapled` ran above. Whether the
+          # archived .app already carries a ticket is a bundler-ordering
+          # detail we refuse to assume: verify, and rebuild + re-sign from the
+          # stapled bundle if not. An un-stapled auto-update would install an
+          # app that has to phone Apple on first launch.
+          tarballs=("$BUNDLE_DIR"/macos/*.app.tar.gz)
+          if [ ${#tarballs[@]} -ne 1 ]; then
+            echo "::error::Expected exactly one .app.tar.gz in $BUNDLE_DIR/macos, found ${#tarballs[@]} — is bundle.createUpdaterArtifacts still true?"; exit 1
+          fi
+          UPDATER_TGZ="dist/Pack-Manager-$VERSION.app.tar.gz"
+          cp "${tarballs[0]}" "$UPDATER_TGZ"
+          cp "${tarballs[0]}.sig" "$UPDATER_TGZ.sig"
+
+          if [ "$NOTARIZE" = "true" ]; then
+            probe="$RUNNER_TEMP/updater-probe"
+            rm -rf "$probe"; mkdir -p "$probe"
+            tar xzf "$UPDATER_TGZ" -C "$probe"
+            if xcrun stapler validate "$probe/Pack-Manager.app" >/dev/null 2>&1; then
+              echo "Updater archive already carries a notarization ticket."
+            else
+              echo "Updater archive is not stapled -> repackaging from the stapled bundle."
+              tar czf "$UPDATER_TGZ" -C "$BUNDLE_DIR/macos" "Pack-Manager.app"
+              # Reads the key from TAURI_SIGNING_PRIVATE_KEY{,_PASSWORD};
+              # writes the detached signature to <file>.sig.
+              rm -f "$UPDATER_TGZ.sig"
+              npx tauri signer sign "$UPDATER_TGZ"
+              [ -s "$UPDATER_TGZ.sig" ] || { echo "::error::re-signing produced no $UPDATER_TGZ.sig"; exit 1; }
+            fi
+            rm -rf "$probe"
+          fi
+
+          # latest.json — the updater endpoint. Both darwin targets point at
+          # the single universal archive: tauri-plugin-updater resolves its
+          # target from `cfg!(target_arch)`, so the running slice of the fat
+          # binary reports darwin-aarch64 on Apple Silicon and darwin-x86_64
+          # on Intel.
+          SIGNATURE=$(cat "$UPDATER_TGZ.sig")
+          ASSET_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v$VERSION/Pack-Manager-$VERSION.app.tar.gz"
+          RELEASE_NOTES=""
+          if [ -n "$RELEASE_TAG" ]; then
+            RELEASE_NOTES=$(gh release view "$RELEASE_TAG" --json body -q .body 2>/dev/null || true)
+          fi
+          jq -n \
+            --arg version "$VERSION" \
+            --arg pub_date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg notes "$RELEASE_NOTES" \
+            --arg sig "$SIGNATURE" \
+            --arg url "$ASSET_URL" \
+            '{version: $version, notes: $notes, pub_date: $pub_date,
+              platforms: {
+                "darwin-aarch64": {signature: $sig, url: $url},
+                "darwin-x86_64":  {signature: $sig, url: $url}
+              }}' > dist/latest.json
+          echo "latest.json:"; cat dist/latest.json
+
       # Prove what we're about to ship passes Gatekeeper before uploading it.
       - name: Verify signature & notarization
         shell: bash
@@ -250,7 +323,7 @@ jobs:
           ATTACH_TO_TAG: ${{ inputs.attach_to_tag }}
         run: |
           shopt -s nullglob
-          files=(dist/*.dmg dist/*.zip)
+          files=(dist/*.dmg dist/*.zip dist/*.app.tar.gz dist/*.app.tar.gz.sig dist/latest.json)
           if [ ${#files[@]} -eq 0 ]; then
             echo "::error::No build artifacts found in dist/ to upload"; exit 1
           fi

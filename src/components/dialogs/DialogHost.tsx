@@ -17,7 +17,7 @@ export function DialogHost() {
     case "stalled":
       return <StalledOperationDialog opId={dialog.opId} silentForSecs={dialog.silentForSecs} />;
     case "quitGuard":
-      return <QuitGuardDialog opIds={dialog.opIds} />;
+      return <QuitGuardDialog opIds={dialog.opIds} reason={dialog.reason} />;
     case "none":
       return null;
   }
