@@ -39,4 +39,22 @@ describe("health_banner_renders_fix_command", () => {
       args: { managerId: "uv", issueId: "uv:aider-chat" },
     });
   });
+
+  it("keeps an altered uv suggestion visible without exposing Copy or Run fix", () => {
+    const alteredSuggestion: HealthIssue = {
+      ...issue,
+      id: "uv:aider-chat:altered",
+      detail:
+        "warning: Tool `aider-chat` environment not found (run `uv tool install aider-chat --reinstall --force` to reinstall)",
+      fixCommand: undefined,
+      fixable: false,
+    };
+
+    render(<HealthBanner managerId="uv" issues={[alteredSuggestion]} />);
+
+    expect(screen.getByText(alteredSuggestion.detail)).toBeInTheDocument();
+    expect(screen.queryByTitle("Copy to clipboard")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Run fix" })).not.toBeInTheDocument();
+    expect(fakeIpc.called("run_health_fix")).toBe(false);
+  });
 });

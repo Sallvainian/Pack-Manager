@@ -1,11 +1,14 @@
-//! ALL serde IPC payload types (SPEC §5.9). Every struct here is part of the
-//! wire contract and mirrored 1:1 in `src/lib/ipc/types.ts`. Drift between the
-//! two sides is guarded by `ipc_contract_matches_committed_fixtures` (Rust) and
+//! ALL serde IPC payload types (SPEC §5.9). Every serialized field here is part
+//! of the wire contract and mirrored in `src/lib/ipc/types.ts`; backend-only
+//! `#[serde(skip)]` fields are intentionally absent there. Drift is guarded by
+//! `ipc_contract_matches_committed_fixtures` (Rust) and
 //! `ipc_types_accept_contract_fixtures` (Vitest) over `dev/fixtures/ipc/*.json`.
 //!
-//! Conventions: `#[serde(rename_all = "camelCase")]` everywhere; fields that are
-//! optional (`?` in TS) use `skip_serializing_if = "Option::is_none"`; fields
-//! typed `T | null` in TS serialize `null` explicitly.
+//! Conventions: struct fields serialize as lower camel case. Enum values use
+//! their explicitly declared wire casing (usually lowercase or lower camel
+//! case; `ErrorCode` is snake case). Fields optional in TS (`?`) use
+//! `skip_serializing_if = "Option::is_none"`; fields typed `T | null` serialize
+//! `null` explicitly.
 
 use serde::{Deserialize, Serialize};
 
@@ -198,12 +201,20 @@ pub enum SelfUpdateRoute {
     /// rustup; npm (note = mise-reset warning).
     InBand {
         command_preview: String,
+        /// Trusted argv excluding the executable. This is deliberately never
+        /// serialized: the frontend may display the preview, but it can never
+        /// supply executable arguments back to the backend.
+        #[serde(skip)]
+        command_args: Vec<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         note: Option<String>,
     },
     Routed {
         executor: ManagerId,
         command_preview: String,
+        /// Trusted argv excluding the executable (backend-only).
+        #[serde(skip)]
+        command_args: Vec<String>,
         why: String,
     },
     /// brew.
@@ -213,6 +224,56 @@ pub enum SelfUpdateRoute {
     Unavailable {
         reason: String,
     },
+}
+
+impl SelfUpdateRoute {
+    /// Builds an in-band route with its display preview and executable argv
+    /// from the same trusted values. `program` is a display name such as
+    /// `npm`; the actual spawn still uses the detected absolute path.
+    pub fn in_band(program: &str, command_args: Vec<String>, note: Option<String>) -> Self {
+        Self::InBand {
+            command_preview: command_preview(program, &command_args),
+            command_args,
+            note,
+        }
+    }
+
+    /// Builds a routed route with its preview and argv from one trusted
+    /// source. The executor's detected absolute path is bound at submission.
+    pub fn routed(
+        executor: ManagerId,
+        program: &str,
+        command_args: Vec<String>,
+        why: impl Into<String>,
+    ) -> Self {
+        Self::Routed {
+            executor,
+            command_preview: command_preview(program, &command_args),
+            command_args,
+            why: why.into(),
+        }
+    }
+
+    /// Returns trusted backend-only argv for executable routes.
+    pub(crate) fn command_args(&self) -> Option<&[String]> {
+        match self {
+            Self::InBand { command_args, .. } | Self::Routed { command_args, .. } => {
+                Some(command_args)
+            }
+            Self::ViaRefresh { .. } | Self::Unavailable { .. } => None,
+        }
+    }
+}
+
+/// Renders the stable, human-visible command form used throughout IPC. It is
+/// intentionally a renderer only; executable argv always remains structured.
+pub fn command_preview(program: &str, args: &[String]) -> String {
+    let mut preview = program.to_string();
+    for arg in args {
+        preview.push(' ');
+        preview.push_str(arg);
+    }
+    preview
 }
 
 // ---------------------------------------------------------------------------
@@ -284,6 +345,9 @@ pub struct HealthIssue {
     pub detail: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fix_command: Option<String>,
+    /// Trusted argv excluding the executable. Never crosses IPC.
+    #[serde(skip)]
+    pub fix_args: Option<Vec<String>>,
     pub fixable: bool,
 }
 
@@ -311,6 +375,9 @@ pub struct PlanSelection {
 #[serde(rename_all = "camelCase")]
 pub struct UpgradePlan {
     pub plan_id: String,
+    /// Echoed solely so the UI can rebuild the same intent after a stale-plan
+    /// rejection. Execution uses the backend-cached request, never this copy.
+    pub request: PlanRequest,
     pub groups: Vec<PlanGroup>,
     pub excluded: Vec<ExcludedPackage>,
     pub notes: Vec<String>,
@@ -541,6 +608,11 @@ mod tests {
                     evidence: Some("resolved at ~/.local/share/mise/shims/npm".into()),
                     self_update: SelfUpdateRoute::InBand {
                         command_preview: "npm install -g npm@latest".into(),
+                        command_args: vec![
+                            "install".into(),
+                            "-g".into(),
+                            "npm@latest".into(),
+                        ],
                         note: Some(
                             "npm and all global packages live inside the mise-managed node — \
                              upgrading node via mise resets them."
@@ -561,6 +633,7 @@ mod tests {
                     self_update: SelfUpdateRoute::Routed {
                         executor: ManagerId::Mise,
                         command_preview: "mise upgrade uv".into(),
+                        command_args: vec!["upgrade".into(), "uv".into()],
                         why: "uv is managed by mise".into(),
                     },
                     install_hint: None,
@@ -651,6 +724,12 @@ mod tests {
                          aider-chat --reinstall` to reinstall)"
                     .into(),
                 fix_command: Some("uv tool install aider-chat --reinstall".into()),
+                fix_args: Some(vec![
+                    "tool".into(),
+                    "install".into(),
+                    "aider-chat".into(),
+                    "--reinstall".into(),
+                ]),
                 fixable: true,
             }],
         }
@@ -732,6 +811,20 @@ mod tests {
             "upgrade_plan.json",
             &UpgradePlan {
                 plan_id: "01981f2e-0000-7000-8000-5f8cff3fb96b".into(),
+                request: PlanRequest {
+                    selection: Some(vec![
+                        PlanSelection {
+                            manager_id: ManagerId::Brew,
+                            package_id: "formula:dolt".into(),
+                        },
+                        PlanSelection {
+                            manager_id: ManagerId::Npm,
+                            package_id: "globalPackage:typescript".into(),
+                        },
+                    ]),
+                    include_self_updates: true,
+                    include_greedy_casks: false,
+                },
                 groups: vec![
                     PlanGroup {
                         subject: ManagerId::Brew,

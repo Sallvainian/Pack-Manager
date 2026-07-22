@@ -289,6 +289,7 @@ mod tests {
                     self_update: SelfUpdateRoute::Routed {
                         executor: ManagerId::Mise,
                         command_preview: "mise upgrade uv".into(),
+                        command_args: vec!["upgrade".into(), "uv".into()],
                         why: "uv is managed by mise".into(),
                     },
                     install_hint: None,
@@ -304,6 +305,7 @@ mod tests {
                     evidence: None,
                     self_update: SelfUpdateRoute::InBand {
                         command_preview: "rustup self update".into(),
+                        command_args: vec!["self".into(), "update".into()],
                         note: None,
                     },
                     install_hint: None,

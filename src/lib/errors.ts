@@ -19,6 +19,7 @@ export const ERROR_TITLES: Record<ErrorCode, string> = {
   parse_failed: "Couldn't read output",
   cancelled: "Cancelled",
   self_update_unavailable: "Self-update unavailable",
+  plan_stale: "Plan needs review",
   env_capture_failed: "Environment probe failed",
   io: "I/O error",
   internal: "Internal error",
@@ -39,6 +40,7 @@ export const ERROR_FALLBACKS: Record<ErrorCode, string> = {
     "The command's output couldn't be parsed. The previous data is still shown; retry to try again.",
   cancelled: "The operation was cancelled.",
   self_update_unavailable: "This manager can't update itself in Pack-Manager.",
+  plan_stale: "The available updates changed. Review the refreshed plan and confirm again.",
   env_capture_failed:
     "The login-shell PATH probe failed; a static fallback path is in use. See the Environment Report.",
   io: "A file-system error occurred. Check the log and retry.",

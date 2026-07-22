@@ -42,6 +42,7 @@ use crate::paths::ToolEnv;
 use crate::process::{CmdPurpose, CommandOutput, CommandRunner, CommandSpec, LineSink};
 use crate::registry::{now_rfc3339, Registry};
 use crate::settings::Settings;
+use crate::state::PlanCoordinator;
 
 /// Global concurrency cap (16GB machine — SPEC §5.7).
 pub const MAX_CONCURRENCY: usize = 4;
@@ -262,6 +263,20 @@ pub fn make_self_update_submission(
             })
         }
     };
+    let args = route
+        .command_args()
+        .filter(|args| !args.is_empty())
+        .ok_or_else(|| PmError::Internal {
+            detail: format!("self-update route for {subject} has no trusted argv"),
+        })?;
+    let expected_preview = ipc::command_preview(adapter_for(executor).binary_name(), args);
+    if preview != expected_preview {
+        return Err(PmError::Internal {
+            detail: format!(
+                "self-update preview/argv mismatch for {subject}: expected `{expected_preview}`"
+            ),
+        });
+    }
     let det = statuses
         .get(&executor)
         .ok_or_else(|| PmError::SelfUpdateUnavailable {
@@ -271,12 +286,6 @@ pub fn make_self_update_submission(
         present_parts(det).ok_or_else(|| PmError::SelfUpdateUnavailable {
             reason: format!("executor {executor} is not installed"),
         })?;
-    let tokens: Vec<String> = preview.split_whitespace().map(str::to_string).collect();
-    if tokens.len() < 2 {
-        return Err(PmError::Internal {
-            detail: format!("unusable self-update preview `{preview}`"),
-        });
-    }
     let extra_env = if executor == ManagerId::Brew {
         vec![("HOMEBREW_NO_AUTO_UPDATE".to_string(), "1".to_string())]
     } else {
@@ -284,7 +293,7 @@ pub fn make_self_update_submission(
     };
     let planned = vec![PlannedCommand {
         label: "self-update",
-        argv: tokens[1..].to_vec(),
+        argv: args.to_vec(),
         timeout: stall_default(),
         extra_env,
         phase_label: None,
@@ -322,21 +331,36 @@ pub fn make_health_fix_submission(
         tool: manager.as_str().to_string(),
         searched: vec![],
     })?;
+    if issue.manager_id != manager || !issue.fixable {
+        return Err(PmError::Internal {
+            detail: format!("health issue {} is not runnable for {manager}", issue.id),
+        });
+    }
     let fix = issue
         .fix_command
         .as_ref()
         .ok_or_else(|| PmError::Internal {
             detail: format!("health issue {} has no fix command", issue.id),
         })?;
-    let tokens: Vec<String> = fix.split_whitespace().map(str::to_string).collect();
-    if tokens.len() < 2 {
+    let args = issue
+        .fix_args
+        .as_deref()
+        .filter(|args| !args.is_empty())
+        .ok_or_else(|| PmError::Internal {
+            detail: format!("health issue {} has no trusted fix argv", issue.id),
+        })?;
+    let expected_fix = ipc::command_preview(adapter_for(manager).binary_name(), args);
+    if fix != &expected_fix {
         return Err(PmError::Internal {
-            detail: format!("unusable fix command `{fix}`"),
+            detail: format!(
+                "health issue {} preview/argv mismatch: expected `{expected_fix}`",
+                issue.id
+            ),
         });
     }
     let planned = vec![PlannedCommand {
         label: "health fix",
-        argv: tokens[1..].to_vec(),
+        argv: args.to_vec(),
         timeout: stall_default(),
         extra_env: vec![],
         phase_label: None,
@@ -368,6 +392,50 @@ pub fn make_health_fix_submission(
 // ---------------------------------------------------------------------------
 
 pub const RUST_DEDUP_NOTE: &str = "rust toolchains are handled by rustup in this plan";
+/// Defensive IPC bounds: comfortably above a legitimate full-machine plan,
+/// while preventing an untrusted frontend from making canonicalization or
+/// cache storage scale without limit. At both ceilings the raw package-id
+/// payload is at most 1 MiB per request; even the request's intentional second
+/// copy inside the cached plan stays bounded across the 64-entry cache.
+pub const MAX_PLAN_SELECTIONS: usize = 2_048;
+pub const MAX_PLAN_PACKAGE_ID_BYTES: usize = 512;
+
+/// Validates and canonicalizes the untrusted plan intent before it is used or
+/// cached. Exact duplicate selections are removed first-seen-order, so they
+/// cannot duplicate argv or interfere with cross-manager deduplication rules.
+pub fn canonicalize_plan_request(mut request: PlanRequest) -> Result<PlanRequest, PmError> {
+    let Some(selection) = request.selection.take() else {
+        return Ok(request);
+    };
+    if selection.len() > MAX_PLAN_SELECTIONS {
+        return Err(PmError::Internal {
+            detail: format!(
+                "plan selection contains {} entries; maximum is {MAX_PLAN_SELECTIONS}",
+                selection.len()
+            ),
+        });
+    }
+
+    let mut seen = BTreeSet::new();
+    let mut canonical = Vec::with_capacity(selection.len());
+    for item in selection {
+        if item.package_id.len() > MAX_PLAN_PACKAGE_ID_BYTES {
+            return Err(PmError::Internal {
+                detail: format!(
+                    "plan package id for {} is {} bytes; maximum is {MAX_PLAN_PACKAGE_ID_BYTES}",
+                    item.manager_id,
+                    item.package_id.len()
+                ),
+            });
+        }
+        let key = (item.manager_id, item.package_id.clone());
+        if seen.insert(key) {
+            canonical.push(item);
+        }
+    }
+    request.selection = Some(canonical);
+    Ok(request)
+}
 
 /// Pure inputs for [`build_upgrade_plan`].
 pub struct PlanSources<'a> {
@@ -377,15 +445,6 @@ pub struct PlanSources<'a> {
     pub busy: &'a BTreeSet<(ManagerId, String)>,
     /// Managers whose last check errored ("list may be stale").
     pub stale: &'a BTreeSet<ManagerId>,
-}
-
-fn preview_of(binary: &str, argv: &[String]) -> String {
-    let mut s = binary.to_string();
-    for a in argv {
-        s.push(' ');
-        s.push_str(a);
-    }
-    s
 }
 
 /// `alreadyRunning` exclusions source: package ids of queued/running upgrades.
@@ -525,7 +584,7 @@ pub fn build_upgrade_plan(req: &PlanRequest, src: &PlanSources) -> UpgradePlan {
             .upgrade_plan(ids, &opts)
             .into_iter()
             .map(|p| PlanCommand {
-                argv_preview: preview_of(adapter.binary_name(), &p.argv),
+                argv_preview: ipc::command_preview(adapter.binary_name(), &p.argv),
                 label: p.label.to_string(),
             })
             .collect();
@@ -602,6 +661,7 @@ pub fn build_upgrade_plan(req: &PlanRequest, src: &PlanSources) -> UpgradePlan {
 
     UpgradePlan {
         plan_id: Uuid::now_v7().to_string(),
+        request: req.clone(),
         groups,
         excluded,
         notes,
@@ -631,6 +691,9 @@ pub struct QueueDeps {
     pub refresh_factory: Option<RefreshFactory>,
     /// Re-checks the subject's self-update route from a fresh snapshot.
     pub route_recheck: Option<RouteRecheck>,
+    /// Shared canonical-state epoch used by plan issue/validation and queue
+    /// admission. Scheduler mutations take this before touching records.
+    pub plan_coordinator: Arc<Mutex<PlanCoordinator>>,
     pub max_concurrency: usize,
     pub aging_guard: Duration,
 }
@@ -680,6 +743,11 @@ enum Msg {
         sub: Box<OpSubmission>,
         reply: Option<oneshot::Sender<String>>,
     },
+    SubmitPlanBatch {
+        subs: Vec<OpSubmission>,
+        expected_revision: u64,
+        reply: oneshot::Sender<Result<Vec<String>, PlanBatchError>>,
+    },
     Cancel {
         op_id: String,
     },
@@ -689,6 +757,16 @@ enum Msg {
         exit_code: Option<i32>,
         error: Option<PmError>,
     },
+}
+
+/// Fail-closed outcomes from the scheduler's atomic plan admission check.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlanBatchError {
+    RevisionChanged,
+    ActiveRefresh,
+    MutatingOperationConflict,
+    StateUpdateInProgress,
+    SchedulerGone,
 }
 
 /// Handle to the scheduler task.
@@ -728,6 +806,25 @@ impl Queue {
         rrx.await.map_err(|_| PmError::Internal {
             detail: "scheduler dropped the submission".into(),
         })
+    }
+
+    /// Atomically checks the canonical revision and enqueues every operation
+    /// in a reviewed plan, or enqueues none. A successful batch advances the
+    /// revision exactly once, invalidating all other prebuilt capabilities.
+    pub async fn submit_plan_batch(
+        &self,
+        subs: Vec<OpSubmission>,
+        expected_revision: u64,
+    ) -> Result<Vec<String>, PlanBatchError> {
+        let (rtx, rrx) = oneshot::channel();
+        self.tx
+            .send(Msg::SubmitPlanBatch {
+                subs,
+                expected_revision,
+                reply: rtx,
+            })
+            .map_err(|_| PlanBatchError::SchedulerGone)?;
+        rrx.await.map_err(|_| PlanBatchError::SchedulerGone)?
     }
 
     /// Cancels a running (SIGTERM→5s→SIGKILL) or queued op. Unknown/finished
@@ -855,6 +952,11 @@ async fn scheduler_task(
     while let Some(msg) = rx.recv().await {
         match msg {
             Msg::Submit { sub, reply } => sched.handle_submit(*sub, reply),
+            Msg::SubmitPlanBatch {
+                subs,
+                expected_revision,
+                reply,
+            } => sched.handle_plan_batch(subs, expected_revision, reply),
             Msg::Cancel { op_id } => sched.handle_cancel(&op_id),
             Msg::Finished {
                 op_id,
@@ -863,7 +965,7 @@ async fn scheduler_task(
                 error,
             } => sched.handle_finished(&op_id, status, exit_code, error),
         }
-        sched.try_start_all();
+        sched.try_start_all_coordinated();
     }
 }
 
@@ -887,14 +989,87 @@ impl Sched {
     }
 
     fn handle_submit(&mut self, sub: OpSubmission, reply: Option<oneshot::Sender<String>>) {
+        let coordinator = self.deps.plan_coordinator.clone();
+        let mut coordinator = coordinator.lock().expect("plan coordinator poisoned");
+        let (op_id, created) = self.enqueue_submission(sub);
+        if created {
+            coordinator.bump_revision();
+        }
+        if let Some(reply) = reply {
+            let _ = reply.send(op_id);
+        }
+    }
+
+    fn handle_plan_batch(
+        &mut self,
+        subs: Vec<OpSubmission>,
+        expected_revision: u64,
+        reply: oneshot::Sender<Result<Vec<String>, PlanBatchError>>,
+    ) {
+        let coordinator = self.deps.plan_coordinator.clone();
+        let mut coordinator = coordinator.lock().expect("plan coordinator poisoned");
+        if coordinator.revision() != expected_revision {
+            let _ = reply.send(Err(PlanBatchError::RevisionChanged));
+            return;
+        }
+        if coordinator.state_update_in_progress() {
+            let _ = reply.send(Err(PlanBatchError::StateUpdateInProgress));
+            return;
+        }
+        if !self.active_refresh.is_empty() {
+            let _ = reply.send(Err(PlanBatchError::ActiveRefresh));
+            return;
+        }
+        if self.has_existing_mutating_lock_conflict(&subs) {
+            let _ = reply.send(Err(PlanBatchError::MutatingOperationConflict));
+            return;
+        }
+
+        // enqueue_submission is infallible after construction, so no record
+        // or event is published until every admission predicate above has
+        // passed. The scheduler task owns all queue internals, making this
+        // whole loop one atomic message relative to every other submission.
+        let mut op_ids = Vec::with_capacity(subs.len());
+        for sub in subs {
+            let (op_id, _) = self.enqueue_submission(sub);
+            op_ids.push(op_id);
+        }
+        coordinator.bump_revision();
+        let _ = reply.send(Ok(op_ids));
+    }
+
+    /// Incoming groups may overlap one another—the scheduler serializes those
+    /// within the accepted batch. They may not queue behind an earlier direct
+    /// mutation, because that mutation's completion/auto-refresh must publish
+    /// a new canonical revision before another reviewed plan can be accepted.
+    fn has_existing_mutating_lock_conflict(&self, subs: &[OpSubmission]) -> bool {
+        let incoming: BTreeSet<ManagerId> = subs
+            .iter()
+            .flat_map(|sub| sub.locks.iter().copied())
+            .collect();
+        let mutating = |kind: ipc::OpKind| {
+            matches!(
+                kind,
+                ipc::OpKind::Upgrade | ipc::OpKind::SelfUpdate | ipc::OpKind::HealthFix
+            )
+        };
+
+        self.pending.iter().any(|pending| {
+            mutating(pending.op.kind.wire()) && !incoming.is_disjoint(&pending.op.locks)
+        }) || self
+            .running
+            .values()
+            .any(|running| mutating(running.kind) && !incoming.is_disjoint(&running.locks))
+    }
+
+    /// Inserts one already-constructed submission. Returns `(op_id, created)`;
+    /// a duplicate refresh coalesces and therefore does not mutate state.
+    fn enqueue_submission(&mut self, sub: OpSubmission) -> (String, bool) {
         // Duplicate refresh coalesces to the existing opId (SPEC §5.7).
         if matches!(sub.kind, OpKind::Refresh) {
             if let Some(existing) = self.active_refresh.get(&sub.subject) {
                 tracing::debug!(subject = %sub.subject, op = %existing, "refresh coalesced");
-                if let Some(reply) = reply {
-                    let _ = reply.send(existing.clone());
-                }
-                return;
+                return (existing.clone(), false);
             }
         }
 
@@ -963,12 +1138,12 @@ impl Sched {
             base_env: sub.base_env,
             enqueued_at: Instant::now(),
         });
-        if let Some(reply) = reply {
-            let _ = reply.send(op_id);
-        }
+        (op_id, true)
     }
 
     fn handle_cancel(&mut self, op_id: &str) {
+        let coordinator = self.deps.plan_coordinator.clone();
+        let mut coordinator = coordinator.lock().expect("plan coordinator poisoned");
         // Running: cancel the token; the runner SIGTERMs the group and the op
         // task reports Cancelled through the normal Finished path.
         if let Some(token) = self
@@ -1009,6 +1184,7 @@ impl Sched {
                     .sink
                     .emit(AppEvent::OpStatus(self.status_event(&r, None)));
             }
+            coordinator.bump_revision();
         }
     }
 
@@ -1029,6 +1205,8 @@ impl Sched {
         exit_code: Option<i32>,
         error: Option<PmError>,
     ) {
+        let coordinator = self.deps.plan_coordinator.clone();
+        let mut coordinator = coordinator.lock().expect("plan coordinator poisoned");
         let Some(info) = self.running.remove(op_id) else {
             return;
         };
@@ -1101,11 +1279,18 @@ impl Sched {
                 }
                 for target in targets {
                     if let Some(sub) = factory(target) {
-                        self.handle_submit(sub, None);
+                        self.enqueue_submission(sub);
                     }
                 }
             }
         }
+        coordinator.bump_revision();
+    }
+
+    fn try_start_all_coordinated(&mut self) {
+        let coordinator = self.deps.plan_coordinator.clone();
+        let _coordinator = coordinator.lock().expect("plan coordinator poisoned");
+        self.try_start_all();
     }
 
     fn try_start_all(&mut self) {
@@ -1197,6 +1382,7 @@ impl Sched {
             emitter: self.emitter.clone(),
             registry: self.deps.registry.clone(),
             route_recheck: self.deps.route_recheck.clone(),
+            plan_coordinator: self.deps.plan_coordinator.clone(),
             shared: self.shared.clone(),
             tx: self.tx.clone(),
         };
@@ -1219,6 +1405,7 @@ struct RunArgs {
     emitter: Arc<BatchingEmitter>,
     registry: Arc<Registry>,
     route_recheck: Option<RouteRecheck>,
+    plan_coordinator: Arc<Mutex<PlanCoordinator>>,
     shared: Arc<Shared>,
     tx: mpsc::UnboundedSender<Msg>,
 }
@@ -1301,6 +1488,7 @@ async fn run_operation(args: RunArgs) {
         emitter,
         registry,
         route_recheck,
+        plan_coordinator,
         shared,
         tx,
     } = args;
@@ -1440,10 +1628,13 @@ async fn run_operation(args: RunArgs) {
                 // SPEC §5.3: routes are re-checked each refresh with the
                 // manager's own listing — BEFORE the upsert so the join
                 // uses fresh routed pairs.
-                if let Some(recheck) = &route_recheck {
-                    recheck(&snapshot);
-                }
-                publish_snapshot(&registry, &sink, snapshot)
+                publish_refresh_snapshot(
+                    &registry,
+                    &sink,
+                    route_recheck.as_ref(),
+                    &plan_coordinator,
+                    snapshot,
+                )
             }
             Err(parse_err) => {
                 tracing::error!(op = %op_id, error = %parse_err, "refresh parse failed");
@@ -1495,10 +1686,13 @@ async fn run_operation(args: RunArgs) {
                                     match adapter.parse_recovery(&failed_planned, &outputs, &out) {
                                         Ok(snapshot) => {
                                             outputs.push(out);
-                                            if let Some(recheck) = &route_recheck {
-                                                recheck(&snapshot);
-                                            }
-                                            publish_snapshot(&registry, &sink, snapshot);
+                                            publish_refresh_snapshot(
+                                                &registry,
+                                                &sink,
+                                                route_recheck.as_ref(),
+                                                &plan_coordinator,
+                                                snapshot,
+                                            );
                                         }
                                         Err(rec_err) => {
                                             end = Some((
@@ -1558,6 +1752,24 @@ fn publish_snapshot(registry: &Registry, sink: &Arc<dyn EventSink>, snapshot: Ma
             }));
         }
     }
+}
+
+/// Publishes route re-evaluation and the joined snapshot as one canonical
+/// epoch. No plan can observe one without the other, and every plan issued
+/// before this refresh becomes stale before the operation reports finished.
+fn publish_refresh_snapshot(
+    registry: &Registry,
+    sink: &Arc<dyn EventSink>,
+    route_recheck: Option<&RouteRecheck>,
+    plan_coordinator: &Arc<Mutex<PlanCoordinator>>,
+    snapshot: ManagerSnapshot,
+) {
+    let mut coordinator = plan_coordinator.lock().expect("plan coordinator poisoned");
+    if let Some(recheck) = route_recheck {
+        recheck(&snapshot);
+    }
+    publish_snapshot(registry, sink, snapshot);
+    coordinator.bump_revision();
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1679,6 +1891,7 @@ mod tests {
         fake: Arc<FakeRunner>,
         sink: Arc<VecSink>,
         registry: Arc<Registry>,
+        plan_coordinator: Arc<Mutex<PlanCoordinator>>,
         journal_path: PathBuf,
         _dir: tempfile::TempDir,
     }
@@ -1696,6 +1909,7 @@ mod tests {
         let fake = Arc::new(FakeRunner::new());
         let sink = Arc::new(VecSink::new());
         let registry = Arc::new(Registry::new());
+        let plan_coordinator = Arc::new(Mutex::new(PlanCoordinator::default()));
         let journal_path = dir.path().join("operations.jsonl");
         let deps = QueueDeps {
             runner: fake.clone(),
@@ -1705,6 +1919,7 @@ mod tests {
             ops_dir: dir.path().join("ops"),
             refresh_factory: factory,
             route_recheck: recheck,
+            plan_coordinator: plan_coordinator.clone(),
             max_concurrency: MAX_CONCURRENCY,
             aging_guard: AGING_GUARD,
         };
@@ -1713,6 +1928,7 @@ mod tests {
             fake,
             sink,
             registry,
+            plan_coordinator,
             journal_path,
             _dir: dir,
         }
@@ -2272,6 +2488,207 @@ mod tests {
             .unwrap();
         assert_ne!(r1, r3);
         wait_for(|| status_of(&h, &r3) == OpStatus::Succeeded).await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn plan_batch_revision_mismatch_enqueues_all_or_none() {
+        let h = harness();
+        let current_revision = h
+            .plan_coordinator
+            .lock()
+            .expect("plan coordinator poisoned")
+            .revision();
+        let subs = vec![
+            upgrade_sub(
+                ManagerId::Brew,
+                &[ManagerId::Brew],
+                "/fake/brew",
+                &["upgrade", "dolt"],
+            ),
+            upgrade_sub(
+                ManagerId::Mise,
+                &[ManagerId::Mise],
+                "/fake/mise",
+                &["upgrade", "deno"],
+            ),
+        ];
+
+        let error = h
+            .queue
+            .submit_plan_batch(subs, current_revision + 1)
+            .await
+            .unwrap_err();
+
+        assert_eq!(error, PlanBatchError::RevisionChanged);
+        assert!(h.queue.records().is_empty(), "no partial batch is visible");
+        assert!(h.fake.calls().is_empty(), "no command was started");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn plan_batch_rejects_existing_mutation_with_intersecting_locks() {
+        let h = harness();
+        let gate = Arc::new(Notify::new());
+        h.fake
+            .on_streaming("brew", &["upgrade", "other"])
+            .gate(gate.clone())
+            .exit(0);
+        let direct = h
+            .queue
+            .submit(upgrade_sub(
+                ManagerId::Brew,
+                &[ManagerId::Brew],
+                "/fake/brew",
+                &["upgrade", "other"],
+            ))
+            .await
+            .unwrap();
+        wait_for(|| h.fake.calls().len() == 1).await;
+        let current_revision = h
+            .plan_coordinator
+            .lock()
+            .expect("plan coordinator poisoned")
+            .revision();
+
+        let error = h
+            .queue
+            .submit_plan_batch(
+                vec![upgrade_sub(
+                    ManagerId::Brew,
+                    &[ManagerId::Brew],
+                    "/fake/brew",
+                    &["upgrade", "dolt"],
+                )],
+                current_revision,
+            )
+            .await
+            .unwrap_err();
+
+        assert_eq!(error, PlanBatchError::MutatingOperationConflict);
+        assert_eq!(h.queue.records().len(), 1, "plan batch was not queued");
+        assert_eq!(h.fake.calls().len(), 1, "plan command never started");
+
+        gate.notify_one();
+        wait_for(|| status_of(&h, &direct) == OpStatus::Succeeded).await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn plan_batch_rejects_running_self_update_with_intersecting_locks() {
+        let h = harness();
+        let gate = Arc::new(Notify::new());
+        h.fake
+            .on_streaming("brew", &["upgrade", "mise"])
+            .gate(gate.clone())
+            .exit(0);
+        let direct = h
+            .queue
+            .submit(streaming_sub(
+                ManagerId::Brew,
+                ManagerId::Mise,
+                &[ManagerId::Brew, ManagerId::Mise],
+                "/fake/brew",
+                &["upgrade", "mise"],
+                abs1h(),
+                OpKind::SelfUpdate,
+            ))
+            .await
+            .unwrap();
+        wait_for(|| h.fake.calls().len() == 1).await;
+        assert_eq!(status_of(&h, &direct), OpStatus::Running);
+        let current_revision = h
+            .plan_coordinator
+            .lock()
+            .expect("plan coordinator poisoned")
+            .revision();
+
+        let error = h
+            .queue
+            .submit_plan_batch(
+                vec![upgrade_sub(
+                    ManagerId::Brew,
+                    &[ManagerId::Brew],
+                    "/fake/brew",
+                    &["upgrade", "dolt"],
+                )],
+                current_revision,
+            )
+            .await
+            .unwrap_err();
+
+        assert_eq!(error, PlanBatchError::MutatingOperationConflict);
+        assert_eq!(h.queue.records().len(), 1, "plan batch was not queued");
+        assert_eq!(h.fake.calls().len(), 1, "plan command never started");
+
+        gate.notify_one();
+        wait_for(|| status_of(&h, &direct) == OpStatus::Succeeded).await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn plan_batch_rejects_queued_health_fix_with_intersecting_locks() {
+        let h = harness();
+        let blocker_gate = Arc::new(Notify::new());
+        h.fake
+            .on_streaming("brew", &["upgrade", "other"])
+            .gate(blocker_gate.clone())
+            .exit(0);
+        h.fake
+            .on_streaming("uv", &["tool", "install", "aider-chat", "--reinstall"])
+            .exit(0);
+
+        let blocker = h
+            .queue
+            .submit(upgrade_sub(
+                ManagerId::Brew,
+                &[ManagerId::Brew],
+                "/fake/brew",
+                &["upgrade", "other"],
+            ))
+            .await
+            .unwrap();
+        wait_for(|| h.fake.calls().len() == 1).await;
+        let health_fix = h
+            .queue
+            .submit(streaming_sub(
+                ManagerId::Uv,
+                ManagerId::Uv,
+                &[ManagerId::Brew, ManagerId::Uv],
+                "/fake/uv",
+                &["tool", "install", "aider-chat", "--reinstall"],
+                abs1h(),
+                OpKind::HealthFix {
+                    issue_id: "uv:aider-chat".into(),
+                },
+            ))
+            .await
+            .unwrap();
+        assert_eq!(status_of(&h, &health_fix), OpStatus::Queued);
+        let current_revision = h
+            .plan_coordinator
+            .lock()
+            .expect("plan coordinator poisoned")
+            .revision();
+
+        let error = h
+            .queue
+            .submit_plan_batch(
+                vec![upgrade_sub(
+                    ManagerId::Uv,
+                    &[ManagerId::Uv],
+                    "/fake/uv",
+                    &["tool", "upgrade", "ruff"],
+                )],
+                current_revision,
+            )
+            .await
+            .unwrap_err();
+
+        assert_eq!(error, PlanBatchError::MutatingOperationConflict);
+        assert_eq!(h.queue.records().len(), 2, "plan batch was not queued");
+        assert_eq!(h.fake.calls().len(), 1, "plan command never started");
+        assert_eq!(status_of(&h, &health_fix), OpStatus::Queued);
+
+        blocker_gate.notify_one();
+        wait_for(|| status_of(&h, &blocker) == OpStatus::Succeeded).await;
+        wait_for(|| status_of(&h, &health_fix) == OpStatus::Succeeded).await;
     }
 
     #[tokio::test(start_paused = true)]
@@ -2967,6 +3384,7 @@ mod tests {
                     SelfUpdateRoute::Routed {
                         executor: ManagerId::Brew,
                         command_preview: "brew upgrade mise".into(),
+                        command_args: vec!["upgrade".into(), "mise".into()],
                         why: "mise is managed by Homebrew".into(),
                     },
                 ),
@@ -2976,6 +3394,7 @@ mod tests {
                     ManagedBy::Mise,
                     SelfUpdateRoute::InBand {
                         command_preview: "npm install -g npm@latest".into(),
+                        command_args: vec!["install".into(), "-g".into(), "npm@latest".into()],
                         note: None,
                     },
                 ),
@@ -2986,6 +3405,7 @@ mod tests {
                     SelfUpdateRoute::Routed {
                         executor: ManagerId::Mise,
                         command_preview: "mise upgrade uv".into(),
+                        command_args: vec!["upgrade".into(), "uv".into()],
                         why: "uv is managed by mise".into(),
                     },
                 ),
@@ -2995,6 +3415,7 @@ mod tests {
                     ManagedBy::Standalone,
                     SelfUpdateRoute::InBand {
                         command_preview: "rustup self update".into(),
+                        command_args: vec!["self".into(), "update".into()],
                         note: None,
                     },
                 ),
@@ -3214,6 +3635,117 @@ mod tests {
             .iter()
             .any(|g| g.package_ids.contains(&"tool:rust".to_string())));
         assert!(plan.notes.is_empty());
+    }
+
+    #[test]
+    fn canonical_request_deduplicates_before_rust_dedup_and_argv_planning() {
+        let report = machine_report();
+        let mut snapshots = machine_snapshots();
+        for snapshot in &mut snapshots {
+            if snapshot.manager_id == ManagerId::Mise {
+                snapshot
+                    .packages
+                    .iter_mut()
+                    .find(|package| package.id == "tool:rust")
+                    .unwrap()
+                    .outdated = true;
+            }
+        }
+        let repeated = PlanRequest {
+            selection: Some(vec![
+                PlanSelection {
+                    manager_id: ManagerId::Mise,
+                    package_id: "tool:rust".into(),
+                },
+                PlanSelection {
+                    manager_id: ManagerId::Mise,
+                    package_id: "tool:rust".into(),
+                },
+                PlanSelection {
+                    manager_id: ManagerId::Rustup,
+                    package_id: "toolchain:stable-aarch64-apple-darwin".into(),
+                },
+                PlanSelection {
+                    manager_id: ManagerId::Rustup,
+                    package_id: "toolchain:stable-aarch64-apple-darwin".into(),
+                },
+                PlanSelection {
+                    manager_id: ManagerId::Mise,
+                    package_id: "tool:deno".into(),
+                },
+                PlanSelection {
+                    manager_id: ManagerId::Mise,
+                    package_id: "tool:deno".into(),
+                },
+            ]),
+            include_self_updates: false,
+            include_greedy_casks: false,
+        };
+
+        let canonical = canonicalize_plan_request(repeated).unwrap();
+        assert_eq!(canonical.selection.as_ref().unwrap().len(), 3);
+        let busy = BTreeSet::new();
+        let stale = BTreeSet::new();
+        let plan = build_upgrade_plan(
+            &canonical,
+            &empty_sources(&report, &snapshots, &busy, &stale),
+        );
+
+        assert_eq!(
+            plan.excluded
+                .iter()
+                .filter(|excluded| excluded.package_id == "tool:rust")
+                .count(),
+            1
+        );
+        assert_eq!(plan.notes, vec![RUST_DEDUP_NOTE.to_string()]);
+        let mise = plan
+            .groups
+            .iter()
+            .find(|group| group.subject == ManagerId::Mise)
+            .unwrap();
+        assert_eq!(mise.package_ids, vec!["tool:deno"]);
+        assert_eq!(mise.commands[0].argv_preview, "mise upgrade deno");
+        let rustup = plan
+            .groups
+            .iter()
+            .find(|group| group.subject == ManagerId::Rustup)
+            .unwrap();
+        assert_eq!(
+            rustup.package_ids,
+            vec!["toolchain:stable-aarch64-apple-darwin"]
+        );
+        assert_eq!(
+            rustup.commands[0].argv_preview,
+            "rustup update stable-aarch64-apple-darwin"
+        );
+    }
+
+    #[test]
+    fn canonical_request_rejects_selection_and_package_id_limits() {
+        let too_many = PlanRequest {
+            selection: Some(
+                (0..=MAX_PLAN_SELECTIONS)
+                    .map(|index| PlanSelection {
+                        manager_id: ManagerId::Brew,
+                        package_id: format!("formula:pkg-{index}"),
+                    })
+                    .collect(),
+            ),
+            include_self_updates: false,
+            include_greedy_casks: false,
+        };
+        assert!(canonicalize_plan_request(too_many).is_err());
+
+        let too_long = PlanRequest {
+            selection: Some(vec![PlanSelection {
+                manager_id: ManagerId::Brew,
+                package_id: "x".repeat(MAX_PLAN_PACKAGE_ID_BYTES + 1),
+            }]),
+            include_self_updates: false,
+            include_greedy_casks: false,
+        };
+        assert!(canonicalize_plan_request(too_long).is_err());
     }
 
     #[test]
@@ -3458,6 +3990,7 @@ mod tests {
         let routed = ipc::SelfUpdateRoute::Routed {
             executor: ManagerId::Brew,
             command_preview: "brew upgrade mise".into(),
+            command_args: vec!["upgrade".into(), "mise".into()],
             why: "mise is managed by Homebrew".into(),
         };
         let sub = make_self_update_submission(ManagerId::Mise, &routed, &statuses, &settings, &env)
@@ -3482,6 +4015,7 @@ mod tests {
         // In-band: npm updates itself; mise-managed npm guards the Mise lock.
         let in_band = ipc::SelfUpdateRoute::InBand {
             command_preview: "npm install -g npm@latest".into(),
+            command_args: vec!["install".into(), "-g".into(), "npm@latest".into()],
             note: None,
         };
         let sub = make_self_update_submission(ManagerId::Npm, &in_band, &statuses, &settings, &env)
@@ -3505,6 +4039,86 @@ mod tests {
     }
 
     #[test]
+    fn self_update_submission_preserves_structured_argument_boundaries() {
+        let mut statuses = BTreeMap::new();
+        statuses.insert(
+            ManagerId::Npm,
+            present(
+                ManagerId::Npm,
+                "/Users/testuser/.local/share/mise/shims/npm",
+                ManagedBy::Mise,
+            ),
+        );
+        let route = SelfUpdateRoute::in_band(
+            "npm",
+            vec![
+                "install".into(),
+                "-g".into(),
+                "package name;$(touch /tmp/never)".into(),
+            ],
+            None,
+        );
+        let sub = make_self_update_submission(
+            ManagerId::Npm,
+            &route,
+            &statuses,
+            &Settings::default(),
+            &test_env(),
+        )
+        .unwrap();
+        assert_eq!(
+            sub.commands[0].spec.args,
+            vec!["install", "-g", "package name;$(touch /tmp/never)"]
+        );
+    }
+
+    #[test]
+    fn self_update_submission_fails_closed_without_matching_backend_argv() {
+        let mut statuses = BTreeMap::new();
+        statuses.insert(
+            ManagerId::Npm,
+            present(
+                ManagerId::Npm,
+                "/Users/testuser/.local/share/mise/shims/npm",
+                ManagedBy::Mise,
+            ),
+        );
+        let route = SelfUpdateRoute::in_band(
+            "npm",
+            vec!["install".into(), "-g".into(), "npm@latest".into()],
+            None,
+        );
+        let wire = serde_json::to_string(&route).unwrap();
+        let deserialized: SelfUpdateRoute = serde_json::from_str(&wire).unwrap();
+        let err = make_self_update_submission(
+            ManagerId::Npm,
+            &deserialized,
+            &statuses,
+            &Settings::default(),
+            &test_env(),
+        )
+        .err()
+        .expect("IPC-round-tripped route has no trusted argv");
+        assert!(matches!(err, PmError::Internal { .. }));
+
+        let mismatched = SelfUpdateRoute::InBand {
+            command_preview: "npm install -g attacker@latest".into(),
+            command_args: vec!["install".into(), "-g".into(), "npm@latest".into()],
+            note: None,
+        };
+        let err = make_self_update_submission(
+            ManagerId::Npm,
+            &mismatched,
+            &statuses,
+            &Settings::default(),
+            &test_env(),
+        )
+        .err()
+        .expect("preview/argv mismatch must fail");
+        assert!(matches!(err, PmError::Internal { .. }));
+    }
+
+    #[test]
     fn health_fix_submission_binds_the_fix_command() {
         let issue = HealthIssue {
             id: "uv:aider-chat".into(),
@@ -3513,6 +4127,12 @@ mod tests {
             title: "Tool `aider-chat` environment is broken.".into(),
             detail: "warning: …".into(),
             fix_command: Some("uv tool install aider-chat --reinstall".into()),
+            fix_args: Some(vec![
+                "tool".into(),
+                "install".into(),
+                "aider-chat".into(),
+                "--reinstall".into(),
+            ]),
             fixable: true,
         };
         let det = present(
@@ -3536,6 +4156,52 @@ mod tests {
         assert!(
             matches!(sub.kind, OpKind::HealthFix { ref issue_id } if issue_id == "uv:aider-chat")
         );
+    }
+
+    #[test]
+    fn health_fix_submission_fails_closed_for_untrusted_or_mismatched_argv() {
+        let det = present(
+            ManagerId::Uv,
+            "/Users/testuser/.local/share/mise/shims/uv",
+            ManagedBy::Mise,
+        );
+        let mut issue = HealthIssue {
+            id: "uv:aider-chat".into(),
+            manager_id: ManagerId::Uv,
+            severity: HealthSeverity::Warning,
+            title: "broken".into(),
+            detail: "warning".into(),
+            fix_command: Some("uv tool install aider-chat --reinstall".into()),
+            fix_args: None,
+            fixable: true,
+        };
+        let err = make_health_fix_submission(
+            ManagerId::Uv,
+            &issue,
+            &det,
+            &Settings::default(),
+            &test_env(),
+        )
+        .err()
+        .expect("missing trusted argv must fail");
+        assert!(matches!(err, PmError::Internal { .. }));
+
+        issue.fix_args = Some(vec![
+            "tool".into(),
+            "install".into(),
+            "other-tool".into(),
+            "--reinstall".into(),
+        ]);
+        let err = make_health_fix_submission(
+            ManagerId::Uv,
+            &issue,
+            &det,
+            &Settings::default(),
+            &test_env(),
+        )
+        .err()
+        .expect("preview/argv mismatch must fail");
+        assert!(matches!(err, PmError::Internal { .. }));
     }
 
     #[test]

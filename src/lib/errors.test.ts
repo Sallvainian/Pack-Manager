@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { describeError } from "./errors";
+import { describeError, errorCopy } from "./errors";
 import type { IpcError } from "./ipc/types";
 
 describe("describeError", () => {
@@ -47,5 +47,14 @@ describe("describeError", () => {
     cyclic.self = cyclic;
     // JSON.stringify throws on cycles; the fallback must not.
     expect(typeof describeError(cyclic)).toBe("string");
+  });
+});
+
+describe("plan_stale copy", () => {
+  it("tells the user to review and confirm the refreshed plan", () => {
+    const copy = errorCopy({ code: "plan_stale", message: "" });
+    expect(copy.title).toBe("Plan needs review");
+    expect(copy.message).toContain("Review the refreshed plan");
+    expect(copy.message).toContain("confirm again");
   });
 });

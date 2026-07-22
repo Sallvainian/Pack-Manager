@@ -44,7 +44,7 @@ export function refreshAll(): Promise<OpIds> {
   return invoke<OpIds>("refresh_all");
 }
 
-/** PURE preview — the trust device behind the Upgrade Plan Sheet. */
+/** Issues the trust-device preview shown in the Upgrade Plan Sheet. */
 export function buildUpgradePlan(args: PlanRequest): Promise<UpgradePlan> {
   return invoke<UpgradePlan>("build_upgrade_plan", { args });
 }

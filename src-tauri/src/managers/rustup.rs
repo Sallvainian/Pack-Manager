@@ -129,21 +129,16 @@ impl ManagerAdapter for RustupAdapter {
     ) -> SelfUpdateRoute {
         // rustup reports itself in `rustup check` — in-band either way.
         if own_outdated_row.is_some() {
-            return SelfUpdateRoute::InBand {
-                command_preview: "rustup self update".into(),
-                note: None,
-            };
+            return SelfUpdateRoute::in_band("rustup", vec!["self".into(), "update".into()], None);
         }
         match managed_by {
-            ManagedBy::Brew => SelfUpdateRoute::Routed {
-                executor: ManagerId::Brew,
-                command_preview: "brew upgrade rustup".into(),
-                why: "rustup is managed by Homebrew".into(),
-            },
-            _ => SelfUpdateRoute::InBand {
-                command_preview: "rustup self update".into(),
-                note: None,
-            },
+            ManagedBy::Brew => SelfUpdateRoute::routed(
+                ManagerId::Brew,
+                "brew",
+                vec!["upgrade".into(), "rustup".into()],
+                "rustup is managed by Homebrew",
+            ),
+            _ => SelfUpdateRoute::in_band("rustup", vec!["self".into(), "update".into()], None),
         }
     }
 

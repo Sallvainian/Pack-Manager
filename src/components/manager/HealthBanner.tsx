@@ -1,7 +1,7 @@
 /**
  * HealthBanner — per-manager health issues (SPEC §4.8 row 3, §F13). Warning- or
- * error-tinted; each issue shows its title, the copyable fix command, and a
- * "Run fix" button that enqueues the fix on the manager's lane (`run_health_fix`).
+ * error-tinted; every issue keeps its diagnostic detail visible, while only a
+ * backend-recognized fix exposes copy and Run fix controls.
  */
 import { runHealthFix } from "../../lib/ipc/client";
 import type { HealthIssue, ManagerId } from "../../lib/ipc/types";

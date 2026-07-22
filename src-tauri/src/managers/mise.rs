@@ -132,21 +132,16 @@ impl ManagerAdapter for MiseAdapter {
     ) -> SelfUpdateRoute {
         // In-band override first (SPEC §5.3 precedence).
         if own_outdated_row.is_some() {
-            return SelfUpdateRoute::InBand {
-                command_preview: "mise self-update".into(),
-                note: None,
-            };
+            return SelfUpdateRoute::in_band("mise", vec!["self-update".into()], None);
         }
         match managed_by {
-            ManagedBy::Brew => SelfUpdateRoute::Routed {
-                executor: ManagerId::Brew,
-                command_preview: "brew upgrade mise".into(),
-                why: "mise is managed by Homebrew".into(),
-            },
-            _ => SelfUpdateRoute::InBand {
-                command_preview: "mise self-update".into(),
-                note: None,
-            },
+            ManagedBy::Brew => SelfUpdateRoute::routed(
+                ManagerId::Brew,
+                "brew",
+                vec!["upgrade".into(), "mise".into()],
+                "mise is managed by Homebrew",
+            ),
+            _ => SelfUpdateRoute::in_band("mise", vec!["self-update".into()], None),
         }
     }
 
