@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.0](https://github.com/Sallvainian/Pack-Manager/compare/v0.1.1...v0.2.0) (2026-07-22)
+
+
+### Features
+
+* add in-app auto-update ([dd535fa](https://github.com/Sallvainian/Pack-Manager/commit/dd535fa1b55266e13e3836c1b9820de0686ed725))
+* in-app auto-update ([5e7466a](https://github.com/Sallvainian/Pack-Manager/commit/5e7466a0acbd50cdcca4fbcb25d6c1925a3780cf))
+
 ## [0.1.1](https://github.com/Sallvainian/Pack-Manager/compare/v0.1.0...v0.1.1) (2026-07-22)
 
 
