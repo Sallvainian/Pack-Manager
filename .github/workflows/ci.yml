@@ -1,0 +1,88 @@
+# Pack-Manager CI (SPEC §7.6).
+#
+# rust (macos-14): fmt + clippy -D warnings + cargo test --locked — offline.
+# web (ubuntu):    npm ci + tsc --noEmit + vitest run + npm run build — offline.
+# build-smoke (macos-14, main only): debug .app bundle, uploaded as artifact.
+#
+# No job touches the network beyond dependency install. Live smoke tests are
+# all #[ignore] and developer-run only — never here. Beta-OS-specific issues
+# are diagnosed on-machine by design (DECISIONS D20): runners stay on stable
+# macos-14.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      # `tauri::generate_context!` embeds `frontendDist` (../dist) at compile
+      # time; the Rust job never builds the frontend, so satisfy it with a stub.
+      - name: Stub frontendDist
+        run: mkdir -p dist && touch dist/index.html
+      - name: cargo fmt
+        working-directory: src-tauri
+        run: cargo fmt --check
+      - name: cargo clippy
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+      - name: cargo test
+        working-directory: src-tauri
+        run: cargo test --locked
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: npm ci
+        run: npm ci
+      - name: typecheck
+        run: npx tsc --noEmit
+      - name: vitest
+        run: npx vitest run
+      - name: build
+        run: npm run build
+
+  build-smoke:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: macos-14
+    needs: [rust, web]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: npm ci
+        run: npm ci
+      - name: tauri build (debug)
+        run: npm run tauri build -- --debug
+      - name: Upload .app
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pack-Manager-debug-app
+          path: src-tauri/target/debug/bundle/macos/Pack-Manager.app
+          if-no-files-found: error

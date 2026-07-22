@@ -133,7 +133,8 @@ pub fn dedupe_formulae_against_casks(formulae: Vec<Package>, casks: &[Package]) 
 pub(crate) fn read_fixture(name: &str) -> String {
     let path =
         std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../dev/fixtures")).join(name);
-    std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read fixture {}: {e}", path.display()))
+    std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("read fixture {}: {e}", path.display()))
 }
 
 #[cfg(test)]
@@ -213,7 +214,7 @@ mod tests {
     fn dedupe_removes_casks_from_formula_inventory() {
         let formulae = vec![
             inv(PackageKind::Formula, "abseil", "20260107.1"),
-            inv(PackageKind::Formula, "ghostty", "1.3.1"),   // also a cask
+            inv(PackageKind::Formula, "ghostty", "1.3.1"), // also a cask
             inv(PackageKind::Formula, "openusage", "0.7.6"), // also a cask
         ];
         let casks = vec![
@@ -235,6 +236,9 @@ mod tests {
             make_id(PackageKind::CaskGreedy, "openusage"),
             "caskGreedy:openusage"
         );
-        assert_eq!(make_id(PackageKind::Tool, "npm:prettier"), "tool:npm:prettier");
+        assert_eq!(
+            make_id(PackageKind::Tool, "npm:prettier"),
+            "tool:npm:prettier"
+        );
     }
 }

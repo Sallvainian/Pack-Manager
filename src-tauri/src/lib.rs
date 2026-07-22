@@ -40,8 +40,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(move |app| {
-            let (settings, path, logging_handle) =
-                setup_state.take().expect("setup runs once");
+            let (settings, path, logging_handle) = setup_state.take().expect("setup runs once");
             let handle = app.handle().clone();
             let app_state = tauri::async_runtime::block_on(state::AppState::initialize(
                 handle,

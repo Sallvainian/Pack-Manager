@@ -45,7 +45,11 @@ pub fn parse_ls_json(stdout: &str) -> Result<Vec<Package>, PmError> {
 
     let mut out = Vec::with_capacity(map.len());
     for (name, installs) in map {
-        let Some(chosen) = installs.iter().find(|i| i.active).or_else(|| installs.last()) else {
+        let Some(chosen) = installs
+            .iter()
+            .find(|i| i.active)
+            .or_else(|| installs.last())
+        else {
             continue; // empty install list for a tool — skip
         };
         let meta = build_meta(
@@ -124,10 +128,7 @@ pub fn parse_outdated_text(stdout: &str) -> Result<Vec<Package>, PmError> {
         if current == latest {
             continue;
         }
-        let source = cols
-            .get(4..)
-            .map(|s| s.join(" "))
-            .filter(|s| !s.is_empty());
+        let source = cols.get(4..).map(|s| s.join(" ")).filter(|s| !s.is_empty());
         let meta = build_meta(Some(requested.to_string()), source);
         out.push(outdated_pkg(tool, current, latest, meta));
     }

@@ -140,18 +140,25 @@ pub fn classify_managed_by(resolved: &Path, home: &Path) -> (ManagedBy, String) 
     )
 }
 
+/// SPEC §5.3 rule 4 helper: the tree a manager calls its own. When a
+/// manager's binary classifies to ITSELF as owner (brew under
+/// `/opt/homebrew`, rustup under `~/.cargo/bin`), it is standalone — a
+/// manager does not manage itself.
+fn own_tree_label(id: ManagerId, owner: ManagedBy) -> Option<&'static str> {
+    match (id, owner) {
+        (ManagerId::Brew, ManagedBy::Brew) => Some("Homebrew's own tree"),
+        (ManagerId::Mise, ManagedBy::Mise) => Some("mise's own tree"),
+        (ManagerId::Rustup, ManagedBy::Rustup) => Some("rustup's own tree"),
+        _ => None,
+    }
+}
+
 /// [`classify_managed_by`] plus SPEC §5.3 rule 4: when the classified owner IS
 /// the manager being classified (brew under `/opt/homebrew`, rustup under
 /// `~/.cargo/bin`), it is `Standalone` — a manager does not manage itself.
 pub fn classify_for_manager(id: ManagerId, resolved: &Path, home: &Path) -> (ManagedBy, String) {
     let (owner, evidence) = classify_managed_by(resolved, home);
-    let own_tree = match (id, owner) {
-        (ManagerId::Brew, ManagedBy::Brew) => Some("Homebrew's own tree"),
-        (ManagerId::Mise, ManagedBy::Mise) => Some("mise's own tree"),
-        (ManagerId::Rustup, ManagedBy::Rustup) => Some("rustup's own tree"),
-        _ => None,
-    };
-    match own_tree {
+    match own_tree_label(id, owner) {
         Some(tree) => (
             ManagedBy::Standalone,
             format!("resolved at {} — {}", abbrev_home(resolved, home), tree),
@@ -207,15 +214,44 @@ fn install_hint(id: ManagerId) -> Option<String> {
 
 /// Resolves one adapter's binary: `which_in` on OUR search path first, then
 /// the fixed candidate paths (`~/` expanded against `env.home`).
+///
+/// **Shim-vs-own-tree preference**: mise's shims proxy tools mise manages
+/// through the mise binary — including `rustup`/`cargo` shims created for
+/// mise's rust toolchain. When the `which` hit for a MANAGER's binary is such
+/// a shim but the manager has its own real installation in its own tree (a
+/// fixed candidate that classifies to the manager itself — SPEC §5.3 rule 4),
+/// the real binary wins: SPEC §2's machine facts pin rustup standalone at
+/// `~/.cargo/bin` while mise's rust tool shims it. npm/uv exist nowhere
+/// outside mise's tree, so their shim resolution (managed by mise) stands —
+/// this preference can never reroute a manager to ANOTHER manager's tree.
 fn resolve_binary(env: &ToolEnv, adapter: &dyn ManagerAdapter) -> Option<PathBuf> {
+    let expand = |candidate: &str| match candidate.strip_prefix("~/") {
+        Some(rest) => env.home.join(rest),
+        None => PathBuf::from(candidate),
+    };
     if let Some(found) = env.which(adapter.binary_name()) {
+        let shims = env.home.join(".local/share/mise/shims");
+        if found.starts_with(&shims) {
+            for candidate in adapter.detection_candidates() {
+                let path = expand(candidate);
+                if path.is_file() {
+                    let (owner, _) = classify_managed_by(&path, &env.home);
+                    if own_tree_label(adapter.id(), owner).is_some() {
+                        tracing::info!(
+                            manager = %adapter.id(),
+                            shim = %found.display(),
+                            preferred = %path.display(),
+                            "which hit a mise shim; preferring the manager's own-tree binary"
+                        );
+                        return Some(path);
+                    }
+                }
+            }
+        }
         return Some(found);
     }
     for candidate in adapter.detection_candidates() {
-        let path = match candidate.strip_prefix("~/") {
-            Some(rest) => env.home.join(rest),
-            None => PathBuf::from(candidate),
-        };
+        let path = expand(candidate);
         if path.is_file() {
             return Some(path);
         }
@@ -647,6 +683,74 @@ mod tests {
         let present = outcome.present();
         assert_eq!(present.len(), 5);
         assert!(!present.contains(&ManagerId::Mas));
+    }
+
+    /// Machine fact (SPEC §2): mise's rust toolchain SHIMS `rustup`, while the
+    /// real standalone rustup lives at `~/.cargo/bin/rustup`. Even with the
+    /// shim first on the search path, rustup must resolve to its own tree and
+    /// classify Standalone (SPEC F1: rustup→standalone) — while npm/uv, which
+    /// exist nowhere outside mise's tree, keep their shim resolution.
+    #[tokio::test]
+    async fn rustup_prefers_own_tree_binary_over_mise_shim() {
+        use crate::ipc::PathSource;
+
+        let tmp = tempfile::tempdir().unwrap();
+        // Canonicalize the root: on macOS `/var/folders/…` canonicalizes to
+        // `/private/var/folders/…`, and the own-tree rule compares the
+        // CANONICAL binary path against `{home}/.cargo/bin`.
+        let root = tmp.path().canonicalize().unwrap();
+        let home = root.join("home");
+        let shims = home.join(".local/share/mise/shims");
+        let bin = root.join("bin");
+        let cargo_bin = home.join(".cargo/bin");
+
+        make_exec(&bin.join("mise"));
+        make_exec(&cargo_bin.join("rustup"));
+        std::fs::create_dir_all(&shims).unwrap();
+        // As on the target machine: rustup/npm/uv shims all point at mise.
+        for shim in ["rustup", "npm", "uv"] {
+            std::os::unix::fs::symlink(bin.join("mise"), shims.join(shim)).unwrap();
+        }
+
+        // Shims FIRST — the SPEC §5.2 static ordering.
+        let env = ToolEnv::from_entries(
+            home.clone(),
+            vec![shims.clone(), bin.clone(), cargo_bin.clone()],
+            PathSource::StaticFallback,
+        );
+
+        let fake = FakeRunner::new();
+        for tool in ["brew", "mise", "npm", "uv", "rustup", "mas"] {
+            fake.on(tool, &["--version"]).ok("1.0.0\n");
+        }
+
+        let outcome = detect_all(&env, &fake).await;
+        let by_id = |id: ManagerId| -> &ManagerInfo {
+            outcome.report.managers.iter().find(|m| m.id == id).unwrap()
+        };
+
+        let rustup = by_id(ManagerId::Rustup);
+        assert_eq!(rustup.status, ManagerStatus::Present);
+        assert_eq!(
+            rustup.managed_by,
+            ManagedBy::Standalone,
+            "own-tree binary must win over the mise shim"
+        );
+        assert_eq!(
+            rustup.binary_path.as_deref(),
+            Some(cargo_bin.join("rustup").to_str().unwrap()),
+            "spawns must use the real rustup, not the shim proxy"
+        );
+        assert!(
+            rustup.evidence.as_deref().unwrap().contains("own tree"),
+            "{:?}",
+            rustup.evidence
+        );
+
+        // npm/uv have no own tree — shim resolution (managed by mise) stands.
+        for id in [ManagerId::Npm, ManagerId::Uv] {
+            assert_eq!(by_id(id).managed_by, ManagedBy::Mise, "{id} stays mise");
+        }
     }
 
     #[tokio::test]

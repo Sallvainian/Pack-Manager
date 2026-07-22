@@ -155,7 +155,11 @@ mod tests {
     #[test]
     fn uv_tool_list_extracts_broken_env_warning_and_fix_command() {
         let parsed = parse_tool_list(&read_fixture("uv_tool_list_2026-07-21.txt"), "");
-        assert_eq!(parsed.packages.len(), 12, "12 tools despite the warning line");
+        assert_eq!(
+            parsed.packages.len(),
+            12,
+            "12 tools despite the warning line"
+        );
 
         assert_eq!(parsed.health.len(), 1);
         let h = &parsed.health[0];
@@ -182,7 +186,13 @@ mod tests {
             .find(|p| p.name == "claude-code-tools")
             .unwrap();
         assert_eq!(
-            cct.meta.as_ref().unwrap().executables.as_ref().unwrap().len(),
+            cct.meta
+                .as_ref()
+                .unwrap()
+                .executables
+                .as_ref()
+                .unwrap()
+                .len(),
             17
         );
 

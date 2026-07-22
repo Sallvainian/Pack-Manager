@@ -65,8 +65,7 @@ pub fn lock_set(
     let mut locks = BTreeSet::new();
     locks.insert(executor);
     locks.insert(subject);
-    if matches!(executor, ManagerId::Npm | ManagerId::Uv)
-        && executor_managed_by == ManagedBy::Mise
+    if matches!(executor, ManagerId::Npm | ManagerId::Uv) && executor_managed_by == ManagedBy::Mise
     {
         locks.insert(ManagerId::Mise);
     }
@@ -159,7 +158,13 @@ pub fn make_refresh_submission(
         return None;
     }
     let base_env = env.child_env();
-    let commands = bind_commands(planned, binary_path, &base_env, settings, CmdPurpose::Refresh);
+    let commands = bind_commands(
+        planned,
+        binary_path,
+        &base_env,
+        settings,
+        CmdPurpose::Refresh,
+    );
     Some(OpSubmission {
         kind: OpKind::Refresh,
         executor: id,
@@ -202,7 +207,13 @@ pub fn make_upgrade_submission(
         });
     }
     let base_env = env.child_env();
-    let commands = bind_commands(planned, binary_path, &base_env, settings, CmdPurpose::Upgrade);
+    let commands = bind_commands(
+        planned,
+        binary_path,
+        &base_env,
+        settings,
+        CmdPurpose::Upgrade,
+    );
     Ok(OpSubmission {
         kind: OpKind::Upgrade { package_ids: ids },
         executor,
@@ -311,9 +322,12 @@ pub fn make_health_fix_submission(
         tool: manager.as_str().to_string(),
         searched: vec![],
     })?;
-    let fix = issue.fix_command.as_ref().ok_or_else(|| PmError::Internal {
-        detail: format!("health issue {} has no fix command", issue.id),
-    })?;
+    let fix = issue
+        .fix_command
+        .as_ref()
+        .ok_or_else(|| PmError::Internal {
+            detail: format!("health issue {} has no fix command", issue.id),
+        })?;
     let tokens: Vec<String> = fix.split_whitespace().map(str::to_string).collect();
     if tokens.len() < 2 {
         return Err(PmError::Internal {
@@ -382,11 +396,7 @@ pub fn busy_package_ids(records: &[OperationRecord]) -> BTreeSet<(ManagerId, Str
             r.kind == ipc::OpKind::Upgrade
                 && matches!(r.status, OpStatus::Queued | OpStatus::Running)
         })
-        .flat_map(|r| {
-            r.package_ids
-                .iter()
-                .map(move |id| (r.subject, id.clone()))
-        })
+        .flat_map(|r| r.package_ids.iter().map(move |id| (r.subject, id.clone())))
         .collect()
 }
 
@@ -585,9 +595,7 @@ pub fn build_upgrade_plan(req: &PlanRequest, src: &PlanSources) -> UpgradePlan {
     // 6. Staleness warnings for managers participating in the plan.
     let mut warnings: Vec<String> = Vec::new();
     for id in ManagerId::ALL {
-        if src.stale.contains(&id)
-            && groups.iter().any(|g| g.subject == id || g.executor == id)
-        {
+        if src.stale.contains(&id) && groups.iter().any(|g| g.subject == id || g.executor == id) {
             warnings.push(format!("{id}: list may be stale — last check errored"));
         }
     }
@@ -688,7 +696,13 @@ impl Queue {
         let shared = Arc::new(Shared::default());
         let (tx, rx) = mpsc::unbounded_channel();
         let emitter = Arc::new(BatchingEmitter::new(deps.sink.clone()));
-        tokio::spawn(scheduler_task(rx, tx.clone(), deps, shared.clone(), emitter));
+        tokio::spawn(scheduler_task(
+            rx,
+            tx.clone(),
+            deps,
+            shared.clone(),
+            emitter,
+        ));
         Arc::new(Queue { tx, shared })
     }
 
@@ -757,13 +771,7 @@ impl Queue {
     /// Cancels every running op (quit-guard kill hook). Fire-and-forget: the
     /// runners SIGTERM their process groups.
     pub fn cancel_all(&self) {
-        for token in self
-            .shared
-            .tokens
-            .lock()
-            .expect("tokens poisoned")
-            .values()
-        {
+        for token in self.shared.tokens.lock().expect("tokens poisoned").values() {
             token.cancel();
         }
     }
@@ -901,9 +909,9 @@ impl Sched {
             self.active_refresh.insert(sub.subject, op_id.clone());
         }
         let position = self.pending.len() as u32;
-        self.deps
-            .sink
-            .emit(AppEvent::OpStatus(self.status_event(&record, Some(position))));
+        self.deps.sink.emit(AppEvent::OpStatus(
+            self.status_event(&record, Some(position)),
+        ));
         tracing::info!(
             op = %op_id,
             kind = ?record.kind,
@@ -1314,7 +1322,10 @@ async fn run_operation(args: RunArgs) {
                 .unwrap_or_default(),
             pgid: 0, // the runner seam does not expose the child's pgid
         };
-        transcript.lock().expect("transcript poisoned").header(&header);
+        transcript
+            .lock()
+            .expect("transcript poisoned")
+            .header(&header);
     }
 
     let mut outputs: Vec<CommandOutput> = Vec::new();
@@ -1438,8 +1449,7 @@ async fn run_operation(args: RunArgs) {
                                 .then(|| brew::classify_brew_failure(&out))
                                 .flatten();
                                 if let Some(err) = lock_busy {
-                                    end =
-                                        Some((OpStatus::Failed, Some(err), out.exit_code));
+                                    end = Some((OpStatus::Failed, Some(err), out.exit_code));
                                 } else {
                                     match adapter.parse_recovery(&failed_planned, &out) {
                                         Ok(snapshot) => {
@@ -1704,10 +1714,7 @@ mod tests {
             executor,
             subject,
             locks: locks.iter().copied().collect(),
-            commands: vec![BoundCommand {
-                planned,
-                spec,
-            }],
+            commands: vec![BoundCommand { planned, spec }],
             adapter: adapter_for(executor),
             base_env: vec![
                 ("PATH".into(), "/fake".into()),
@@ -1872,8 +1879,7 @@ mod tests {
         g1.notify_one();
         g2.notify_one();
         wait_for(|| {
-            status_of(&h, &id1) == OpStatus::Succeeded
-                && status_of(&h, &id2) == OpStatus::Succeeded
+            status_of(&h, &id1) == OpStatus::Succeeded && status_of(&h, &id2) == OpStatus::Succeeded
         })
         .await;
     }
@@ -2672,7 +2678,13 @@ mod tests {
 
     // ---------------- plan builder ----------------
 
-    fn pkg(kind: PackageKind, name: &str, installed: &str, latest: &str, outdated: bool) -> Package {
+    fn pkg(
+        kind: PackageKind,
+        name: &str,
+        installed: &str,
+        latest: &str,
+        outdated: bool,
+    ) -> Package {
         Package {
             id: format!("{}:{name}", kind_str(kind)),
             name: name.into(),
@@ -2707,7 +2719,12 @@ mod tests {
         }
     }
 
-    fn info(id: ManagerId, name: &str, managed_by: ManagedBy, route: SelfUpdateRoute) -> ManagerInfo {
+    fn info(
+        id: ManagerId,
+        name: &str,
+        managed_by: ManagedBy,
+        route: SelfUpdateRoute,
+    ) -> ManagerInfo {
         ManagerInfo {
             id,
             display_name: name.into(),
@@ -2791,8 +2808,20 @@ mod tests {
                 vec![
                     pkg(PackageKind::Formula, "dolt", "2.2.1", "2.2.2", true),
                     deno_pinned,
-                    pkg(PackageKind::Formula, "abseil", "20260107.1", "20260107.1", false),
-                    pkg(PackageKind::CaskGreedy, "openusage", "0.6.20", "0.7.6", true),
+                    pkg(
+                        PackageKind::Formula,
+                        "abseil",
+                        "20260107.1",
+                        "20260107.1",
+                        false,
+                    ),
+                    pkg(
+                        PackageKind::CaskGreedy,
+                        "openusage",
+                        "0.6.20",
+                        "0.7.6",
+                        true,
+                    ),
                 ],
             ),
             snap(
@@ -2810,7 +2839,13 @@ mod tests {
             snap(
                 ManagerId::Npm,
                 vec![
-                    pkg(PackageKind::GlobalPackage, "typescript", "6.0.3", "7.0.2", true),
+                    pkg(
+                        PackageKind::GlobalPackage,
+                        "typescript",
+                        "6.0.3",
+                        "7.0.2",
+                        true,
+                    ),
                     pkg(PackageKind::GlobalPackage, "dmux", "1.2.0", "1.3.0", true),
                 ],
             ),
@@ -2870,13 +2905,13 @@ mod tests {
         );
 
         // Exclusions with reasons: pinned deno, greedy openusage.
-        assert!(plan.excluded.iter().any(|e| e.package_id == "formula:deno"
-            && e.reason == ExcludeReason::Pinned));
         assert!(plan
             .excluded
             .iter()
-            .any(|e| e.package_id == "caskGreedy:openusage"
-                && e.reason == ExcludeReason::GreedyCask));
+            .any(|e| e.package_id == "formula:deno" && e.reason == ExcludeReason::Pinned));
+        assert!(plan.excluded.iter().any(
+            |e| e.package_id == "caskGreedy:openusage" && e.reason == ExcludeReason::GreedyCask
+        ));
         // The up-to-date abseil row is neither included nor excluded.
         assert!(!plan
             .groups
@@ -2957,12 +2992,10 @@ mod tests {
 
         // Without rustup targets in the selection, mise's rust row survives.
         let req = PlanRequest {
-            selection: Some(vec![
-                PlanSelection {
-                    manager_id: ManagerId::Mise,
-                    package_id: "tool:rust".into(),
-                },
-            ]),
+            selection: Some(vec![PlanSelection {
+                manager_id: ManagerId::Mise,
+                package_id: "tool:rust".into(),
+            }]),
             include_self_updates: false,
             include_greedy_casks: false,
         };
@@ -3039,7 +3072,10 @@ mod tests {
         assert_eq!(self_group.executor, ManagerId::Brew);
         assert_eq!(self_group.locks, vec![ManagerId::Brew, ManagerId::Mise]);
         assert_eq!(self_group.commands[0].argv_preview, "brew upgrade mise");
-        assert_eq!(self_group.commands[0].label, "Self-update mise via Homebrew");
+        assert_eq!(
+            self_group.commands[0].label,
+            "Self-update mise via Homebrew"
+        );
 
         // Toggle off → no self-update groups.
         let req_off = PlanRequest {
@@ -3069,9 +3105,11 @@ mod tests {
             plan.warnings,
             vec!["mise: list may be stale — last check errored".to_string()]
         );
-        assert!(plan.excluded.iter().any(|e| e.package_id
-            == "globalPackage:typescript"
-            && e.reason == ExcludeReason::AlreadyRunning));
+        assert!(plan
+            .excluded
+            .iter()
+            .any(|e| e.package_id == "globalPackage:typescript"
+                && e.reason == ExcludeReason::AlreadyRunning));
         let npm = plan
             .groups
             .iter()
@@ -3113,7 +3151,12 @@ mod tests {
                 &["formula:dolt"],
             ),
             mk(ipc::OpKind::Refresh, ManagerId::Mise, OpStatus::Failed, &[]),
-            mk(ipc::OpKind::Refresh, ManagerId::Brew, OpStatus::Succeeded, &[]),
+            mk(
+                ipc::OpKind::Refresh,
+                ManagerId::Brew,
+                OpStatus::Succeeded,
+                &[],
+            ),
         ];
         let busy = busy_package_ids(&records);
         assert!(busy.contains(&(ManagerId::Npm, "globalPackage:typescript".to_string())));
@@ -3185,7 +3228,11 @@ mod tests {
         let mut statuses = BTreeMap::new();
         statuses.insert(
             ManagerId::Brew,
-            present(ManagerId::Brew, "/opt/homebrew/bin/brew", ManagedBy::Standalone),
+            present(
+                ManagerId::Brew,
+                "/opt/homebrew/bin/brew",
+                ManagedBy::Standalone,
+            ),
         );
         statuses.insert(
             ManagerId::Npm,
@@ -3204,16 +3251,18 @@ mod tests {
             command_preview: "brew upgrade mise".into(),
             why: "mise is managed by Homebrew".into(),
         };
-        let sub =
-            make_self_update_submission(ManagerId::Mise, &routed, &statuses, &settings, &env)
-                .unwrap();
+        let sub = make_self_update_submission(ManagerId::Mise, &routed, &statuses, &settings, &env)
+            .unwrap();
         assert_eq!(sub.executor, ManagerId::Brew);
         assert_eq!(sub.subject, ManagerId::Mise);
         assert_eq!(
             sub.locks.iter().copied().collect::<Vec<_>>(),
             vec![ManagerId::Brew, ManagerId::Mise]
         );
-        assert_eq!(sub.commands[0].spec.program, PathBuf::from("/opt/homebrew/bin/brew"));
+        assert_eq!(
+            sub.commands[0].spec.program,
+            PathBuf::from("/opt/homebrew/bin/brew")
+        );
         assert_eq!(sub.commands[0].spec.args, vec!["upgrade", "mise"]);
         assert!(sub.commands[0]
             .spec
@@ -3226,11 +3275,13 @@ mod tests {
             command_preview: "npm install -g npm@latest".into(),
             note: None,
         };
-        let sub =
-            make_self_update_submission(ManagerId::Npm, &in_band, &statuses, &settings, &env)
-                .unwrap();
+        let sub = make_self_update_submission(ManagerId::Npm, &in_band, &statuses, &settings, &env)
+            .unwrap();
         assert_eq!(sub.executor, ManagerId::Npm);
-        assert_eq!(sub.commands[0].spec.args, vec!["install", "-g", "npm@latest"]);
+        assert_eq!(
+            sub.commands[0].spec.args,
+            vec!["install", "-g", "npm@latest"]
+        );
         assert!(sub.locks.contains(&ManagerId::Mise));
 
         // Unavailable errors with the route's reason.
@@ -3273,12 +3324,18 @@ mod tests {
             vec!["tool", "install", "aider-chat", "--reinstall"]
         );
         assert!(sub.locks.contains(&ManagerId::Mise), "uv is mise-managed");
-        assert!(matches!(sub.kind, OpKind::HealthFix { ref issue_id } if issue_id == "uv:aider-chat"));
+        assert!(
+            matches!(sub.kind, OpKind::HealthFix { ref issue_id } if issue_id == "uv:aider-chat")
+        );
     }
 
     #[test]
     fn refresh_submission_binds_plan_env_and_meta() {
-        let sub = refresh_sub(ManagerId::Brew, "/opt/homebrew/bin/brew", ManagedBy::Standalone);
+        let sub = refresh_sub(
+            ManagerId::Brew,
+            "/opt/homebrew/bin/brew",
+            ManagedBy::Standalone,
+        );
         assert!(matches!(sub.kind, OpKind::Refresh));
         assert_eq!(sub.commands.len(), 5);
         assert_eq!(sub.commands[0].spec.args, vec!["update"]);

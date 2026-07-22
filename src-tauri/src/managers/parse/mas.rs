@@ -43,7 +43,13 @@ pub fn parse_list(stdout: &str) -> Result<Vec<Package>, PmError> {
             });
         };
         let ver = c["ver"].to_string();
-        out.push(app_pkg(&c["id"], &c["name"], Some(ver.clone()), Some(ver), false));
+        out.push(app_pkg(
+            &c["id"],
+            &c["name"],
+            Some(ver.clone()),
+            Some(ver),
+            false,
+        ));
     }
     Ok(out)
 }

@@ -183,7 +183,10 @@ mod tests {
         // 30 transcripts → only the newest 25 ship.
         for i in 0..30 {
             std::fs::write(
-                ops.join(format!("2026-07-22T10-{:02}-00_op{i:02}_npm_upgrade.log", i)),
+                ops.join(format!(
+                    "2026-07-22T10-{:02}-00_op{i:02}_npm_upgrade.log",
+                    i
+                )),
                 "transcript\n",
             )
             .unwrap();
@@ -223,12 +226,8 @@ mod tests {
             .filter(|n| n.starts_with("operations/"))
             .collect();
         assert_eq!(transcript_names.len(), 25, "last 25 transcripts");
-        assert!(names.contains(
-            &"operations/2026-07-22T10-29-00_op29_npm_upgrade.log".to_string()
-        ));
-        assert!(!names.contains(
-            &"operations/2026-07-22T10-00-00_op00_npm_upgrade.log".to_string()
-        ));
+        assert!(names.contains(&"operations/2026-07-22T10-29-00_op29_npm_upgrade.log".to_string()));
+        assert!(!names.contains(&"operations/2026-07-22T10-00-00_op00_npm_upgrade.log".to_string()));
 
         // report.json round-trips as JSON with the expected fields.
         use std::io::Read;

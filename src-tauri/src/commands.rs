@@ -154,13 +154,14 @@ pub async fn refresh_manager(
     let sub = {
         let det = state.detection.read().expect("detection poisoned");
         let outcome = det.as_ref().ok_or_else(detection_not_ready)?;
-        let status = outcome
-            .statuses
-            .get(&args.manager_id)
-            .cloned()
-            .unwrap_or(DetectStatus::Absent {
-                reason: format!("{} was not detected", args.manager_id),
-            });
+        let status =
+            outcome
+                .statuses
+                .get(&args.manager_id)
+                .cloned()
+                .unwrap_or(DetectStatus::Absent {
+                    reason: format!("{} was not detected", args.manager_id),
+                });
         let settings = state.settings.read().expect("settings poisoned").clone();
         let env = state.tool_env.read().expect("tool_env poisoned").clone();
         queue::make_refresh_submission(args.manager_id, &status, &settings, &env)
@@ -187,9 +188,7 @@ pub async fn refresh_all(state: State<'_, AppState>) -> Result<OpIds, IpcError> 
         outcome
             .statuses
             .iter()
-            .filter_map(|(id, status)| {
-                queue::make_refresh_submission(*id, status, &settings, &env)
-            })
+            .filter_map(|(id, status)| queue::make_refresh_submission(*id, status, &settings, &env))
             .collect()
     };
     let mut op_ids = Vec::with_capacity(subs.len());
@@ -277,13 +276,11 @@ pub async fn execute_plan(
                     }
                 }
             } else {
-                let status = outcome
-                    .statuses
-                    .get(&group.executor)
-                    .cloned()
-                    .unwrap_or(DetectStatus::Absent {
+                let status = outcome.statuses.get(&group.executor).cloned().unwrap_or(
+                    DetectStatus::Absent {
                         reason: format!("{} was not detected", group.executor),
-                    });
+                    },
+                );
                 // Greedy casks reached the group only when opted in.
                 let include_greedy = group
                     .package_ids
@@ -333,13 +330,11 @@ pub async fn self_update_manager(
         match &info.self_update {
             // brew: `brew update` IS the self-update — enqueue a refresh.
             SelfUpdateRoute::ViaRefresh { .. } => {
-                let status = outcome
-                    .statuses
-                    .get(&args.manager_id)
-                    .cloned()
-                    .unwrap_or(DetectStatus::Absent {
+                let status = outcome.statuses.get(&args.manager_id).cloned().unwrap_or(
+                    DetectStatus::Absent {
                         reason: "not detected".into(),
-                    });
+                    },
+                );
                 queue::make_refresh_submission(args.manager_id, &status, &settings, &env)
                     .ok_or_else(|| {
                         IpcError::from(PmError::SelfUpdateUnavailable {
@@ -368,26 +363,26 @@ pub async fn run_health_fix(
     args: HealthFixArgs,
 ) -> Result<OpRef, IpcError> {
     let sub = {
-        let snapshot = state.registry.get(args.manager_id).ok_or_else(|| {
-            IpcError::internal(format!("no snapshot for {}", args.manager_id))
-        })?;
+        let snapshot = state
+            .registry
+            .get(args.manager_id)
+            .ok_or_else(|| IpcError::internal(format!("no snapshot for {}", args.manager_id)))?;
         let issue = snapshot
             .health
             .iter()
             .find(|h| h.id == args.issue_id)
-            .ok_or_else(|| {
-                IpcError::internal(format!("unknown health issue {}", args.issue_id))
-            })?
+            .ok_or_else(|| IpcError::internal(format!("unknown health issue {}", args.issue_id)))?
             .clone();
         let det = state.detection.read().expect("detection poisoned");
         let outcome = det.as_ref().ok_or_else(detection_not_ready)?;
-        let status = outcome
-            .statuses
-            .get(&args.manager_id)
-            .cloned()
-            .unwrap_or(DetectStatus::Absent {
-                reason: "not detected".into(),
-            });
+        let status =
+            outcome
+                .statuses
+                .get(&args.manager_id)
+                .cloned()
+                .unwrap_or(DetectStatus::Absent {
+                    reason: "not detected".into(),
+                });
         let settings = state.settings.read().expect("settings poisoned").clone();
         let env = state.tool_env.read().expect("tool_env poisoned").clone();
         queue::make_health_fix_submission(args.manager_id, &issue, &status, &settings, &env)
@@ -487,10 +482,11 @@ pub async fn reveal_operation_log(
                 .cloned()
         })
         .ok_or_else(|| IpcError::internal(format!("unknown operation {}", args.op_id)))?;
-    tauri_plugin_opener::reveal_item_in_dir(PathBuf::from(&record.log_path))
-        .map_err(|e| IpcError::from(PmError::Io {
+    tauri_plugin_opener::reveal_item_in_dir(PathBuf::from(&record.log_path)).map_err(|e| {
+        IpcError::from(PmError::Io {
             detail: e.to_string(),
-        }))
+        })
+    })
 }
 
 #[tauri::command]
@@ -503,9 +499,7 @@ pub async fn reveal_logs_dir() -> Result<(), IpcError> {
 }
 
 #[tauri::command]
-pub async fn export_diagnostics(
-    state: State<'_, AppState>,
-) -> Result<DiagnosticsResult, IpcError> {
+pub async fn export_diagnostics(state: State<'_, AppState>) -> Result<DiagnosticsResult, IpcError> {
     let report = {
         let env = state.tool_env.read().expect("tool_env poisoned").env_info();
         let detection = state

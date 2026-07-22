@@ -82,7 +82,16 @@ pub fn parse_outdated_json(stdout: &str) -> Result<Vec<Package>, PmError> {
         })?;
     let out = map
         .into_iter()
-        .map(|(name, e)| npm_pkg(&name, e.current, e.latest, e.wanted, e.location, e.dependent))
+        .map(|(name, e)| {
+            npm_pkg(
+                &name,
+                e.current,
+                e.latest,
+                e.wanted,
+                e.location,
+                e.dependent,
+            )
+        })
         .collect();
     Ok(out)
 }
@@ -111,10 +120,7 @@ pub fn parse_outdated_text(stdout: &str) -> Result<Vec<Package>, PmError> {
         let wanted = Some(cols[2].to_string());
         let latest = Some(cols[3].to_string());
         let location = cols.get(4).map(|s| s.to_string());
-        let dependent = cols
-            .get(5..)
-            .map(|s| s.join(" "))
-            .filter(|s| !s.is_empty());
+        let dependent = cols.get(5..).map(|s| s.join(" ")).filter(|s| !s.is_empty());
         out.push(npm_pkg(name, current, latest, wanted, location, dependent));
     }
     Ok(out)
