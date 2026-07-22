@@ -100,14 +100,18 @@ export function formatDuration(ms: number): string {
 }
 
 /**
- * Elapsed/total duration label for an op. Running ops measure to `now`; finished
- * ops measure start→finish. Returns "" when the op has not started.
+ * Elapsed/total duration label for an op. Live ops measure to `now`; finished
+ * ops measure start→finish and stay frozen. A terminal op WITHOUT a finish
+ * instant (Interrupted — start-without-finish in the crash journal) returns ""
+ * so callers render an em-dash instead of a duration ticking against the wall
+ * clock (SPEC §4.9: live ticker while running, static once finished). Returns
+ * "" when the op has not started.
  */
 export function durationLabel(op: OpView, now: number): string {
   if (!op.startedAt) return "";
   const start = Date.parse(op.startedAt);
   if (Number.isNaN(start)) return "";
-  const end = op.finishedAt ? Date.parse(op.finishedAt) : now;
+  const end = op.finishedAt ? Date.parse(op.finishedAt) : isTerminal(op.status) ? NaN : now;
   if (Number.isNaN(end)) return "";
   return formatDuration(end - start);
 }

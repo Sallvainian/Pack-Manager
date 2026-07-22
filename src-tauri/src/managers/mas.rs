@@ -91,6 +91,7 @@ impl ManagerAdapter for MasAdapter {
     fn parse_recovery(
         &self,
         failed: &PlannedCommand,
+        _refresh_outputs: &[CommandOutput],
         _out: &CommandOutput,
     ) -> Result<ManagerSnapshot, PmError> {
         Err(PmError::Internal {

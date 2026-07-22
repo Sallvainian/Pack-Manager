@@ -20,6 +20,7 @@ export const calls: RecordedCall[] = [];
 
 const responders = new Map<string, Responder>();
 const listeners = new Map<string, Set<(e: { payload: unknown }) => void>>();
+const listenFailures = new Map<string, unknown>();
 
 /** Mocked `bridge.invoke`. */
 export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
@@ -36,6 +37,9 @@ export async function listen<T>(
   event: string,
   handler: (e: { payload: T }) => void,
 ): Promise<() => void> {
+  if (listenFailures.has(event)) {
+    throw listenFailures.get(event);
+  }
   let set = listeners.get(event);
   if (!set) {
     set = new Set();
@@ -68,9 +72,20 @@ export function callsFor(cmd: string): RecordedCall[] {
   return calls.filter((c) => c.cmd === cmd);
 }
 
+/** Make the next `listen(event, …)` calls reject with `error`. */
+export function failListen(event: string, error: unknown): void {
+  listenFailures.set(event, error);
+}
+
+/** Count of live listeners for an event (leak assertions). */
+export function listenerCount(event: string): number {
+  return listeners.get(event)?.size ?? 0;
+}
+
 /** Clear all responders, listeners, and recorded calls between tests. */
 export function reset(): void {
   responders.clear();
   listeners.clear();
+  listenFailures.clear();
   calls.length = 0;
 }

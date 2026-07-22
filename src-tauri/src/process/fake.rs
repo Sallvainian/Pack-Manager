@@ -56,6 +56,9 @@ struct BufferedRule {
     basename: String,
     args: Vec<String>,
     responses: VecDeque<BufferedResponse>,
+    /// When set, the fake command blocks until notified (or cancelled/timed
+    /// out) before returning — deterministic ordering for buffered-op tests.
+    gate: Option<Arc<Notify>>,
 }
 
 #[derive(Debug, Clone)]
@@ -104,6 +107,7 @@ impl FakeRunner {
             basename: program.to_string(),
             args: args.iter().map(|s| s.to_string()).collect(),
             responses: VecDeque::new(),
+            gate: None,
         });
         let index = rules.len() - 1;
         OnBuffered {
@@ -175,7 +179,10 @@ impl FakeRunner {
         out
     }
 
-    fn take_buffered_response(&self, spec: &CommandSpec) -> Option<BufferedResponse> {
+    fn take_buffered_response(
+        &self,
+        spec: &CommandSpec,
+    ) -> Option<(BufferedResponse, Option<Arc<Notify>>)> {
         let basename = basename_of(spec);
         let mut rules = self.buffered.lock().unwrap();
         let rule = rules
@@ -187,11 +194,12 @@ impl FakeRunner {
                 basename, spec.args
             );
         }
-        if rule.responses.len() > 1 {
+        let response = if rule.responses.len() > 1 {
             rule.responses.pop_front()
         } else {
             rule.responses.front().cloned()
-        }
+        };
+        response.map(|r| (r, rule.gate.clone()))
     }
 
     fn find_streaming_rule(&self, spec: &CommandSpec) -> Option<StreamingRule> {
@@ -261,6 +269,14 @@ impl OnBuffered<'_> {
     /// The invocation fails at the runner level (spawn failure, timeout, …).
     pub fn fail(self, err: PmError) -> Self {
         self.push(BufferedResponse::Error(err))
+    }
+
+    /// The fake command blocks until the gate is notified (deterministic
+    /// ordering for buffered-op tests); cancel/timeout interrupt the wait
+    /// like the real runner's SIGTERM/deadline would.
+    pub fn gate(self, gate: Arc<Notify>) -> Self {
+        self.runner.buffered.lock().unwrap()[self.index].gate = Some(gate);
+        self
     }
 }
 
@@ -387,9 +403,14 @@ fn now_ms() -> u64 {
 
 #[async_trait]
 impl CommandRunner for FakeRunner {
-    async fn run(&self, spec: &CommandSpec) -> Result<CommandOutput, PmError> {
+    async fn run(
+        &self,
+        spec: &CommandSpec,
+        cancel: CancellationToken,
+    ) -> Result<CommandOutput, PmError> {
+        let started = Instant::now();
         let index = self.record_start(spec, false);
-        let response = self.take_buffered_response(spec).unwrap_or_else(|| {
+        let (response, gate) = self.take_buffered_response(spec).unwrap_or_else(|| {
             panic!(
                 "FakeRunner: no buffered rule for `{} {:?}`\nregistered rules:\n{}",
                 basename_of(spec),
@@ -397,6 +418,29 @@ impl CommandRunner for FakeRunner {
                 self.registered_summary()
             )
         });
+        // Mirror the real runner: a cancelled token wins over completion.
+        if cancel.is_cancelled() {
+            self.record_end(index);
+            return Err(PmError::Cancelled);
+        }
+        if let Some(gate) = gate {
+            let notify = self.stall_notify.lock().unwrap().clone();
+            let mut wd = Watchdog::new(&spec.timeout, started);
+            match guarded_wait(gate.notified(), &cancel, &mut wd, &notify).await {
+                WaitEnd::Ready => {}
+                WaitEnd::Cancelled => {
+                    self.record_end(index);
+                    return Err(PmError::Cancelled);
+                }
+                WaitEnd::TimedOut => {
+                    self.record_end(index);
+                    return Err(PmError::Timeout {
+                        after_secs: wd.overall.as_secs(),
+                        phase: phase_of(spec),
+                    });
+                }
+            }
+        }
         self.record_end(index);
         match response {
             BufferedResponse::Output(out) => Ok(out),
@@ -522,7 +566,10 @@ mod tests {
         let fake = FakeRunner::new();
         fake.on("brew", &["update"]).ok("Already up-to-date.\n");
         let out = fake
-            .run(&spec("/opt/homebrew/bin/brew", &["update"], abs5()))
+            .run(
+                &spec("/opt/homebrew/bin/brew", &["update"], abs5()),
+                CancellationToken::new(),
+            )
             .await
             .unwrap();
         assert_eq!(out.exit_code, Some(0));
@@ -547,10 +594,11 @@ mod tests {
             .exit(1, "{}", "")
             .ok("{}");
         let s = spec("/x/npm", &["outdated", "-g", "--json"], abs5());
-        assert_eq!(fake.run(&s).await.unwrap().exit_code, Some(1));
-        assert_eq!(fake.run(&s).await.unwrap().exit_code, Some(0));
+        let tok = CancellationToken::new;
+        assert_eq!(fake.run(&s, tok()).await.unwrap().exit_code, Some(1));
+        assert_eq!(fake.run(&s, tok()).await.unwrap().exit_code, Some(0));
         assert_eq!(
-            fake.run(&s).await.unwrap().exit_code,
+            fake.run(&s, tok()).await.unwrap().exit_code,
             Some(0),
             "last repeats"
         );
@@ -565,11 +613,10 @@ mod tests {
                 phase: "brew outdated --json=v2".into(),
             });
         let err = fake
-            .run(&spec(
-                "/opt/homebrew/bin/brew",
-                &["outdated", "--json=v2"],
-                abs5(),
-            ))
+            .run(
+                &spec("/opt/homebrew/bin/brew", &["outdated", "--json=v2"], abs5()),
+                CancellationToken::new(),
+            )
             .await
             .unwrap_err();
         assert!(matches!(
@@ -586,7 +633,12 @@ mod tests {
     async fn fake_panics_on_unmatched() {
         let fake = FakeRunner::new();
         fake.on("brew", &["update"]).ok("");
-        let _ = fake.run(&spec("/x/mise", &["ls", "--json"], abs5())).await;
+        let _ = fake
+            .run(
+                &spec("/x/mise", &["ls", "--json"], abs5()),
+                CancellationToken::new(),
+            )
+            .await;
     }
 
     #[tokio::test]
@@ -595,14 +647,36 @@ mod tests {
         fake.on("brew", &["outdated", "--json=v2"])
             .fixture("brew_outdated.json");
         let out = fake
-            .run(&spec(
-                "/opt/homebrew/bin/brew",
-                &["outdated", "--json=v2"],
-                abs5(),
-            ))
+            .run(
+                &spec("/opt/homebrew/bin/brew", &["outdated", "--json=v2"], abs5()),
+                CancellationToken::new(),
+            )
             .await
             .unwrap();
         assert!(out.stdout.contains("formulae"), "real fixture body loaded");
+    }
+
+    /// Regression pin for the buffered-cancel seam: a gated buffered command
+    /// (refresh-shaped) must return `Cancelled` when the op's token fires —
+    /// previously buffered runs ignored cancellation entirely.
+    #[tokio::test(start_paused = true)]
+    async fn fake_buffered_gate_cancel_returns_cancelled() {
+        let fake = Arc::new(FakeRunner::new());
+        let gate = Arc::new(Notify::new());
+        fake.on("brew", &["update"]).ok("").gate(gate);
+
+        let cancel = CancellationToken::new();
+        let runner = fake.clone();
+        let token = cancel.clone();
+        let handle = tokio::spawn(async move {
+            runner
+                .run(&spec("/opt/homebrew/bin/brew", &["update"], abs5()), token)
+                .await
+        });
+        tokio::task::yield_now().await;
+        assert!(!handle.is_finished(), "held by the gate");
+        cancel.cancel();
+        assert_eq!(handle.await.unwrap().unwrap_err(), PmError::Cancelled);
     }
 
     #[tokio::test(start_paused = true)]

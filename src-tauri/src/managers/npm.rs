@@ -107,10 +107,23 @@ impl ManagerAdapter for NpmAdapter {
     fn parse_recovery(
         &self,
         _failed: &PlannedCommand,
+        refresh_outputs: &[CommandOutput],
         out: &CommandOutput,
     ) -> Result<ManagerSnapshot, PmError> {
-        let rows = parse_npm::parse_outdated_text(&out.stdout)?;
-        Ok(self.snapshot(rows))
+        // `npm ls -g` already succeeded — merge its full inventory with the
+        // recovered text overlay instead of shrinking the snapshot to the
+        // outdated rows alone.
+        let [ls, _outdated] = refresh_outputs else {
+            return Err(PmError::Internal {
+                detail: format!(
+                    "npm parse_recovery expected 2 refresh outputs, got {}",
+                    refresh_outputs.len()
+                ),
+            });
+        };
+        let inventory = parse_npm::parse_ls_json(&ls.stdout)?;
+        let overlay = parse_npm::parse_outdated_text(&out.stdout)?;
+        Ok(self.snapshot(parse::merge_inventory_overlay(inventory, overlay)))
     }
 
     fn upgrade_plan(&self, pkgs: &[PackageId], _opts: &PlanOptions) -> Vec<PlannedCommand> {
@@ -236,7 +249,10 @@ mod tests {
         let plan = adapter.refresh_plan(&present(), &Settings::default());
         let mut outputs = Vec::new();
         for cmd in &plan {
-            let out = fake.run(&spec_for(cmd)).await.unwrap();
+            let out = fake
+                .run(&spec_for(cmd), tokio_util::sync::CancellationToken::new())
+                .await
+                .unwrap();
             let class = adapter.classify_exit(cmd, &out);
             assert_ne!(class, ExitClass::Failure, "{}: {:?}", cmd.label, class);
             outputs.push(out);
@@ -309,12 +325,40 @@ mod tests {
         let recovery = adapter.recovery_plan(&plan[1]).expect("recovery");
         assert_eq!(recovery.argv, vec!["outdated", "-g"]);
 
+        // Regression: recovery merges the already-captured `npm ls -g`
+        // inventory (15 rows) with the text overlay — the up-to-date globals
+        // must not vanish when the JSON shape fails to parse.
+        let refresh_outputs = vec![
+            out_with(0, &fixture("npm_ls_g_2026-07-22.json")),
+            out_with(1, "npm ERR! not json"),
+        ];
         let out = out_with(1, &fixture("npm_outdated_g_text_2026-07-21.txt"));
-        let snapshot = adapter.parse_recovery(&recovery, &out).expect("snapshot");
-        assert_eq!(snapshot.packages.len(), 4, "5 rows, npm hoisted");
+        let snapshot = adapter
+            .parse_recovery(&recovery, &refresh_outputs, &out)
+            .expect("snapshot");
+        assert_eq!(
+            snapshot.packages.len(),
+            14,
+            "15 inventory rows, npm hoisted"
+        );
+        assert_eq!(
+            snapshot.packages.iter().filter(|p| p.outdated).count(),
+            4,
+            "overlay rows minus the hoisted npm"
+        );
+        // Up-to-date inventory survives recovery.
+        assert!(snapshot.packages.iter().any(|p| p.name == "pyright"));
+        let ts = snapshot
+            .packages
+            .iter()
+            .find(|p| p.name == "typescript")
+            .expect("typescript row");
+        assert!(ts.outdated);
+        assert_eq!(ts.latest.as_deref(), Some("7.0.2"));
         let s = snapshot.self_status.expect("npm self");
-        assert_eq!(s.installed.as_deref(), Some("11.16.0"));
+        assert_eq!(s.installed.as_deref(), Some("12.0.1"), "inventory value");
         assert_eq!(s.latest.as_deref(), Some("12.0.1"));
+        assert!(s.update_available, "the overlay's verdict is authoritative");
     }
 
     #[test]

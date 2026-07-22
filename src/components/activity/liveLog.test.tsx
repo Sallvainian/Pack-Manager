@@ -128,6 +128,39 @@ describe("activity_drawer_summary_and_expanded_panes", () => {
   });
 });
 
+describe("focus_switch_repins_log_view", () => {
+  it("switching the focused op remounts the log pinned to the tail (no stale chip/scroll)", () => {
+    useManagersStore.getState().setDetection(detectionReport);
+    useOperationsStore.getState().applyStatus(evt({ opId: "opA" }));
+    useOperationsStore.getState().applyStatus(
+      evt({
+        opId: "opB",
+        executor: "brew",
+        subject: "brew",
+        commandLine: "/opt/homebrew/bin/brew upgrade dolt",
+      }),
+    );
+    useUiStore.getState().setFocusedOp("opA");
+    useUiStore.getState().setDrawerOpen(true);
+
+    render(<ActivityDrawer />);
+
+    // Unpin op A by scrolling away from the tail -> jump chip appears.
+    const logEl = screen.getByRole("log");
+    Object.defineProperty(logEl, "scrollHeight", { configurable: true, value: 1000 });
+    Object.defineProperty(logEl, "clientHeight", { configurable: true, value: 200 });
+    logEl.scrollTop = 0;
+    fireEvent.scroll(logEl);
+    expect(screen.getByRole("button", { name: /Jump to latest/ })).toBeInTheDocument();
+
+    // Switching focus must render op B fresh and re-pinned, not inherit op A's
+    // unpinned state and meaningless scroll offset.
+    act(() => useUiStore.getState().setFocusedOp("opB"));
+    expect(screen.getByText("/opt/homebrew/bin/brew upgrade dolt")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Jump to latest/ })).toBeNull();
+  });
+});
+
 describe("cancel_flips_pill_on_event", () => {
   function Row({ opId }: { opId: string }) {
     const op = useOperationsStore((s) => s.byId[opId]);

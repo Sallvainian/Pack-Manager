@@ -154,7 +154,10 @@ async fn live_brew_outdated_json_round_trips() {
     };
 
     let runner = RealRunner::new();
-    let out = runner.run(&spec).await.expect("brew outdated must spawn");
+    let out = runner
+        .run(&spec, tokio_util::sync::CancellationToken::new())
+        .await
+        .expect("brew outdated must spawn");
     assert_eq!(
         out.exit_code,
         Some(0),

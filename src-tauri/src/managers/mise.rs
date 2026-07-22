@@ -90,9 +90,23 @@ impl ManagerAdapter for MiseAdapter {
     fn parse_recovery(
         &self,
         _failed: &PlannedCommand,
+        refresh_outputs: &[CommandOutput],
         out: &CommandOutput,
     ) -> Result<ManagerSnapshot, PmError> {
-        Ok(self.snapshot(parse_mise::parse_outdated_text(&out.stdout)?))
+        // `mise ls --json` already succeeded — merge its full inventory with
+        // the recovered text overlay instead of shrinking the snapshot to the
+        // outdated rows alone (the up-to-date tools must not vanish).
+        let [ls, _outdated] = refresh_outputs else {
+            return Err(PmError::Internal {
+                detail: format!(
+                    "mise parse_recovery expected 2 refresh outputs, got {}",
+                    refresh_outputs.len()
+                ),
+            });
+        };
+        let inventory = parse_mise::parse_ls_json(&ls.stdout)?;
+        let overlay = parse_mise::parse_outdated_text(&out.stdout)?;
+        Ok(self.snapshot(parse::merge_inventory_overlay(inventory, overlay)))
     }
 
     fn upgrade_plan(&self, pkgs: &[PackageId], _opts: &PlanOptions) -> Vec<PlannedCommand> {
@@ -207,7 +221,11 @@ mod tests {
         assert_eq!(plan.len(), 2);
         let mut outputs = Vec::new();
         for cmd in &plan {
-            outputs.push(fake.run(&spec_for(cmd)).await.unwrap());
+            outputs.push(
+                fake.run(&spec_for(cmd), tokio_util::sync::CancellationToken::new())
+                    .await
+                    .unwrap(),
+            );
         }
         let snapshot = adapter.parse_refresh(&outputs).expect("snapshot");
         assert_eq!(snapshot.packages.len(), 11, "11 tools in mise_ls fixture");
@@ -261,18 +279,39 @@ mod tests {
         let fake = FakeRunner::new();
         fake.on("mise", &["outdated"])
             .fixture("mise_outdated_text_2026-07-21.txt");
-        let rec_out = fake.run(&spec_for(&recovery)).await.unwrap();
+        let rec_out = fake
+            .run(
+                &spec_for(&recovery),
+                tokio_util::sync::CancellationToken::new(),
+            )
+            .await
+            .unwrap();
+        // Regression: recovery merges the already-captured `mise ls --json`
+        // inventory (11 tools) with the text overlay — the up-to-date tools
+        // (bun/go/node/python/rust) must not vanish when recovery fires.
         let snapshot = adapter
-            .parse_recovery(&recovery, &rec_out)
+            .parse_recovery(&recovery, &outputs, &rec_out)
             .expect("snapshot");
-        assert_eq!(snapshot.packages.len(), 6, "7 rows, rust dropped");
-        assert!(snapshot.packages.iter().all(|p| p.outdated));
+        assert_eq!(snapshot.packages.len(), 11, "full inventory survives");
+        assert_eq!(
+            snapshot.packages.iter().filter(|p| p.outdated).count(),
+            6,
+            "7 overlay rows, rust dropped (current == latest)"
+        );
+        assert!(
+            snapshot
+                .packages
+                .iter()
+                .any(|p| p.name == "node" && !p.outdated),
+            "up-to-date inventory row retained"
+        );
         let prettier = snapshot
             .packages
             .iter()
             .find(|p| p.name == "npm:prettier")
             .expect("verbatim npm:prettier");
         assert_eq!(prettier.id, "tool:npm:prettier");
+        assert!(prettier.outdated);
     }
 
     #[test]

@@ -24,11 +24,20 @@ use tauri::Manager as _;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // SPEC §5.12: logging first (settings are loaded before so the filter can
-    // honor the persisted level), then prune old logs.
+    // honor the persisted level), then prune old logs. Settings load runs
+    // before the subscriber exists, so a corrupt file is re-logged after init
+    // — a silent revert of every preference must be loud in the logs.
     let settings_path = Settings::default_path();
-    let loaded_settings = Settings::load_from(&settings_path);
+    let (loaded_settings, settings_corrupt) = Settings::load_from_reporting(&settings_path);
     let logging_handle = logging::init(&loaded_settings);
     logging::prune_at_startup();
+    if let Some(detail) = settings_corrupt {
+        tracing::warn!(
+            path = %settings_path.display(),
+            %detail,
+            "settings.json was corrupt; defaults are in effect"
+        );
+    }
     tracing::info!(
         version = env!("CARGO_PKG_VERSION"),
         os = std::env::consts::OS,

@@ -16,7 +16,9 @@ import { useManagersStore } from "../../store/managers";
 import { useOperationsStore } from "../../store/operations";
 import { usePackagesStore } from "../../store/packages";
 import { useUiStore } from "../../store/ui";
+import { describeError } from "../errors";
 import { listen, type UnlistenFn } from "./bridge";
+import { logFrontendEvent, refreshAll } from "./client";
 import {
   EVENT_DETECTION_UPDATED,
   EVENT_OP_OUTPUT,
@@ -32,8 +34,50 @@ import {
 
 const FAILURE: ReadonlySet<string> = new Set(["failed", "cancelled", "timedOut", "interrupted"]);
 
+// ---------------------------------------------------------------------------
+// Launch refresh gating (SPEC §5.12 step 3)
+//
+// Backend detection runs asynchronously after the window shows; `refresh_all`
+// rejects with `detection_not_ready` until it lands. Firing the launch refresh
+// inline from bootstrap therefore races detection (and loses on a warm
+// relaunch). Instead, the launch refresh fires immediately only when a real
+// detection is already hydrated, and otherwise arms a one-shot that the first
+// real `detection:updated` consumes.
+// ---------------------------------------------------------------------------
+
+let launchRefreshArmed = false;
+
+/** A real detection report — the pre-detection placeholder has no managers. */
+function isRealDetection(report: DetectionReport | null): report is DetectionReport {
+  return !!report && report.managers.length > 0;
+}
+
+function fireLaunchRefresh(): void {
+  void refreshAll().catch(
+    (e) => void logFrontendEvent("error", `launch refresh failed: ${describeError(e)}`),
+  );
+}
+
+/**
+ * Request the launch refresh: runs now when detection is ready, otherwise
+ * defers until the first real `detection:updated` arrives (one-shot).
+ */
+export function scheduleLaunchRefresh(): void {
+  if (isRealDetection(useManagersStore.getState().detection)) fireLaunchRefresh();
+  else launchRefreshArmed = true;
+}
+
+/** Test hook: clear the launch-refresh one-shot between cases. */
+export function resetLaunchRefresh(): void {
+  launchRefreshArmed = false;
+}
+
 export function onDetection(report: DetectionReport): void {
   useManagersStore.getState().setDetection(report);
+  if (launchRefreshArmed && isRealDetection(report)) {
+    launchRefreshArmed = false;
+    fireLaunchRefresh();
+  }
 }
 
 export function onSnapshot(evt: SnapshotUpdatedEvent): void {
@@ -65,12 +109,24 @@ export function onStalled(evt: OpStalledEvent): void {
 
 /** Subscribe to all backend events. Returns a single unlisten for teardown. */
 export async function subscribeEvents(): Promise<UnlistenFn> {
-  const unlisteners = await Promise.all([
+  // allSettled (not all): if any listen() rejects, the ones that DID register
+  // must still be unlistened — Promise.all would trap their unlisten fns
+  // inside the rejected aggregate and leak the handlers for the process
+  // lifetime.
+  const results = await Promise.allSettled([
     listen<DetectionReport>(EVENT_DETECTION_UPDATED, (e) => onDetection(e.payload)),
     listen<SnapshotUpdatedEvent>(EVENT_SNAPSHOT_UPDATED, (e) => onSnapshot(e.payload)),
     listen<OpStatusEvent>(EVENT_OP_STATUS, (e) => onStatus(e.payload)),
     listen<OpOutputEvent>(EVENT_OP_OUTPUT, (e) => onOutput(e.payload)),
     listen<OpStalledEvent>(EVENT_OP_STALLED, (e) => onStalled(e.payload)),
   ]);
+  const unlisteners = results
+    .filter((r): r is PromiseFulfilledResult<UnlistenFn> => r.status === "fulfilled")
+    .map((r) => r.value);
+  const rejected = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+  if (rejected) {
+    unlisteners.forEach((u) => u());
+    throw rejected.reason;
+  }
   return () => unlisteners.forEach((u) => u());
 }

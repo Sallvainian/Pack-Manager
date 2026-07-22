@@ -25,6 +25,11 @@ describe("interrupted_ops_render_in_history", () => {
     expect(within(table).getByText("Interrupted")).toBeInTheDocument();
     expect(within(table).getByText("Homebrew")).toBeInTheDocument();
     expect(within(table).getByText("/opt/homebrew/bin/brew update")).toBeInTheDocument();
+
+    // Terminal-without-finish shows an em-dash Duration, never a live ticker:
+    // exactly two "—" cells (Duration + Exit) and no formatted duration text.
+    expect(within(table).getAllByText("—")).toHaveLength(2);
+    expect(within(table).queryByText(/^\d+(h|m|s)( \d+(m|s))?$/)).toBeNull();
   });
 });
 

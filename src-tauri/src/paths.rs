@@ -17,6 +17,8 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::Duration;
 
+use nix::sys::signal::{killpg, Signal};
+use nix::unistd::Pid;
 use tokio::io::AsyncReadExt;
 
 use crate::error::PmError;
@@ -116,10 +118,22 @@ pub async fn probe_login_shell_path_with(
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
+        // Own process group, like the op runner: profiles can background
+        // helpers, and start_kill alone would only signal the shell itself,
+        // orphaning those descendants to launchd on every launch/Re-detect.
+        .process_group(0)
         .kill_on_drop(true);
     let mut child = cmd.spawn().map_err(|e| PmError::EnvCaptureFailed {
         detail: format!("failed to spawn {}: {e}", shell.display()),
     })?;
+    // process_group(0): the child leads a fresh group whose pgid is its pid.
+    let pgid = Pid::from_raw(child.id().map(|id| id as i32).unwrap_or(0));
+    let kill_probe = |child: &mut tokio::process::Child| {
+        if pgid.as_raw() > 0 {
+            let _ = killpg(pgid, Signal::SIGKILL);
+        }
+        let _ = child.start_kill();
+    };
     let mut stdout = child.stdout.take().expect("stdout piped");
 
     let read = async {
@@ -130,21 +144,22 @@ pub async fn probe_login_shell_path_with(
     let bytes = match tokio::time::timeout(timeout, read).await {
         Ok(Ok(bytes)) => bytes,
         Ok(Err(e)) => {
-            let _ = child.start_kill();
+            kill_probe(&mut child);
             return Err(PmError::EnvCaptureFailed {
                 detail: format!("probe read failed: {e}"),
             });
         }
         Err(_) => {
-            let _ = child.start_kill();
+            kill_probe(&mut child);
             return Err(PmError::EnvCaptureFailed {
                 detail: format!("login-shell probe timed out after {}s", timeout.as_secs()),
             });
         }
     };
     // Reap (or kill a shell still chattering past the cap) without blocking
-    // startup; kill_on_drop covers the pathological case.
-    let _ = child.start_kill();
+    // startup; kill_on_drop covers the pathological case. killpg reaps any
+    // profile-spawned descendants along with the shell.
+    kill_probe(&mut child);
     let _ = tokio::time::timeout(Duration::from_millis(500), child.wait()).await;
 
     let text = String::from_utf8_lossy(&bytes);
@@ -437,6 +452,53 @@ mod tests {
         assert_eq!(info.source, PathSource::Merged);
         assert_eq!(info.home, "/Users/testuser");
         assert_eq!(info.entries.len(), env.entries.len());
+    }
+
+    /// Regression (default-run, /bin/sh only): the probe runs in its OWN
+    /// process group and kills the WHOLE group on timeout — a login profile
+    /// that backgrounds a child must not leak it to launchd on every
+    /// launch/Re-detect. Previously only the direct shell was killed.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn probe_timeout_kills_profile_spawned_descendants() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let pid_file = dir.path().join("bg.pid");
+        // Stand-in for a noisy login shell: backgrounds a long-lived child
+        // (recording its pid), then hangs without printing sentinels.
+        let shell = dir.path().join("noisy-shell.sh");
+        std::fs::write(
+            &shell,
+            format!(
+                "#!/bin/sh\nsleep 30 &\necho $! > {}\nwait\n",
+                pid_file.display()
+            ),
+        )
+        .unwrap();
+        std::fs::set_permissions(&shell, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let err = probe_login_shell_path_with(&shell, Duration::from_millis(300))
+            .await
+            .unwrap_err();
+        assert!(matches!(err, PmError::EnvCaptureFailed { .. }));
+
+        let pid: i32 = std::fs::read_to_string(&pid_file)
+            .expect("script wrote the background pid")
+            .trim()
+            .parse()
+            .unwrap();
+        // The group SIGKILL reaps the backgrounded descendant too; once init
+        // re-parents and reaps it, `kill(pid, 0)` reports ESRCH.
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        loop {
+            if nix::sys::signal::kill(nix::unistd::Pid::from_raw(pid), None).is_err() {
+                break; // gone — the whole group was killed
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "backgrounded descendant (pid {pid}) survived the probe kill"
+            );
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
     }
 
     /// Real login-shell probe on this machine — developer-run only.

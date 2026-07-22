@@ -24,8 +24,14 @@ use crate::process::{CommandOutput, CommandSpec, LineSink, LogLine, Timeout};
 
 #[async_trait]
 pub trait CommandRunner: Send + Sync {
-    /// Buffered execution (refresh/detection).
-    async fn run(&self, spec: &CommandSpec) -> Result<CommandOutput, PmError>;
+    /// Buffered execution (refresh/detection). `cancel` triggers the same
+    /// SIGTERM → 5s grace → SIGKILL escalation as streaming execution —
+    /// refreshes are cancellable ops too (SPEC F7).
+    async fn run(
+        &self,
+        spec: &CommandSpec,
+        cancel: CancellationToken,
+    ) -> Result<CommandOutput, PmError>;
 
     /// Streaming execution (upgrades/self-updates): every line goes to `sink`
     /// as it arrives; `cancel` triggers SIGTERM → 5s grace → SIGKILL on the
@@ -49,6 +55,13 @@ pub const STREAM_CAP_BYTES: usize = 512 * 1024;
 
 /// Grace between SIGTERM and SIGKILL (SPEC F7).
 pub const TERM_GRACE: Duration = Duration::from_secs(5);
+
+/// After the direct child exits, how long to keep waiting for pipe EOF before
+/// completing anyway. Descendants inherit the stdout/stderr write ends
+/// (`.process_group(0)` isolates signals, not fds), so a lingering helper can
+/// hold the pipes open long after the command itself finished — the op must
+/// complete on the child's exit, not the helper's.
+pub const POST_EXIT_EOF_GRACE: Duration = Duration::from_secs(2);
 
 fn ansi_re() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
@@ -166,6 +179,7 @@ enum LoopEnd {
 pub struct RealRunner {
     stall_notify: Option<StallNotify>,
     term_grace: Option<Duration>,
+    eof_grace: Option<Duration>,
 }
 
 impl RealRunner {
@@ -186,8 +200,18 @@ impl RealRunner {
         self
     }
 
+    /// Test affordance: shorten the post-exit EOF grace (default 2s).
+    pub fn with_post_exit_eof_grace(mut self, grace: Duration) -> Self {
+        self.eof_grace = Some(grace);
+        self
+    }
+
     fn grace(&self) -> Duration {
         self.term_grace.unwrap_or(TERM_GRACE)
+    }
+
+    fn post_exit_eof_grace(&self) -> Duration {
+        self.eof_grace.unwrap_or(POST_EXIT_EOF_GRACE)
     }
 
     async fn kill_group(&self, pgid: Pid, child: &mut tokio::process::Child, already_exited: bool) {
@@ -211,9 +235,14 @@ impl RealRunner {
 
 #[async_trait]
 impl CommandRunner for RealRunner {
-    async fn run(&self, spec: &CommandSpec) -> Result<CommandOutput, PmError> {
-        self.run_streaming(spec, Arc::new(|_| {}), CancellationToken::new())
-            .await
+    async fn run(
+        &self,
+        spec: &CommandSpec,
+        cancel: CancellationToken,
+    ) -> Result<CommandOutput, PmError> {
+        // The op's REAL cancel token is threaded through so buffered
+        // refreshes honor Cancel / cancel_all like streaming ops do.
+        self.run_streaming(spec, Arc::new(|_| {}), cancel).await
     }
 
     async fn run_streaming(
@@ -242,8 +271,8 @@ impl CommandRunner for RealRunner {
         let (tx, mut rx) = mpsc::unbounded_channel::<LogLine>();
         let stdout = child.stdout.take().expect("stdout piped");
         let stderr = child.stderr.take().expect("stderr piped");
-        spawn_reader(stdout, StreamKind::Out, tx.clone());
-        spawn_reader(stderr, StreamKind::Err, tx);
+        let out_reader = spawn_reader(stdout, StreamKind::Out, tx.clone());
+        let err_reader = spawn_reader(stderr, StreamKind::Err, tx);
         // Both reader tasks own a sender; `rx` closes when both hit EOF.
 
         let (overall, stall_silence) = match spec.timeout {
@@ -258,6 +287,10 @@ impl CommandRunner for RealRunner {
         let mut stderr_buf = String::new();
         let mut streams_done = false;
         let mut exit_status: Option<std::process::ExitStatus> = None;
+        // Armed when the child exits with the pipes still open: a descendant
+        // holding the inherited write ends must not stall the op until the
+        // overall deadline turns a finished command into TimedOut.
+        let mut eof_deadline: Option<Instant> = None;
 
         let end = loop {
             if streams_done && exit_status.is_some() {
@@ -282,7 +315,10 @@ impl CommandRunner for RealRunner {
                 }
                 res = child.wait(), if exit_status.is_none() => {
                     match res {
-                        Ok(status) => exit_status = Some(status),
+                        Ok(status) => {
+                            exit_status = Some(status);
+                            eof_deadline = Some(Instant::now() + self.post_exit_eof_grace());
+                        }
                         Err(e) => {
                             return Err(PmError::Io { detail: format!("wait failed: {e}") });
                         }
@@ -290,6 +326,20 @@ impl CommandRunner for RealRunner {
                 }
                 _ = cancel.cancelled() => break LoopEnd::Cancelled,
                 _ = tokio::time::sleep_until(overall_deadline) => break LoopEnd::TimedOut,
+                _ = tokio::time::sleep_until(eof_deadline.unwrap_or(overall_deadline)),
+                    if eof_deadline.is_some() && !streams_done => {
+                    // Child reaped but EOF never arrived (an fd-inheriting
+                    // descendant keeps the pipes open). Drain what is already
+                    // queued and complete on the child's own exit.
+                    while let Ok(line) = rx.try_recv() {
+                        match line.stream {
+                            StreamKind::Out => append_capped(&mut stdout_buf, &line.line),
+                            StreamKind::Err => append_capped(&mut stderr_buf, &line.line),
+                        }
+                        sink(line);
+                    }
+                    break LoopEnd::Completed;
+                }
                 _ = tokio::time::sleep_until(stall_deadline.unwrap_or(overall_deadline)),
                     if stall_deadline.is_some() => {
                     let silent = Instant::now().duration_since(last_output);
@@ -303,6 +353,10 @@ impl CommandRunner for RealRunner {
                 }
             }
         };
+        // Readers may still be parked on a pipe a descendant holds open; they
+        // are no longer needed on any exit path.
+        out_reader.abort();
+        err_reader.abort();
 
         match end {
             LoopEnd::Completed => Ok(CommandOutput {
@@ -481,8 +535,12 @@ mod tests {
         );
     }
 
+    /// Default-run (NOT `#[ignore]`): this is the only test guarding the
+    /// SIGTERM→grace→SIGKILL escalation in `kill_group` — the queue-level
+    /// cancel/timeout tests only assert the status→footer mapping through the
+    /// FakeRunner. Fast (300ms grace) and deterministic: /bin/sh only, no
+    /// network, no package managers.
     #[tokio::test(flavor = "multi_thread")]
-    #[ignore]
     async fn real_cancel_escalates_to_sigkill_when_term_ignored() {
         let runner = RealRunner::new().with_term_grace(Duration::from_millis(300));
         let spec = sh_spec(
@@ -507,12 +565,42 @@ mod tests {
         );
     }
 
+    /// Default-run: a leader that exits while a backgrounded descendant holds
+    /// the inherited stdout pipe must complete on the child's exit (bounded
+    /// EOF grace), not stall until the absolute timeout kills it as TimedOut.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn real_completes_when_descendant_holds_pipes_open_after_exit() {
+        let runner = RealRunner::new().with_post_exit_eof_grace(Duration::from_millis(300));
+        // `sleep 15` inherits the stdout write end and keeps it open far past
+        // the 5s absolute timeout; the leader exits immediately with code 7.
+        let spec = sh_spec(
+            "sleep 15 & echo done; exit 7",
+            Timeout::Absolute(Duration::from_secs(5)),
+        );
+        let (sink, lines) = collecting_sink();
+        let started = std::time::Instant::now();
+        let out = runner
+            .run_streaming(&spec, sink, CancellationToken::new())
+            .await
+            .expect("must complete on child exit, not TimedOut on pipe EOF");
+        assert_eq!(out.exit_code, Some(7));
+        assert_eq!(out.stdout, "done\n");
+        assert_eq!(lines.lock().unwrap().len(), 1);
+        assert!(
+            started.elapsed() < Duration::from_secs(5),
+            "completed within the EOF grace, not at the timeout"
+        );
+    }
+
     #[tokio::test(flavor = "multi_thread")]
     #[ignore]
     async fn real_absolute_timeout_kills_and_reports() {
         let runner = RealRunner::new();
         let spec = sh_spec("sleep 30", Timeout::Absolute(Duration::from_millis(300)));
-        let err = runner.run(&spec).await.unwrap_err();
+        let err = runner
+            .run(&spec, CancellationToken::new())
+            .await
+            .unwrap_err();
         match err {
             PmError::Timeout { after_secs, phase } => {
                 assert_eq!(after_secs, 0); // 300ms rounds down
@@ -563,7 +651,10 @@ mod tests {
                 hard_cap: Duration::from_millis(400),
             },
         );
-        let err = runner.run(&spec).await.unwrap_err();
+        let err = runner
+            .run(&spec, CancellationToken::new())
+            .await
+            .unwrap_err();
         assert!(matches!(err, PmError::Timeout { .. }));
     }
 
@@ -580,7 +671,7 @@ mod tests {
             ("PM_PROBE".into(), "constructed".into()),
             ("HOME".into(), "/tmp/pm-home".into()),
         ];
-        let out = runner.run(&spec).await.unwrap();
+        let out = runner.run(&spec, CancellationToken::new()).await.unwrap();
         assert_eq!(out.stdout, "constructed\n/tmp/pm-home\n");
     }
 }

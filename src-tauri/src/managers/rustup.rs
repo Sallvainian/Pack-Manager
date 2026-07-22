@@ -99,6 +99,7 @@ impl ManagerAdapter for RustupAdapter {
     fn parse_recovery(
         &self,
         failed: &PlannedCommand,
+        _refresh_outputs: &[CommandOutput],
         _out: &CommandOutput,
     ) -> Result<ManagerSnapshot, PmError> {
         Err(PmError::Internal {

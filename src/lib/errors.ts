@@ -7,7 +7,7 @@
  * backend copy is missing. Every string states what happened and the next
  * action.
  */
-import type { ErrorCode, IpcError } from "./ipc/types";
+import { isIpcError, type ErrorCode, type IpcError } from "./ipc/types";
 
 /** Taxonomy-mapped short titles (SPEC §4.8 "taxonomy-mapped title"). */
 export const ERROR_TITLES: Record<ErrorCode, string> = {
@@ -61,6 +61,32 @@ export function errorCopy(err: IpcError): ErrorCopy {
   const message = err.message && err.message.trim().length > 0 ? err.message : ERROR_FALLBACKS[err.code];
   const hint = err.code === "timeout" ? OFFLINE_HINT : undefined;
   return { title, message, hint };
+}
+
+/**
+ * Serialize a caught unknown value for logging. Tauri rejects a failed
+ * `invoke()` with the serialized `IpcError` — a plain object, which
+ * `String(e)` collapses to "[object Object]", destroying the diagnostic
+ * payload. This preserves IpcError fields, Error stacks, and falls back to
+ * JSON for anything else.
+ */
+export function describeError(e: unknown): string {
+  if (isIpcError(e)) {
+    const parts = [`${e.code}: ${e.message}`];
+    if (e.detail) parts.push(`detail: ${e.detail}`);
+    if (e.managerId) parts.push(`manager: ${e.managerId}`);
+    if (e.opId) parts.push(`opId: ${e.opId}`);
+    if (e.logPath) parts.push(`log: ${e.logPath}`);
+    return parts.join(" — ");
+  }
+  if (e instanceof Error) {
+    return e.stack ?? `${e.name}: ${e.message}`;
+  }
+  try {
+    return JSON.stringify(e) ?? String(e);
+  } catch {
+    return String(e);
+  }
 }
 
 /**

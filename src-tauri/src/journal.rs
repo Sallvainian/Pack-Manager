@@ -175,6 +175,13 @@ pub fn load_records(path: &Path) -> Vec<OperationRecord> {
 /// Startup compaction: keep the newest `keep` operations (file order = age;
 /// UUIDv7 op ids are time-sortable but appearance order is authoritative) and
 /// rewrite the file as start line + finish line per kept op.
+///
+/// The rewrite is ATOMIC: content goes to a sibling temp file (fsynced), then
+/// `rename` replaces `operations.jsonl` in one step. This file is the crash
+/// journal itself — a truncate-in-place rewrite interrupted by power loss /
+/// kill / ENOSPC would destroy the entire history INCLUDING the interrupted
+/// records the file exists to surface. A crash mid-compaction now leaves the
+/// original journal untouched.
 pub fn compact(path: &Path, keep: usize) -> std::io::Result<()> {
     if !path.exists() {
         return Ok(());
@@ -197,7 +204,28 @@ pub fn compact(path: &Path, keep: usize) -> std::io::Result<()> {
             }
         }
     }
-    std::fs::write(path, out)
+    write_atomic(path, &out)
+}
+
+/// Write-to-temp + fsync + rename in the target's own directory (rename is
+/// atomic on the same filesystem). On failure the temp file is best-effort
+/// removed and the original is left untouched.
+fn write_atomic(path: &Path, content: &str) -> std::io::Result<()> {
+    let file_name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "journal".to_string());
+    let tmp = path.with_file_name(format!("{file_name}.tmp"));
+    let result = (|| {
+        let mut f = std::fs::File::create(&tmp)?;
+        f.write_all(content.as_bytes())?;
+        f.sync_all()?;
+        std::fs::rename(&tmp, path)
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    result
 }
 
 #[cfg(test)]
@@ -323,6 +351,56 @@ mod tests {
         let (s, f) = &entries[1]; // op-0006, even → finished
         assert_eq!(s.op_id, "op-0006");
         assert!(f.is_some());
+    }
+
+    /// Regression: compaction must never modify the journal in place. When
+    /// the rewrite cannot complete (here: the directory refuses new files, a
+    /// stand-in for ENOSPC / crash mid-write), the ORIGINAL journal — with
+    /// its interrupted records — must survive byte-identically. The old
+    /// truncate-in-place `std::fs::write` would have rewritten (or truncated)
+    /// it despite the failure injection.
+    #[test]
+    fn compact_failure_leaves_the_original_journal_intact() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("operations.jsonl");
+        let journal = Journal::new(path.clone());
+        for i in 0..1005 {
+            journal.record_start(&start(&format!("op-{i:04}"), "2026-07-22T14:00:00Z"));
+        }
+        drop(journal);
+        let before = std::fs::read_to_string(&path).unwrap();
+
+        // Read-only dir: the sibling temp file cannot be created, so the
+        // atomic rewrite must fail WITHOUT touching operations.jsonl.
+        std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o555)).unwrap();
+        let result = compact(&path, COMPACT_KEEP);
+        std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        assert!(result.is_err(), "rewrite must fail, not truncate in place");
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            before,
+            "original journal survives a failed compaction byte-identically"
+        );
+        // Interrupted records are still all recoverable.
+        assert_eq!(load_records(&path).len(), 1005);
+    }
+
+    #[test]
+    fn compact_leaves_no_temp_file_behind() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("operations.jsonl");
+        let journal = Journal::new(path.clone());
+        for i in 0..1005 {
+            journal.record_start(&start(&format!("op-{i:04}"), "2026-07-22T14:00:00Z"));
+        }
+        compact(&path, COMPACT_KEEP).unwrap();
+        assert_eq!(load_entries(&path).len(), COMPACT_KEEP);
+        assert!(
+            !dir.path().join("operations.jsonl.tmp").exists(),
+            "temp file renamed away"
+        );
     }
 
     #[test]

@@ -13,9 +13,13 @@ use crate::logging::{self, LoggingHandle};
 use crate::paths::{static_entries, ToolEnv};
 use crate::process::runner::RealRunner;
 use crate::process::CommandRunner;
-use crate::queue::{self, Queue, QueueDeps, RefreshFactory};
+use crate::queue::{self, Queue, QueueDeps, RefreshFactory, RouteRecheck};
 use crate::registry::Registry;
 use crate::settings::Settings;
+
+/// Quit-guard bound: SIGTERM → 5s grace → SIGKILL plus scheduling headroom.
+/// The exit path blocks at most this long for running ops to finalize.
+const SHUTDOWN_GRACE: std::time::Duration = std::time::Duration::from_secs(7);
 
 #[derive(Clone)]
 pub struct AppState {
@@ -91,6 +95,27 @@ impl AppState {
                 queue::make_refresh_submission(id, &status, &settings, &env)
             })
         };
+        // SPEC §5.3 "re-checked each refresh": every parsed refresh snapshot
+        // re-resolves the subject's self-update route from its own listing
+        // (the in-band override — npm outdated in its own list must yield
+        // `npm install -g npm@latest`, never `mise upgrade npm`, D5).
+        let route_recheck: RouteRecheck = {
+            let detection = detection.clone();
+            let registry = registry.clone();
+            let sink = sink.clone();
+            Arc::new(move |snapshot: &crate::ipc::ManagerSnapshot| {
+                let report = {
+                    let mut det = detection.write().expect("detection poisoned");
+                    let Some(outcome) = det.as_mut() else { return };
+                    if !detect::recheck_route_from_snapshot(outcome, snapshot) {
+                        return;
+                    }
+                    registry.set_routes_from(&outcome.report);
+                    outcome.report.clone()
+                };
+                sink.emit(AppEvent::DetectionUpdated(report));
+            })
+        };
         let queue = Queue::new(QueueDeps {
             runner: runner.clone(),
             sink: sink.clone(),
@@ -98,6 +123,7 @@ impl AppState {
             journal,
             ops_dir: logging::operations_dir(),
             refresh_factory: Some(factory),
+            route_recheck: Some(route_recheck),
             max_concurrency: queue::MAX_CONCURRENCY,
             aging_guard: queue::AGING_GUARD,
         });
@@ -131,11 +157,29 @@ impl AppState {
 
     /// Quit-guard kill hook: cancel every running op (SIGTERM → 5s → SIGKILL
     /// on the process groups) so children never outlive the app.
+    ///
+    /// `cancel_all` only flips the tokens — the SIGTERM/SIGKILL work happens
+    /// inside each op's runner task on the async runtime. This hook runs on
+    /// the main thread during `RunEvent::Exit`, so it BLOCKS (bounded by
+    /// [`SHUTDOWN_GRACE`]) until those tasks report terminal states;
+    /// returning immediately would let the process exit before any signal is
+    /// sent and reparent live children to launchd (SPEC F7 violation).
     pub fn shutdown(&self) {
         let running = self.queue.running().len();
-        if running > 0 {
-            tracing::info!(running, "app exit: cancelling running operations");
-        }
         self.queue.cancel_all();
+        if running == 0 {
+            return;
+        }
+        tracing::info!(running, "app exit: cancelling running operations");
+        let queue = self.queue.clone();
+        let done =
+            tauri::async_runtime::block_on(
+                async move { queue.wait_until_idle(SHUTDOWN_GRACE).await },
+            );
+        if done {
+            tracing::info!("app exit: all operations finalized");
+        } else {
+            tracing::warn!("app exit: shutdown grace elapsed with operations still running");
+        }
     }
 }

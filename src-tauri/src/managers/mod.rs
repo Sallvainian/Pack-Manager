@@ -81,9 +81,15 @@ pub trait ManagerAdapter: Send + Sync {
     /// (mise/npm/brew-casks text fallback).
     fn recovery_plan(&self, failed: &PlannedCommand) -> Option<PlannedCommand>;
 
+    /// PURE: rebuilds the WHOLE snapshot from the recovery command's output.
+    /// `refresh_outputs` are the already-captured outputs of the normal
+    /// refresh plan (in `refresh_plan` order) — the inventory parsed from them
+    /// must be merged with the recovered overlay, or every up-to-date package
+    /// would vanish from the table whenever recovery fires.
     fn parse_recovery(
         &self,
         failed: &PlannedCommand,
+        refresh_outputs: &[CommandOutput],
         out: &CommandOutput,
     ) -> Result<ManagerSnapshot, PmError>;
 

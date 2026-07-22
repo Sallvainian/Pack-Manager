@@ -2,8 +2,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../lib/ipc/bridge", () => import("../test/fakeIpc"));
 
-import { onOutput, onSnapshot, onStalled, onStatus } from "../lib/ipc/events";
+import { onOutput, onSnapshot, onStalled, onStatus, subscribeEvents } from "../lib/ipc/events";
 import type { IpcError, OpStatusEvent } from "../lib/ipc/types";
+import {
+  EVENT_DETECTION_UPDATED,
+  EVENT_OP_OUTPUT,
+  EVENT_OP_STALLED,
+  EVENT_OP_STATUS,
+  EVENT_SNAPSHOT_UPDATED,
+} from "../lib/ipc/types";
 import {
   resetStores,
   useManagersStore,
@@ -11,6 +18,7 @@ import {
   usePackagesStore,
   useUiStore,
 } from "../store";
+import * as fakeIpc from "../test/fakeIpc";
 import { npmSnapshot } from "../test/fixtures";
 
 function status(over: Partial<OpStatusEvent> & Pick<OpStatusEvent, "opId">): OpStatusEvent {
@@ -83,5 +91,33 @@ describe("onStalled", () => {
   it("opens the stalled dialog with the silent duration", () => {
     onStalled({ opId: "u6", silentForSecs: 120 });
     expect(useUiStore.getState().dialog).toEqual({ kind: "stalled", opId: "u6", silentForSecs: 120 });
+  });
+});
+
+describe("subscribeEvents — no listener leak on partial failure", () => {
+  const ALL_EVENTS = [
+    EVENT_DETECTION_UPDATED,
+    EVENT_SNAPSHOT_UPDATED,
+    EVENT_OP_STATUS,
+    EVENT_OP_OUTPUT,
+    EVENT_OP_STALLED,
+  ];
+
+  beforeEach(() => fakeIpc.reset());
+
+  it("registers all five listeners and tears them all down", async () => {
+    const unlisten = await subscribeEvents();
+    for (const evt of ALL_EVENTS) expect(fakeIpc.listenerCount(evt)).toBe(1);
+    unlisten();
+    for (const evt of ALL_EVENTS) expect(fakeIpc.listenerCount(evt)).toBe(0);
+  });
+
+  it("unlistens the already-registered listeners when one listen() rejects", async () => {
+    fakeIpc.failListen(EVENT_OP_STATUS, new Error("listen refused"));
+
+    await expect(subscribeEvents()).rejects.toThrow("listen refused");
+
+    // The siblings that DID register must not leak for the process lifetime.
+    for (const evt of ALL_EVENTS) expect(fakeIpc.listenerCount(evt)).toBe(0);
   });
 });

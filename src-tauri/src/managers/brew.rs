@@ -193,13 +193,35 @@ impl ManagerAdapter for BrewAdapter {
     fn parse_recovery(
         &self,
         _failed: &PlannedCommand,
+        refresh_outputs: &[CommandOutput],
         out: &CommandOutput,
     ) -> Result<ManagerSnapshot, PmError> {
-        let casks = parse_brew::parse_greedy_text(&out.stdout)?;
+        // The list commands succeeded before the outdated-JSON parse failed —
+        // rebuild the full inventory from them (same slicing as parse_refresh)
+        // and use the recovered greedy-text rows as the outdated overlay.
+        // Replacing the snapshot with the overlay alone would silently drop
+        // every up-to-date formula/cask from the table.
+        let data = match refresh_outputs.len() {
+            5 => &refresh_outputs[1..],
+            4 => refresh_outputs,
+            n => {
+                return Err(PmError::Internal {
+                    detail: format!("brew parse_recovery expected 4 or 5 refresh outputs, got {n}"),
+                })
+            }
+        };
+        let formulae_inv = parse_brew::parse_list_versions(&data[0].stdout);
+        let casks_inv = parse_brew::parse_cask_versions(&data[1].stdout);
+        let formulae_inv = parse::dedupe_formulae_against_casks(formulae_inv, &casks_inv);
+        let mut inventory = formulae_inv;
+        inventory.extend(casks_inv);
+        // Text form cannot distinguish greedy-only from plain-outdated casks,
+        // so recovered rows keep the plain `cask:` kind (degraded but honest).
+        let overlay = parse_brew::parse_greedy_text(&out.stdout)?;
         Ok(ManagerSnapshot {
             manager_id: ManagerId::Brew,
             refreshed_at: now_rfc3339(),
-            packages: casks,
+            packages: parse::merge_inventory_overlay(inventory, overlay),
             self_status: None,
             health: vec![],
         })
@@ -268,9 +290,19 @@ impl ManagerAdapter for BrewAdapter {
         }
     }
 
-    fn classify_exit(&self, _cmd: &PlannedCommand, out: &CommandOutput) -> ExitClass {
+    fn classify_exit(&self, cmd: &PlannedCommand, out: &CommandOutput) -> ExitClass {
         match out.exit_code {
             Some(0) => ExitClass::Success,
+            // `brew update` is the best-effort metadata step (and brew's
+            // self-update). It is the ONLY refresh command that needs the
+            // network and routinely exits non-zero offline or on tap trouble;
+            // the list/outdated commands read local data, so a failed update
+            // must degrade to stale `latest` values, never abort the refresh
+            // and discard an obtainable local snapshot (SPEC: offline
+            // degrades with snapshots retained).
+            _ if cmd.argv.first().map(String::as_str) == Some("update") => {
+                ExitClass::ExpectedNonZero
+            }
             _ => ExitClass::Failure,
         }
     }
@@ -285,6 +317,7 @@ mod tests {
     use crate::process::fake::FakeRunner;
     use crate::process::{CmdPurpose, CommandRunner, CommandSpec};
     use std::path::PathBuf;
+    use tokio_util::sync::CancellationToken;
 
     fn present() -> DetectStatus {
         DetectStatus::Present {
@@ -377,7 +410,11 @@ mod tests {
             if let Some(label) = &cmd.phase_label {
                 sink.emit(phase_event(label));
             }
-            outputs.push(fake.run(&spec_for(cmd)).await.expect("fake output"));
+            outputs.push(
+                fake.run(&spec_for(cmd), CancellationToken::new())
+                    .await
+                    .expect("fake output"),
+            );
         }
 
         // The two-phase brew story in order: update (self-update phase) runs
@@ -428,7 +465,10 @@ mod tests {
         });
         let adapter = BrewAdapter;
         let plan = adapter.refresh_plan(&present(), &Settings::default());
-        let err = fake.run(&spec_for(&plan[0])).await.unwrap_err();
+        let err = fake
+            .run(&spec_for(&plan[0]), CancellationToken::new())
+            .await
+            .unwrap_err();
         assert!(
             matches!(
                 err,
@@ -505,16 +545,106 @@ mod tests {
             "brew update: none"
         );
         assert!(adapter.recovery_plan(&plan[1]).is_none(), "list: none");
+    }
 
-        let out = CommandOutput {
+    /// Regression: recovery must MERGE the already-captured inventory with the
+    /// recovered overlay, not replace the whole snapshot with the 3 greedy
+    /// rows (which silently dropped all 258 inventory packages).
+    #[test]
+    fn parse_recovery_merges_full_inventory_with_recovered_overlay() {
+        let adapter = BrewAdapter;
+        let plan = adapter.refresh_plan(&present(), &Settings::default());
+        let recovery = adapter.recovery_plan(&plan[3]).expect("recovery");
+
+        let out_with = |stdout: String| CommandOutput {
             exit_code: Some(0),
-            stdout: crate::process::fake::fixture("brew_outdated_greedy_text_2026-07-21.txt"),
+            stdout,
             stderr: String::new(),
             duration: Duration::ZERO,
         };
-        let snapshot = adapter.parse_recovery(&recovery, &out).expect("snapshot");
-        assert_eq!(snapshot.packages.len(), 3);
-        assert!(snapshot.packages.iter().all(|p| p.outdated));
+        // The refresh outputs as captured before the outdated-JSON parse
+        // failed: update + both list commands succeeded, outdated JSON was
+        // garbage (the trigger).
+        let refresh_outputs = vec![
+            out_with("Already up-to-date.\n".into()),
+            out_with(crate::process::fake::fixture(
+                "brew_list_versions_2026-07-22.txt",
+            )),
+            out_with(crate::process::fake::fixture(
+                "brew_list_cask_versions_2026-07-22.txt",
+            )),
+            out_with("Error: not json".into()),
+            out_with("Error: not json".into()),
+        ];
+        let rec_out = out_with(crate::process::fake::fixture(
+            "brew_outdated_greedy_text_2026-07-21.txt",
+        ));
+        let snapshot = adapter
+            .parse_recovery(&recovery, &refresh_outputs, &rec_out)
+            .expect("snapshot");
+
+        // 243 formulae + 15 casks inventory, plus the 2 overlay-only rows
+        // (syncthing-app, transmission are not in the cask inventory fixture).
+        assert_eq!(snapshot.packages.len(), 260);
+        assert_eq!(
+            snapshot.packages.iter().filter(|p| p.outdated).count(),
+            3,
+            "exactly the recovered overlay rows are outdated"
+        );
+        let openusage = snapshot
+            .packages
+            .iter()
+            .find(|p| p.name == "openusage")
+            .expect("inventory cask row patched, not duplicated");
+        assert!(openusage.outdated);
+        assert_eq!(openusage.latest.as_deref(), Some("0.7.6"));
+        assert_eq!(
+            snapshot
+                .packages
+                .iter()
+                .filter(|p| p.name == "openusage")
+                .count(),
+            1
+        );
+        // Up-to-date inventory survives recovery.
+        assert!(snapshot.packages.iter().any(|p| p.id == "formula:abseil"));
+    }
+
+    #[test]
+    fn brew_update_non_zero_is_expected_never_aborts_refresh() {
+        let adapter = BrewAdapter;
+        let plan = adapter.refresh_plan(&present(), &Settings::default());
+        let offline = CommandOutput {
+            exit_code: Some(1),
+            stdout: String::new(),
+            stderr: "Error: Fetching /opt/homebrew failed!\n".into(),
+            duration: Duration::ZERO,
+        };
+        // The metadata step is best-effort: non-zero must NOT classify as
+        // Failure (which would abort the whole refresh and discard the
+        // obtainable local inventory).
+        assert_eq!(
+            adapter.classify_exit(&plan[0], &offline),
+            ExitClass::ExpectedNonZero
+        );
+        // Every other refresh command keeps strict classification.
+        for cmd in &plan[1..] {
+            assert_eq!(
+                adapter.classify_exit(cmd, &offline),
+                ExitClass::Failure,
+                "{} must stay strict",
+                cmd.label
+            );
+        }
+        // And an upgrade command exiting 1 is still a failure.
+        let upgrade = &adapter.upgrade_plan(
+            &["formula:dolt".into()],
+            &PlanOptions {
+                include_self_updates: false,
+                include_greedy_casks: false,
+            },
+        )[0];
+        assert_eq!(adapter.classify_exit(upgrade, &offline), ExitClass::Failure);
     }
 
     #[test]

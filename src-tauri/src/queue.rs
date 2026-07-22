@@ -615,6 +615,11 @@ pub fn build_upgrade_plan(req: &PlanRequest, src: &PlanSources) -> UpgradePlan {
 
 pub type RefreshFactory = Arc<dyn Fn(ManagerId) -> Option<OpSubmission> + Send + Sync>;
 
+/// Invoked with every freshly parsed refresh snapshot BEFORE it is published:
+/// SPEC §5.3 routes are "re-checked each refresh" with the manager's own
+/// listing (`detect::recheck_route_from_snapshot` behind AppState's locks).
+pub type RouteRecheck = Arc<dyn Fn(&ManagerSnapshot) + Send + Sync>;
+
 pub struct QueueDeps {
     pub runner: Arc<dyn CommandRunner>,
     pub sink: Arc<dyn EventSink>,
@@ -624,6 +629,8 @@ pub struct QueueDeps {
     pub ops_dir: PathBuf,
     /// Builds the auto re-refresh submission after successful upgrades.
     pub refresh_factory: Option<RefreshFactory>,
+    /// Re-checks the subject's self-update route from a fresh snapshot.
+    pub route_recheck: Option<RouteRecheck>,
     pub max_concurrency: usize,
     pub aging_guard: Duration,
 }
@@ -768,11 +775,31 @@ impl Queue {
             .collect()
     }
 
-    /// Cancels every running op (quit-guard kill hook). Fire-and-forget: the
-    /// runners SIGTERM their process groups.
+    /// Cancels every running op (quit-guard kill hook). Only flips the
+    /// tokens — the runner tasks perform the SIGTERM→grace→SIGKILL work, so
+    /// the quit path must ALSO await [`Queue::wait_until_idle`] before the
+    /// process exits or the kill tasks may never be polled.
     pub fn cancel_all(&self) {
         for token in self.shared.tokens.lock().expect("tokens poisoned").values() {
             token.cancel();
+        }
+    }
+
+    /// Waits (bounded) until no op is `Running`. The quit guard calls this
+    /// after [`Queue::cancel_all`] so the runner tasks' SIGTERM → grace →
+    /// SIGKILL escalation demonstrably completes before the process exits —
+    /// children never outlive the app (SPEC F7). Returns `false` when the
+    /// timeout elapsed with ops still running.
+    pub async fn wait_until_idle(&self, timeout: Duration) -> bool {
+        let deadline = Instant::now() + timeout;
+        loop {
+            if self.running().is_empty() {
+                return true;
+            }
+            if Instant::now() >= deadline {
+                return false;
+            }
+            tokio::time::sleep(Duration::from_millis(25)).await;
         }
     }
 }
@@ -1169,6 +1196,7 @@ impl Sched {
             sink: self.deps.sink.clone(),
             emitter: self.emitter.clone(),
             registry: self.deps.registry.clone(),
+            route_recheck: self.deps.route_recheck.clone(),
             shared: self.shared.clone(),
             tx: self.tx.clone(),
         };
@@ -1190,6 +1218,7 @@ struct RunArgs {
     sink: Arc<dyn EventSink>,
     emitter: Arc<BatchingEmitter>,
     registry: Arc<Registry>,
+    route_recheck: Option<RouteRecheck>,
     shared: Arc<Shared>,
     tx: mpsc::UnboundedSender<Msg>,
 }
@@ -1271,6 +1300,7 @@ async fn run_operation(args: RunArgs) {
         sink,
         emitter,
         registry,
+        route_recheck,
         shared,
         tx,
     } = args;
@@ -1406,7 +1436,15 @@ async fn run_operation(args: RunArgs) {
     // Refresh parse + recovery + registry upsert.
     if end.is_none() && is_refresh {
         match adapter.parse_refresh(&outputs) {
-            Ok(snapshot) => publish_snapshot(&registry, &sink, snapshot),
+            Ok(snapshot) => {
+                // SPEC §5.3: routes are re-checked each refresh with the
+                // manager's own listing — BEFORE the upsert so the join
+                // uses fresh routed pairs.
+                if let Some(recheck) = &route_recheck {
+                    recheck(&snapshot);
+                }
+                publish_snapshot(&registry, &sink, snapshot)
+            }
             Err(parse_err) => {
                 tracing::error!(op = %op_id, error = %parse_err, "refresh parse failed");
                 let recovery = planned
@@ -1451,9 +1489,15 @@ async fn run_operation(args: RunArgs) {
                                 if let Some(err) = lock_busy {
                                     end = Some((OpStatus::Failed, Some(err), out.exit_code));
                                 } else {
-                                    match adapter.parse_recovery(&failed_planned, &out) {
+                                    // The captured refresh outputs ride along
+                                    // so recovery can rebuild the inventory
+                                    // and merge (not replace) the snapshot.
+                                    match adapter.parse_recovery(&failed_planned, &outputs, &out) {
                                         Ok(snapshot) => {
                                             outputs.push(out);
+                                            if let Some(recheck) = &route_recheck {
+                                                recheck(&snapshot);
+                                            }
                                             publish_snapshot(&registry, &sink, snapshot);
                                         }
                                         Err(rec_err) => {
@@ -1529,7 +1573,10 @@ async fn run_one_spec(
     sink: &Arc<dyn EventSink>,
 ) -> SpecEnd {
     let result = if buffered {
-        let res = runner.run(spec).await;
+        // The op's REAL cancel token rides into the buffered run too — a
+        // refresh is cancellable (Cancel button, quit-time cancel_all) and
+        // the runner SIGTERMs the group exactly like the streaming path.
+        let res = runner.run(spec, cancel.clone()).await;
         if let Ok(out) = &res {
             // Buffered commands (refresh/detection) land in the transcript,
             // ring buffer, and drawer after completion.
@@ -1637,10 +1684,14 @@ mod tests {
     }
 
     fn harness() -> Harness {
-        harness_with_factory(None)
+        harness_with(None, None)
     }
 
     fn harness_with_factory(factory: Option<RefreshFactory>) -> Harness {
+        harness_with(factory, None)
+    }
+
+    fn harness_with(factory: Option<RefreshFactory>, recheck: Option<RouteRecheck>) -> Harness {
         let dir = tempfile::tempdir().unwrap();
         let fake = Arc::new(FakeRunner::new());
         let sink = Arc::new(VecSink::new());
@@ -1653,6 +1704,7 @@ mod tests {
             journal: Arc::new(Journal::new(journal_path.clone())),
             ops_dir: dir.path().join("ops"),
             refresh_factory: factory,
+            route_recheck: recheck,
             max_concurrency: MAX_CONCURRENCY,
             aging_guard: AGING_GUARD,
         };
@@ -2344,8 +2396,11 @@ mod tests {
             "text fallback ran"
         );
         let snap = h.registry.get(ManagerId::Mise).expect("recovered snapshot");
-        assert_eq!(snap.packages.len(), 6, "7 rows, rust dropped");
-        assert!(snap.packages.iter().all(|p| p.outdated));
+        // Recovery merges the already-captured 11-tool inventory with the
+        // 6-row text overlay (7 rows, rust dropped) — up-to-date tools must
+        // not vanish from the table when recovery fires.
+        assert_eq!(snap.packages.len(), 11, "full inventory survives recovery");
+        assert_eq!(snap.packages.iter().filter(|p| p.outdated).count(), 6);
     }
 
     #[tokio::test(start_paused = true)]
@@ -2444,6 +2499,12 @@ mod tests {
         assert!(h.registry.get(ManagerId::Mise).is_some());
     }
 
+    /// SPEC §7.3 name. Scope note: through the FakeRunner this verifies the
+    /// cancel → Cancelled status flow and the finalized transcript/journal —
+    /// the footer string is a pure status mapping (`footer_status_str`). The
+    /// actual SIGTERM→grace→SIGKILL escalation is guarded by the DEFAULT-RUN
+    /// real-process test `real_cancel_escalates_to_sigkill_when_term_ignored`
+    /// in `process/runner.rs`.
     #[tokio::test(start_paused = true)]
     async fn cancel_sigterm_then_sigkill_marks_cancelled_finalizes_transcript() {
         let h = harness();
@@ -2480,6 +2541,150 @@ mod tests {
         let records = crate::journal::load_records(&h.journal_path);
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].status, OpStatus::Cancelled);
+    }
+
+    /// Regression: cancelling a RUNNING refresh was a silent no-op — the
+    /// buffered path ran `runner.run(spec)` with a throwaway token, so the
+    /// op's real token (flipped by handle_cancel) never reached the child.
+    /// The op must finalize Cancelled, not run to natural completion.
+    #[tokio::test(start_paused = true)]
+    async fn cancel_running_refresh_marks_cancelled() {
+        let h = harness();
+        let gate = Arc::new(Notify::new());
+        // First refresh command parks on the gate — "in flight".
+        h.fake
+            .on("mise", &["ls", "--json"])
+            .fixture("mise_ls_2026-07-22.json")
+            .gate(gate);
+        h.fake
+            .on("mise", &["outdated", "--json"])
+            .fixture("mise_outdated.json");
+
+        let id = h
+            .queue
+            .submit(refresh_sub(ManagerId::Mise, "/fake/mise", ManagedBy::Brew))
+            .await
+            .unwrap();
+        wait_for(|| status_of(&h, &id) == OpStatus::Running).await;
+
+        h.queue.cancel(&id);
+        wait_for(|| status_of(&h, &id) == OpStatus::Cancelled).await;
+
+        let record = h.queue.record(&id).unwrap();
+        assert_eq!(record.error.as_ref().unwrap().code, ErrorCode::Cancelled);
+        assert!(
+            h.registry.get(ManagerId::Mise).is_none(),
+            "cancelled refresh publishes no snapshot"
+        );
+        // The journal finalizes Cancelled (start + finish lines).
+        let records = crate::journal::load_records(&h.journal_path);
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].status, OpStatus::Cancelled);
+    }
+
+    /// Regression for the quit guard: cancel_all only flips tokens; the exit
+    /// path must be able to WAIT until the runner tasks finish the kill work.
+    /// With a running (buffered) refresh, cancel_all + wait_until_idle must
+    /// converge to no running ops — previously the refresh child was
+    /// untouchable and kept running past app exit (SPEC F7).
+    #[tokio::test(start_paused = true)]
+    async fn cancel_all_then_wait_until_idle_reaps_running_refresh() {
+        let h = harness();
+        let gate = Arc::new(Notify::new());
+        h.fake
+            .on("npm", &["ls", "-g", "--depth=0", "--json"])
+            .fixture("npm_ls_g_2026-07-22.json")
+            .gate(gate);
+        h.fake
+            .on("npm", &["outdated", "-g", "--json"])
+            .fixture_with_exit("npm_outdated_g_synthetic.json", 1);
+
+        let id = h
+            .queue
+            .submit(refresh_sub(ManagerId::Npm, "/fake/npm", ManagedBy::Mise))
+            .await
+            .unwrap();
+        wait_for(|| status_of(&h, &id) == OpStatus::Running).await;
+        assert_eq!(h.queue.running().len(), 1);
+
+        h.queue.cancel_all();
+        assert!(
+            h.queue.wait_until_idle(Duration::from_secs(7)).await,
+            "running ops must reach a terminal state within the shutdown grace"
+        );
+        assert_eq!(status_of(&h, &id), OpStatus::Cancelled);
+        assert!(h.queue.running().is_empty());
+    }
+
+    /// Regression: a non-zero `brew update` (offline, tap trouble) must NOT
+    /// abort the refresh — the remaining commands read local data and the
+    /// full snapshot is still obtainable.
+    #[tokio::test(start_paused = true)]
+    async fn brew_update_failure_degrades_to_local_snapshot() {
+        let h = harness();
+        h.fake
+            .on("brew", &["update"])
+            .exit(1, "", "Error: Fetching /opt/homebrew failed!\n");
+        h.fake
+            .on("brew", &["list", "--versions"])
+            .fixture("brew_list_versions_2026-07-22.txt");
+        h.fake
+            .on("brew", &["list", "--cask", "--versions"])
+            .fixture("brew_list_cask_versions_2026-07-22.txt");
+        h.fake
+            .on("brew", &["outdated", "--json=v2"])
+            .fixture("brew_outdated.json");
+        h.fake
+            .on("brew", &["outdated", "--json=v2", "--greedy"])
+            .fixture("brew_outdated_greedy.json");
+
+        let id = h
+            .queue
+            .submit(refresh_sub(
+                ManagerId::Brew,
+                "/fake/brew",
+                ManagedBy::Standalone,
+            ))
+            .await
+            .unwrap();
+        wait_for(|| status_of(&h, &id) == OpStatus::Succeeded).await;
+
+        assert_eq!(h.fake.calls().len(), 5, "all refresh commands still ran");
+        let snap = h.registry.get(ManagerId::Brew).expect("snapshot published");
+        assert_eq!(snap.packages.len(), 258, "full local inventory retained");
+        assert!(h.queue.record(&id).unwrap().error.is_none());
+    }
+
+    /// SPEC §5.3 wiring: every successfully parsed refresh snapshot flows
+    /// through the route-recheck hook BEFORE it is published.
+    #[tokio::test(start_paused = true)]
+    async fn refresh_invokes_route_recheck_with_parsed_snapshot() {
+        let seen: Arc<Mutex<Vec<ManagerSnapshot>>> = Arc::new(Mutex::new(Vec::new()));
+        let seen_clone = seen.clone();
+        let recheck: RouteRecheck = Arc::new(move |snapshot: &ManagerSnapshot| {
+            seen_clone.lock().unwrap().push(snapshot.clone());
+        });
+        let h = harness_with(None, Some(recheck));
+        h.fake
+            .on("npm", &["ls", "-g", "--depth=0", "--json"])
+            .fixture("npm_ls_g_2026-07-22.json");
+        h.fake
+            .on("npm", &["outdated", "-g", "--json"])
+            .fixture_with_exit("npm_outdated_g_synthetic.json", 1);
+
+        let id = h
+            .queue
+            .submit(refresh_sub(ManagerId::Npm, "/fake/npm", ManagedBy::Mise))
+            .await
+            .unwrap();
+        wait_for(|| status_of(&h, &id) == OpStatus::Succeeded).await;
+
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen.len(), 1);
+        assert_eq!(seen[0].manager_id, ManagerId::Npm);
+        // npm reports itself outdated in this fixture — exactly the input the
+        // in-band override (D5) needs at recheck time.
+        assert!(seen[0].self_status.as_ref().unwrap().update_available);
     }
 
     #[tokio::test(start_paused = true)]
@@ -2524,6 +2729,10 @@ mod tests {
         wait_for(|| status_of(&h, &id) == OpStatus::Succeeded).await;
     }
 
+    /// SPEC §7.3 name. Scope note: verifies the hard cap → TimedOut flow via
+    /// the FakeRunner; the footer's "(SIGKILL after 5s grace)" text is the
+    /// status mapping, and the real kill escalation is guarded by the
+    /// default-run runner test (see the cancel test's note above).
     #[tokio::test(start_paused = true)]
     async fn hard_cap_times_out() {
         let h = harness();

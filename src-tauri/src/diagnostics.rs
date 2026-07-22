@@ -46,6 +46,12 @@ fn internal(detail: impl std::fmt::Display) -> PmError {
 
 /// Files in `dir` whose name passes `keep`, sorted name-descending (both log
 /// kinds carry sortable date prefixes/suffixes), truncated to `limit`.
+///
+/// Only REGULAR files qualify: `DirEntry::file_type()` does not follow
+/// symlinks. The log/operations dirs are user-writable and this bundle is
+/// exported for sharing — a symlink dropped there (e.g. by a package's
+/// post-install script) pointing at `~/.ssh/id_rsa` must never have its
+/// target's bytes embedded in the zip.
 fn newest_files(dir: &Path, keep: impl Fn(&str) -> bool, limit: usize) -> Vec<(String, PathBuf)> {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return Vec::new();
@@ -54,7 +60,8 @@ fn newest_files(dir: &Path, keep: impl Fn(&str) -> bool, limit: usize) -> Vec<(S
         .flatten()
         .filter_map(|e| {
             let name = e.file_name().to_string_lossy().into_owned();
-            (e.path().is_file() && keep(&name)).then(|| (name, e.path()))
+            let is_regular = e.file_type().map(|t| t.is_file()).unwrap_or(false);
+            (is_regular && keep(&name)).then(|| (name, e.path()))
         })
         .collect();
     files.sort_by(|a, b| b.0.cmp(&a.0));
@@ -62,15 +69,31 @@ fn newest_files(dir: &Path, keep: impl Fn(&str) -> bool, limit: usize) -> Vec<(S
     files
 }
 
+/// `true` only for a REGULAR file at `path` itself (symlinks excluded —
+/// `Path::is_file` would follow them).
+fn is_regular_file(path: &Path) -> bool {
+    std::fs::symlink_metadata(path)
+        .map(|m| m.is_file())
+        .unwrap_or(false)
+}
+
+/// Streams one source file into the zip. Belt-and-braces re-check that the
+/// path is a regular file (not a symlink) at read time, and `io::copy`
+/// instead of read-all so multi-hundred-MB transcripts never have to fit in
+/// memory on the 16GB target machine.
 fn add_file(
     zip: &mut ZipWriter<std::fs::File>,
     entry_name: &str,
     path: &Path,
 ) -> Result<(), PmError> {
-    let body = std::fs::read(path)?;
+    if !is_regular_file(path) {
+        tracing::warn!(path = %path.display(), "diagnostics: skipping non-regular file");
+        return Ok(());
+    }
+    let mut file = std::fs::File::open(path)?;
     zip.start_file(entry_name, SimpleFileOptions::default())
         .map_err(internal)?;
-    zip.write_all(&body)?;
+    std::io::copy(&mut file, zip)?;
     Ok(())
 }
 
@@ -117,7 +140,7 @@ pub fn export_to(
     for (name, path) in newest_files(ops_dir, |n| n.ends_with(".log"), TRANSCRIPTS_INCLUDED) {
         add_file(&mut zip, &format!("operations/{name}"), &path)?;
     }
-    if journal_path.is_file() {
+    if is_regular_file(journal_path) {
         add_file(&mut zip, "operations.jsonl", journal_path)?;
     }
 
@@ -241,6 +264,104 @@ mod tests {
         assert_eq!(v["appVersion"], "0.1.0");
         assert_eq!(v["env"]["source"], "merged");
         assert_eq!(v["logDirective"], "info,pack_manager_lib=debug");
+    }
+
+    /// Regression: a symlink dropped into the log/operations dirs (named to
+    /// pass the filename filters) must NOT have its target's bytes embedded
+    /// in the shareable zip — previously `is_file()`/`fs::read` followed it
+    /// and exfiltrated arbitrary files (e.g. a private key) into the bundle.
+    #[test]
+    fn export_never_follows_symlinks_into_the_bundle() {
+        let dir = tempfile::tempdir().unwrap();
+        let logs = dir.path().join("logs");
+        let ops = dir.path().join("ops");
+        std::fs::create_dir_all(&logs).unwrap();
+        std::fs::create_dir_all(&ops).unwrap();
+
+        // The "secret" an attacker wants exfiltrated.
+        let secret = dir.path().join("id_rsa");
+        std::fs::write(&secret, "-----BEGIN OPENSSH PRIVATE KEY-----\nhunter2\n").unwrap();
+
+        // One legitimate transcript, plus symlinks named to pass every filter.
+        std::fs::write(
+            ops.join("2026-07-22T10-00-00_op00_npm_upgrade.log"),
+            "real\n",
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(&secret, ops.join("2026-07-22T23-59-59_evil_x_x.log")).unwrap();
+        std::os::unix::fs::symlink(&secret, logs.join("pack-manager.log.2026-07-23")).unwrap();
+        // Even the journal path itself could be swapped for a symlink.
+        let journal = dir.path().join("operations.jsonl");
+        std::os::unix::fs::symlink(&secret, &journal).unwrap();
+
+        let zip_path = export_to(
+            &dir.path().join("desktop"),
+            &report(),
+            &logs,
+            &ops,
+            &journal,
+            datetime!(2026-07-22 14:03:11 UTC),
+        )
+        .unwrap();
+
+        let mut archive = zip::ZipArchive::new(std::fs::File::open(&zip_path).unwrap()).unwrap();
+        let names: Vec<String> = archive.file_names().map(str::to_string).collect();
+        assert!(
+            names.contains(&"operations/2026-07-22T10-00-00_op00_npm_upgrade.log".to_string()),
+            "real transcript still ships"
+        );
+        assert!(
+            !names.iter().any(|n| n.contains("evil")),
+            "symlinked transcript excluded: {names:?}"
+        );
+        assert!(
+            !names.contains(&"logs/pack-manager.log.2026-07-23".to_string()),
+            "symlinked app log excluded"
+        );
+        assert!(
+            !names.contains(&"operations.jsonl".to_string()),
+            "symlinked journal excluded"
+        );
+        // No entry anywhere carries the secret's bytes.
+        use std::io::Read;
+        for i in 0..archive.len() {
+            let mut f = archive.by_index(i).unwrap();
+            let name = f.name().to_string();
+            let mut body = String::new();
+            f.read_to_string(&mut body).unwrap();
+            assert!(!body.contains("hunter2"), "secret bytes leaked into {name}");
+        }
+    }
+
+    /// The streaming copy must be byte-faithful (no truncation/duplication).
+    #[test]
+    fn export_streams_file_bodies_byte_identically() {
+        let dir = tempfile::tempdir().unwrap();
+        let logs = dir.path().join("logs");
+        let ops = dir.path().join("ops");
+        std::fs::create_dir_all(&logs).unwrap();
+        std::fs::create_dir_all(&ops).unwrap();
+        let body = "line\n".repeat(10_000);
+        std::fs::write(ops.join("2026-07-22T10-00-00_op00_npm_upgrade.log"), &body).unwrap();
+
+        let zip_path = export_to(
+            &dir.path().join("desktop"),
+            &report(),
+            &logs,
+            &ops,
+            &dir.path().join("no-journal.jsonl"),
+            datetime!(2026-07-22 14:03:11 UTC),
+        )
+        .unwrap();
+        let mut archive = zip::ZipArchive::new(std::fs::File::open(&zip_path).unwrap()).unwrap();
+        use std::io::Read;
+        let mut round_tripped = String::new();
+        archive
+            .by_name("operations/2026-07-22T10-00-00_op00_npm_upgrade.log")
+            .unwrap()
+            .read_to_string(&mut round_tripped)
+            .unwrap();
+        assert_eq!(round_tripped, body);
     }
 
     #[test]

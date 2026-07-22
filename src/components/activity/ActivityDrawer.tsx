@@ -96,7 +96,9 @@ export function ActivityDrawer() {
         <div className="flex min-h-0 flex-1 border-t border-border">
           <OperationList />
           {effectiveFocus ? (
-            <LiveLogView opId={effectiveFocus} />
+            // Keyed by op: switching focus remounts the log fresh (re-pinned to
+            // the tail) instead of carrying the previous op's pin/scroll state.
+            <LiveLogView key={effectiveFocus} opId={effectiveFocus} />
           ) : (
             <div className="flex min-w-0 flex-1 items-center justify-center bg-bg-inset text-[12px] text-text-muted">
               Select an operation to view its output.

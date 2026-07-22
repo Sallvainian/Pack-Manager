@@ -97,6 +97,7 @@ impl ManagerAdapter for UvAdapter {
     fn parse_recovery(
         &self,
         failed: &PlannedCommand,
+        _refresh_outputs: &[CommandOutput],
         _out: &CommandOutput,
     ) -> Result<ManagerSnapshot, PmError> {
         Err(PmError::Internal {
@@ -197,7 +198,11 @@ mod tests {
         let plan = adapter.refresh_plan(&present(), &Settings::default());
         let mut outputs = Vec::new();
         for cmd in &plan {
-            outputs.push(fake.run(&spec_for(cmd)).await.unwrap());
+            outputs.push(
+                fake.run(&spec_for(cmd), tokio_util::sync::CancellationToken::new())
+                    .await
+                    .unwrap(),
+            );
         }
         let snapshot = adapter
             .parse_refresh(&outputs)

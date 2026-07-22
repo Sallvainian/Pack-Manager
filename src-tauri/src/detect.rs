@@ -17,8 +17,11 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
+use tokio_util::sync::CancellationToken;
+
 use crate::ipc::{
-    DetectionReport, ManagedBy, ManagerId, ManagerInfo, ManagerStatus, Package, SelfUpdateRoute,
+    DetectionReport, ManagedBy, ManagerId, ManagerInfo, ManagerSnapshot, ManagerStatus, Package,
+    PackageKind, SelfUpdateRoute,
 };
 use crate::managers::brew::BrewAdapter;
 use crate::managers::mas::MasAdapter;
@@ -193,6 +196,68 @@ pub struct DetectionOutcome {
     pub statuses: BTreeMap<ManagerId, DetectStatus>,
 }
 
+/// The manager's own row in its own outdated listing, reconstructed from the
+/// hoisted `selfStatus` (`extract_self` consumed the raw row before the
+/// snapshot was assembled). `None` when the manager does not report itself
+/// outdated — the in-band override only rides on the manager's OWN listing.
+fn own_outdated_row(id: ManagerId, snapshot: &ManagerSnapshot) -> Option<Package> {
+    let s = snapshot.self_status.as_ref()?;
+    if !s.update_available {
+        return None;
+    }
+    let kind = match id {
+        ManagerId::Brew => PackageKind::Formula,
+        ManagerId::Mise | ManagerId::Uv => PackageKind::Tool,
+        ManagerId::Npm => PackageKind::GlobalPackage,
+        ManagerId::Rustup => PackageKind::Toolchain,
+        ManagerId::Mas => PackageKind::App,
+    };
+    Some(Package {
+        id: crate::managers::parse::make_id(kind, id.as_str()),
+        name: id.as_str().to_string(),
+        kind,
+        installed: s.installed.clone(),
+        latest: s.latest.clone(),
+        outdated: true,
+        pinned: false,
+        meta: None,
+    })
+}
+
+/// SPEC §5.3: routes are "resolved at detection, **re-checked each refresh**".
+/// Recomputes the snapshot's manager's self-update route from its refreshed
+/// own listing (rule 1, the in-band override: npm reporting ITSELF outdated
+/// must yield `npm install -g npm@latest`, never `mise upgrade npm` — D5) and
+/// stores it on the `ManagerInfo`. Returns `true` when the route changed (the
+/// caller re-derives routed pairs and re-emits the detection report).
+pub fn recheck_route_from_snapshot(
+    outcome: &mut DetectionOutcome,
+    snapshot: &ManagerSnapshot,
+) -> bool {
+    let id = snapshot.manager_id;
+    let Some(DetectStatus::Present { managed_by, .. }) = outcome.statuses.get(&id) else {
+        return false;
+    };
+    let managed_by = *managed_by;
+    let present = outcome.present();
+    let own_row = own_outdated_row(id, snapshot);
+    let route = resolve_route(
+        adapter_for(id).as_ref(),
+        managed_by,
+        own_row.as_ref(),
+        &present,
+    );
+    let Some(info) = outcome.report.managers.iter_mut().find(|m| m.id == id) else {
+        return false;
+    };
+    if info.self_update == route {
+        return false;
+    }
+    tracing::info!(manager = %id, route = ?route, "self-update route re-checked after refresh");
+    info.self_update = route;
+    true
+}
+
 impl DetectionOutcome {
     /// Present managers as a set (route resolution, refresh fan-out).
     pub fn present(&self) -> BTreeSet<ManagerId> {
@@ -298,7 +363,8 @@ pub async fn detect_all(env: &ToolEnv, runner: &dyn CommandRunner) -> DetectionO
             timeout: Timeout::Absolute(VERSION_PROBE_TIMEOUT),
             purpose: CmdPurpose::Detection,
         };
-        let version = match runner.run(&spec).await {
+        // Detection probes are not tied to an op; a fresh token is fine.
+        let version = match runner.run(&spec, CancellationToken::new()).await {
             Ok(out) if out.exit_code == Some(0) => extract_version(&out.stdout),
             Ok(out) => {
                 tracing::warn!(manager = %id, exit = ?out.exit_code, "version probe non-zero exit");
@@ -351,7 +417,9 @@ pub async fn detect_all(env: &ToolEnv, runner: &dyn CommandRunner) -> DetectionO
                 evidence,
             }) => {
                 // No outdated data exists at detection time; routes are
-                // re-checked each refresh with the manager's own listing.
+                // re-checked each refresh with the manager's own listing
+                // (`recheck_route_from_snapshot`, invoked by the queue's
+                // route-recheck hook after every published snapshot).
                 let route = resolve_route(adapter.as_ref(), *managed_by, None, &present);
                 tracing::info!(manager = %id, route = ?route, "detection: route resolved");
                 ManagerInfo {
@@ -563,6 +631,136 @@ mod tests {
             } => assert_eq!(command_preview, "mise self-update"),
             other => panic!("expected native fall-through, got {other:?}"),
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // Route re-check each refresh (SPEC §5.3, D5)
+    // -----------------------------------------------------------------------
+
+    fn npm_mise_outcome() -> DetectionOutcome {
+        // This machine's npm topology: npm resolves at mise's shim, mise is
+        // detected, and detection (no outdated data yet) delegated npm's
+        // self-update to mise.
+        let mut statuses = BTreeMap::new();
+        statuses.insert(
+            ManagerId::Npm,
+            DetectStatus::Present {
+                binary_path: home().join(".local/share/mise/shims/npm"),
+                canonical_path: PathBuf::from("/opt/homebrew/bin/mise"),
+                version: Some("11.16.0".into()),
+                managed_by: ManagedBy::Mise,
+                evidence: "resolved at ~/.local/share/mise/shims/npm".into(),
+            },
+        );
+        statuses.insert(
+            ManagerId::Mise,
+            DetectStatus::Present {
+                binary_path: PathBuf::from("/opt/homebrew/bin/mise"),
+                canonical_path: PathBuf::from("/opt/homebrew/bin/mise"),
+                version: Some("2026.1.5".into()),
+                managed_by: ManagedBy::Brew,
+                evidence: "resolved at /opt/homebrew/bin/mise".into(),
+            },
+        );
+        let npm_info = ManagerInfo {
+            id: ManagerId::Npm,
+            display_name: "npm".into(),
+            status: ManagerStatus::Present,
+            binary_path: None,
+            canonical_path: None,
+            version: Some("11.16.0".into()),
+            managed_by: ManagedBy::Mise,
+            evidence: None,
+            self_update: SelfUpdateRoute::Routed {
+                executor: ManagerId::Mise,
+                command_preview: "mise upgrade npm".into(),
+                why: "npm is managed by mise".into(),
+            },
+            install_hint: None,
+        };
+        DetectionOutcome {
+            report: DetectionReport {
+                managers: vec![npm_info],
+                env: crate::ipc::EnvInfo {
+                    path: String::new(),
+                    entries: vec![],
+                    source: crate::ipc::PathSource::StaticFallback,
+                    home: String::new(),
+                },
+            },
+            statuses,
+        }
+    }
+
+    fn npm_snapshot(update_available: bool) -> ManagerSnapshot {
+        ManagerSnapshot {
+            manager_id: ManagerId::Npm,
+            refreshed_at: "2026-07-22T14:00:00Z".into(),
+            packages: vec![],
+            self_status: Some(crate::ipc::SelfStatus {
+                installed: Some("11.16.0".into()),
+                latest: Some("12.0.1".into()),
+                update_available,
+            }),
+            health: vec![],
+        }
+    }
+
+    /// THE misroute regression (SPEC §5.3 rule 1, D5): after a refresh shows
+    /// npm reporting itself outdated, the stored route must flip from the
+    /// detection-time `mise upgrade npm` delegation to the in-band
+    /// `npm install -g npm@latest` — otherwise Update enqueues the exact
+    /// command D5 exists to prevent (mise manages no tool named `npm`).
+    #[test]
+    fn recheck_flips_npm_to_in_band_when_own_listing_reports_it_outdated() {
+        let mut outcome = npm_mise_outcome();
+        let changed = recheck_route_from_snapshot(&mut outcome, &npm_snapshot(true));
+        assert!(changed, "route must change");
+        match &outcome.report.managers[0].self_update {
+            SelfUpdateRoute::InBand {
+                command_preview, ..
+            } => assert_eq!(command_preview, "npm install -g npm@latest"),
+            other => panic!("expected the in-band override, got {other:?}"),
+        }
+        // Re-checking with the same snapshot is a no-op.
+        assert!(!recheck_route_from_snapshot(
+            &mut outcome,
+            &npm_snapshot(true)
+        ));
+    }
+
+    #[test]
+    fn recheck_keeps_delegation_when_own_listing_is_clean_and_flips_back() {
+        let mut outcome = npm_mise_outcome();
+        // Clean listing → the detection-time delegation stands.
+        assert!(!recheck_route_from_snapshot(
+            &mut outcome,
+            &npm_snapshot(false)
+        ));
+        assert!(matches!(
+            outcome.report.managers[0].self_update,
+            SelfUpdateRoute::Routed {
+                executor: ManagerId::Mise,
+                ..
+            }
+        ));
+
+        // Outdated → in-band; a later clean refresh flips back to delegation.
+        assert!(recheck_route_from_snapshot(
+            &mut outcome,
+            &npm_snapshot(true)
+        ));
+        assert!(recheck_route_from_snapshot(
+            &mut outcome,
+            &npm_snapshot(false)
+        ));
+        assert!(matches!(
+            outcome.report.managers[0].self_update,
+            SelfUpdateRoute::Routed {
+                executor: ManagerId::Mise,
+                ..
+            }
+        ));
     }
 
     // -----------------------------------------------------------------------
