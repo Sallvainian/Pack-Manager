@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/Sallvainian/Pack-Manager/compare/v0.2.0...v0.2.1) (2026-07-22)
+
+
+### Bug Fixes
+
+* **ui:** scale down the outdated-count numeral on manager cards ([1bb4c63](https://github.com/Sallvainian/Pack-Manager/commit/1bb4c6374b83430f624a0f3afaa51c5bb6f26163))
+* **ui:** scale down the outdated-count numeral on manager cards ([36f75d4](https://github.com/Sallvainian/Pack-Manager/commit/36f75d411345c0d1af1a724562c721a96229d482))
+
 ## [0.2.0](https://github.com/Sallvainian/Pack-Manager/compare/v0.1.1...v0.2.0) (2026-07-22)
 
 
