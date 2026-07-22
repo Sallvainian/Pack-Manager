@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.5](https://github.com/Sallvainian/Pack-Manager/compare/v0.2.4...v0.2.5) (2026-07-22)
+
+
+### Bug Fixes
+
+* **ci:** build the release from its tag, not the triggering commit ([b586edf](https://github.com/Sallvainian/Pack-Manager/commit/b586edfad349ceb1e8dfdb18997a5e41163e6274))
+
 ## [0.2.4](https://github.com/Sallvainian/Pack-Manager/compare/v0.2.3...v0.2.4) (2026-07-22)
 
 
