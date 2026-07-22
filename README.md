@@ -78,6 +78,10 @@ npx tsc --noEmit           # typecheck
 cd src-tauri && cargo test # Rust suite (offline; live smoke is #[ignore])
 ```
 
+Build output lands under `src-tauri/target/release/bundle/` — the app and its
+updater archive in `macos/` (`Pack-Manager.app`, `Pack-Manager.app.tar.gz`,
+`.sig`), the installer in `dmg/`.
+
 `tauri build` needs the updater's minisign key, because `bundle.createUpdaterArtifacts`
 is on and the CLI refuses to bundle when it finds a configured `pubkey` with no
 private key ("A public key has been found, but no private key"). `fnox exec`
