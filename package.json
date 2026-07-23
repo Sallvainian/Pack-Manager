@@ -8,6 +8,15 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:typecheck": "tsc --project tests/tsconfig.json",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:install": "playwright install chromium webkit",
+    "test:e2e:install:ci": "playwright install --with-deps chromium webkit",
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml --locked",
     "tauri": "tauri"
   },
   "dependencies": {
@@ -18,6 +27,8 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.5.0",
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/cli": "^2",
     "@testing-library/jest-dom": "^7.0.0",
@@ -30,5 +41,10 @@
     "typescript": "~5.8.3",
     "vite": "^7.0.4",
     "vitest": "^4.1.10"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "fsevents@2.3.3": true,
+    "fsevents@2.3.2": true
   }
 }

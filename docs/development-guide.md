@@ -7,7 +7,7 @@
 Pack-Manager is developed as one Tauri application with two toolchains:
 
 - macOS for the supported desktop target and real package-manager smoke tests.
-- Node.js and npm. CI uses Node 24; the repository does not currently pin a local Node version.
+- Node.js and npm. `.nvmrc` pins Node 24 for local development and CI.
 - Stable Rust with Cargo. The crate uses Rust edition 2021; the repository does not include `rust-toolchain.toml`.
 - Tauri's macOS build prerequisites, including the Apple command-line build tools.
 - `fnox` through `mise` when producing updater-signed local builds.
@@ -19,7 +19,9 @@ No database, local service, container, or `.env` file is required.
 From the repository root:
 
 ```sh
-npm install
+nvm install
+nvm use
+npm ci
 ```
 
 The Tauri CLI is a project dev dependency, so a separate global install is unnecessary. Cargo resolves the native dependencies from `src-tauri/Cargo.lock` when a native command is first run.
@@ -100,9 +102,12 @@ Because `bundle.createUpdaterArtifacts` and an updater public key are configured
 npm test
 npx tsc --noEmit
 npm run build
+npm run test:e2e:typecheck
+npm run test:e2e:install
+npm run test:e2e
 ```
 
-The Vitest suite uses jsdom and React Testing Library. At scan time it contained 22 test files and all 120 tests passed.
+The Vitest suite uses jsdom and React Testing Library. Playwright runs browser-visible journeys in Chromium and WebKit against a deterministic in-browser Tauri transport. Use `npm run test:e2e:install:ci` only on Linux CI runners; local machines use `npm run test:e2e:install`. See [`tests/README.md`](../tests/README.md) for its boundaries and failure-evidence guide.
 
 ### Native Core
 
@@ -134,7 +139,7 @@ The default suites are intended to be deterministic and offline:
 - Parser tests use committed captures from `dev/fixtures/`.
 - Rust and TypeScript validate the same IPC JSON payloads from `dev/fixtures/ipc/`.
 
-There is no Playwright or Cypress suite. The closest end-to-end coverage is the ignored native real-machine smoke suite plus the CI bundle smoke build.
+The Playwright suite exercises the real React interface while replacing native Tauri commands and events with a deterministic browser fixture. It does not replace the ignored real-machine Rust smoke tests, which remain responsible for installed package-manager behavior.
 
 ## IPC Contract Changes
 

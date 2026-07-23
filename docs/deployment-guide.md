@@ -149,6 +149,8 @@ cargo test -- --ignored
 - Web on Ubuntu: clean npm install, TypeScript, Vitest, and production Vite build.
 - Main-only macOS build smoke: unsigned debug application bundle uploaded as an Actions artifact.
 
+`.github/workflows/test.yml` adds browser verification on Ubuntu: Playwright TypeScript/discovery checks, two shards collectively covering the configured Chromium and WebKit projects, pull-request and weekly ten-pass burn-in, and merged HTML/JUnit artifacts. It requires no repository secrets.
+
 The release workflow is intentionally independent from the ordinary CI jobs but should only be reached from a reviewed, green `main` branch.
 
 ## Failure Diagnosis

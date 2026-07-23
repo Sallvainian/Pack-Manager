@@ -120,7 +120,7 @@ A change is ready for review when:
 - No secret values, personal paths beyond intentional project examples, generated dependencies, or local build artifacts are included.
 - The PR description explains the behavior change and concrete verification performed.
 
-GitHub CI runs independent Rust and frontend gates. Human-authored pull requests may also receive automated review against Pack-Manager's invariants.
+GitHub CI runs independent Rust, frontend, and Playwright browser gates. Human-authored pull requests may also receive automated review against Pack-Manager's invariants.
 
 ## Sensitive and Generated Files
 

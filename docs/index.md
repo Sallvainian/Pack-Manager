@@ -53,6 +53,9 @@ Start with [project-overview.md](./project-overview.md) for the concise system s
 ### Automation Definitions
 
 - [Continuous Integration](../.github/workflows/ci.yml) — Rust checks, web checks, and main-branch bundle smoke.
+- [Browser Test CI](../.github/workflows/test.yml) — Playwright validation, two shards covering Chromium and WebKit, burn-in, and merged reports.
+- [CI Guide](./ci.md) — triggers, stages, artifacts, local parity, and troubleshooting.
+- [CI Secrets Checklist](./ci-secrets-checklist.md) — credential requirements and safe configuration boundaries.
 - [Claude Issue/PR Agent](../.github/workflows/claude.yml) — mention-triggered repository assistance.
 - [Automated PR Review](../.github/workflows/claude-code-review.yml) — human-authored pull-request review workflow.
 - [Release Please](../.github/workflows/release-please.yml) — release PR, tag, GitHub Release, and build orchestration.
@@ -63,14 +66,15 @@ Start with [project-overview.md](./project-overview.md) for the concise system s
 ### Prerequisites
 
 - macOS and Apple command-line build tools.
-- Node.js/npm (CI uses Node 24).
+- Node.js/npm (Node 24 from `.nvmrc`).
 - Stable Rust/Cargo.
 - fnox through mise for a signed updater build.
 
 ### Install and Run
 
 ```sh
-npm install
+nvm install && nvm use
+npm ci
 npm run tauri dev
 ```
 
@@ -80,6 +84,8 @@ npm run tauri dev
 npm test
 npx tsc --noEmit
 npm run build
+npm run test:e2e:typecheck
+npm run test:e2e
 
 cd src-tauri
 cargo fmt --check
