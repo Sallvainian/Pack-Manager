@@ -4,9 +4,11 @@
 //!   into `meta.executables`; `warning:` lines (from EITHER stream) become
 //!   `HealthIssue`s. A parenthetical command is only made runnable when it
 //!   passes the strict backend parser and allowlist.
-//! - `uv tool list --outdated` — empty output is clean; a `(vX available)`
-//!   suffix is captured leniently as `latest`; any unknown suffix degrades to
-//!   `latest: null` (UI shows "update available", never a fabricated delta).
+//! - `uv tool list --outdated` — parent lines use
+//!   `name vINSTALLED [latest: LATEST]`; `- exe` child lines are ignored
+//!   because the inventory parser already owns executable metadata. Empty
+//!   output is clean, and unknown parent suffixes degrade to `latest: null`
+//!   (UI shows "update available", never a fabricated delta).
 
 use std::sync::LazyLock;
 
@@ -41,10 +43,18 @@ static SAFE_TOOL_NAME_RE: LazyLock<Regex> =
 static TOOL_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(?P<name>\S+)\s+v(?P<ver>\S+)$").unwrap());
 
-/// `(vX available)` — lenient latest extraction for the under-verified
-/// `--outdated` format.
-static OUTDATED_LATEST_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\(v?(?P<latest>\S+)\s+available\)").unwrap());
+/// Verified populated `uv tool list --outdated` parent row.
+static OUTDATED_TOOL_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(?P<name>\S+)\s+v(?P<installed>\S+)\s+\[latest:\s*(?P<latest>[^\]\s]+)\]$")
+        .unwrap()
+});
+
+/// Previously supported parent-row shape. Keep it fully anchored so an
+/// embedded `(vX available)` fragment cannot promote an unrelated line.
+static OUTDATED_LEGACY_TOOL_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(?P<name>\S+)\s+v?(?P<installed>[0-9]\S*)\s+\(v?(?P<latest>\S+)\s+available\)$")
+        .unwrap()
+});
 
 pub fn parse_tool_list(stdout: &str, stderr: &str) -> UvToolList {
     UvToolList {
@@ -140,8 +150,8 @@ fn finalize(mut pkg: Package, exes: Vec<String>) -> Package {
     pkg
 }
 
-/// `uv tool list --outdated`. Empty = clean (0-byte capture). Unknown suffixes
-/// degrade to `latest: null`.
+/// `uv tool list --outdated`. Empty = clean. Executable child rows are not
+/// packages and are ignored. Unknown parent suffixes degrade to `latest: null`.
 pub fn parse_tool_list_outdated(stdout: &str) -> Vec<Package> {
     let mut out = Vec::new();
     for raw in stdout.lines() {
@@ -149,23 +159,71 @@ pub fn parse_tool_list_outdated(stdout: &str) -> Vec<Package> {
         if line.is_empty() || line.starts_with("warning:") {
             continue;
         }
+        if line
+            .split_whitespace()
+            .next()
+            .is_some_and(|token| token == "-")
+        {
+            continue;
+        }
+        if let Some(c) = OUTDATED_TOOL_RE.captures(line) {
+            if !SAFE_TOOL_NAME_RE.is_match(&c["name"]) {
+                continue;
+            }
+            out.push(Package {
+                id: make_id(PackageKind::Tool, &c["name"]),
+                name: c["name"].to_string(),
+                kind: PackageKind::Tool,
+                installed: Some(c["installed"].to_string()),
+                latest: Some(c["latest"].to_string()),
+                outdated: true,
+                pinned: false,
+                meta: None,
+            });
+            continue;
+        }
+        if let Some(c) = OUTDATED_LEGACY_TOOL_RE.captures(line) {
+            if !SAFE_TOOL_NAME_RE.is_match(&c["name"]) {
+                continue;
+            }
+            out.push(Package {
+                id: make_id(PackageKind::Tool, &c["name"]),
+                name: c["name"].to_string(),
+                kind: PackageKind::Tool,
+                installed: Some(c["installed"].to_string()),
+                latest: Some(c["latest"].to_string()),
+                outdated: true,
+                pinned: false,
+                meta: None,
+            });
+            continue;
+        }
         let mut tokens = line.split_whitespace();
         let Some(name) = tokens.next() else {
             continue;
         };
-        let installed = tokens
+        if !SAFE_TOOL_NAME_RE.is_match(name) {
+            continue;
+        }
+        let Some(version_token) = tokens.next() else {
+            continue;
+        };
+        let installed = version_token.strip_prefix('v').unwrap_or(version_token);
+        if !installed.starts_with(|character: char| character.is_ascii_digit()) {
+            continue;
+        }
+        if tokens
             .next()
-            .filter(|s| !s.starts_with('('))
-            .map(str::to_string);
-        let latest = OUTDATED_LATEST_RE
-            .captures(line)
-            .map(|c| c["latest"].to_string());
+            .is_some_and(|suffix| !suffix.starts_with('(') && !suffix.starts_with('['))
+        {
+            continue;
+        }
         out.push(Package {
             id: make_id(PackageKind::Tool, name),
             name: name.to_string(),
             kind: PackageKind::Tool,
-            installed,
-            latest,
+            installed: Some(installed.to_string()),
+            latest: None,
             outdated: true,
             pinned: false,
             meta: None,
@@ -297,6 +355,20 @@ mod tests {
     }
 
     #[test]
+    fn uv_outdated_populated_capture_ignores_executables_and_extracts_versions() {
+        let rows = parse_tool_list_outdated(&read_fixture("uv_tool_list_outdated_2026-07-23.txt"));
+        assert_eq!(rows.len(), 1);
+
+        let cct = &rows[0];
+        assert_eq!(cct.id, "tool:claude-code-tools");
+        assert_eq!(cct.name, "claude-code-tools");
+        assert_eq!(cct.installed.as_deref(), Some("1.19.0"));
+        assert_eq!(cct.latest.as_deref(), Some("1.19.2"));
+        assert!(cct.outdated);
+        assert!(!rows.iter().any(|package| package.id == "tool:-"));
+    }
+
+    #[test]
     fn uv_outdated_unknown_suffix_degrades_to_null_latest() {
         // Unknown suffix (no `(… available)`): latest degrades to null.
         let rows = parse_tool_list_outdated("ruff 0.15.20 (some unrecognised note)\n");
@@ -308,5 +380,13 @@ mod tests {
         // A recognisable `(vX available)` suffix IS captured as latest.
         let known = parse_tool_list_outdated("ruff 0.15.20 (v0.15.22 available)\n");
         assert_eq!(known[0].latest.as_deref(), Some("0.15.22"));
+    }
+
+    #[test]
+    fn uv_outdated_ignores_alternate_whitespace_children_and_unrelated_lines() {
+        let rows = parse_tool_list_outdated(
+            "-\tvoice-type\nstatus message\ncache 2026 unavailable\nruff 0.15.20 note (v9 available)\n",
+        );
+        assert!(rows.is_empty());
     }
 }

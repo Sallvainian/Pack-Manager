@@ -39,7 +39,7 @@ and a retirement condition documented below.
 | `mas_list_2026-07-22.txt` | `mas list` | **12 apps**, lifted verbatim from the 14:18:09 operation transcript. Retires `mas_list_synthetic.txt`, whose guessed `id Name (version)` shape was wrong in two ways real output proves: mas **right-aligns the app id**, so 9-digit ids carry a **leading space** (` 640199958`), and the name column is **space-padded** to the widest entry rather than single-spaced. `FireShot - Full web page screenshots` proves a name may contain both hyphens and spaces. |
 | `mas_outdated_2026-07-22.txt` | `mas outdated` | **3 apps**, from the same 14:18:09 refresh as the list above — so the pair is self-consistent and exercises the overlay honestly (list says `5.20.0`; outdated says `5.20.0 -> 5.21.0`). Retires `mas_outdated_synthetic.txt`. The shape no guess would produce: mas pads the version column **inside the parens**, so `(4.2.2  -> 4.3.0)` leaves trailing spaces on the installed version that the parser must trim. |
 
-### Outdated / status — earlier recon captures (this machine)
+### Outdated / status — real captures (this machine)
 
 | File | Command | Verified facts |
 |---|---|---|
@@ -53,6 +53,7 @@ and a retirement condition documented below.
 | `uv_tool_list.txt` | `uv tool list` | **12 tools**; `claude-code-tools` has **17 executables**; `serena-agent v1.6.2.dev0` proves non-semver versions. `- exe` lines accumulate into `meta.executables`. |
 | `uv_tool_list_2026-07-21.txt` | `uv tool list` | First line is a `warning:` for a broken tool env: `` warning: Tool `aider-chat` environment not found (run `uv tool install aider-chat --reinstall` to reinstall) `` → HealthIssue + fix command. 12 tools. |
 | `uv_tool_list_outdated.txt` | `uv tool list --outdated` | **0 bytes** — empty output means clean, not an error. |
+| `uv_tool_list_outdated_2026-07-23.txt` | `uv tool list --outdated` with mise-managed uv 0.11.30 | One outdated parent row: `claude-code-tools v1.19.0 [latest: 1.19.2]`, followed by its 17 `- exe` child rows. Child rows are executable metadata, not independently upgradable packages. |
 | `rustup_check.txt` | `rustup check` | Both toolchain and self up to date, with **both colon spacings** in one file: `up to date: 1.97.1 (…)` and `up to date : 1.29.0`. The `\s*:\s*` in the regex is load-bearing. |
 | `rustup_check_2026-07-21.txt` | `rustup check` | Outdated: toolchain `stable-aarch64-apple-darwin 1.94.0 → 1.97.1`; self `rustup 1.28.2 → 1.29.0`. Commit hashes/dates → meta. |
 | `mas_outdated.txt` | `mas outdated` | `zsh: command not found: mas` — captured **while mas was absent** (superseded 2026-07-22 by the real captures above; kept deliberately). Detection gates an absent manager so this never reaches a parser, but a defensive test documents that feeding it to one yields `ParseFailed`, never a panic — the value is the shell-error shape, which no longer depends on mas being missing. |
@@ -83,12 +84,6 @@ firms up an under-verified parser branch.
   capture), so the opportunity recurs whenever tools drift.
 - **Populated `npm outdated -g --json`** — same: `{}` on 2026-07-22 (clean),
   5 outdated on 2026-07-21.
-- **Populated `uv tool list --outdated`** — only the 0-byte clean capture
-  exists; the populated line format is unknown. The parser captures a
-  `(vX available)`-style suffix leniently as `latest` and degrades any unknown
-  suffix to `latest: null` (UI shows "update available", never a fabricated
-  delta — Judge 2's mandate). No `_synthetic` fixture is invented for a format
-  we have not seen; the degradation branch is covered by an inline test string.
 - **Populated brew cask JSON** — both `brew outdated --json=v2` captures have
   `"casks": []`, so the cask JSON shape is UNVERIFIED. The `BrewCask` serde
   struct is default-tolerant, and the greedy **text** parser

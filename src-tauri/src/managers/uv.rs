@@ -2,9 +2,9 @@
 //! via `parse::uv`).
 //!
 //! Refresh: `uv tool list` (60s; `warning:` lines from either stream become
-//! `HealthIssue`s) → `uv tool list --outdated` (120s; empty stdout = clean per
-//! the 0-byte capture; unknown suffixes degrade to `latest: null` so the UI
-//! shows "update available", never a fabricated delta).
+//! `HealthIssue`s) → `uv tool list --outdated` (120s; populated parent rows
+//! include installed/latest versions and executable child rows are ignored;
+//! empty stdout is clean).
 
 use std::time::Duration;
 
@@ -70,14 +70,6 @@ impl ManagerAdapter for UvAdapter {
             });
         };
         let parsed = parse_uv::parse_tool_list(&list.stdout, &list.stderr);
-        if !outdated.stdout.trim().is_empty() {
-            // The populated `--outdated` format is under-verified (0-byte
-            // capture) — WARN until it is captured (SPEC §6.3).
-            tracing::warn!(
-                bytes = outdated.stdout.len(),
-                "uv tool list --outdated returned output; format is under-verified"
-            );
-        }
         let overlay = parse_uv::parse_tool_list_outdated(&outdated.stdout);
         Ok(ManagerSnapshot {
             manager_id: ManagerId::Uv,
@@ -213,6 +205,77 @@ mod tests {
         assert_eq!(
             h.fix_command.as_deref(),
             Some("uv tool install aider-chat --reinstall")
+        );
+    }
+
+    #[tokio::test]
+    async fn populated_outdated_capture_preserves_inventory_metadata_without_bogus_rows() {
+        let fake = FakeRunner::new();
+        fake.on("uv", &["tool", "list"]).fixture("uv_tool_list.txt");
+        fake.on("uv", &["tool", "list", "--outdated"])
+            .fixture("uv_tool_list_outdated_2026-07-23.txt");
+
+        let adapter = UvAdapter;
+        let plan = adapter.refresh_plan(&present(), &Settings::default());
+        let mut outputs = Vec::new();
+        for cmd in &plan {
+            outputs.push(
+                fake.run(&spec_for(cmd), tokio_util::sync::CancellationToken::new())
+                    .await
+                    .unwrap(),
+            );
+        }
+        let snapshot = adapter.parse_refresh(&outputs).expect("snapshot");
+
+        assert_eq!(snapshot.packages.len(), 12);
+        assert_eq!(
+            snapshot
+                .packages
+                .iter()
+                .filter(|package| package.outdated)
+                .count(),
+            1
+        );
+        assert!(!snapshot
+            .packages
+            .iter()
+            .any(|package| package.id == "tool:-"));
+
+        let cct = snapshot
+            .packages
+            .iter()
+            .find(|package| package.name == "claude-code-tools")
+            .expect("claude-code-tools");
+        assert_eq!(cct.installed.as_deref(), Some("1.19.0"));
+        assert_eq!(cct.latest.as_deref(), Some("1.19.2"));
+        assert!(cct.outdated);
+        let executables = cct
+            .meta
+            .as_ref()
+            .and_then(|meta| meta.executables.as_ref())
+            .expect("executables");
+        assert_eq!(
+            executables,
+            &[
+                "agent-tunnel",
+                "aichat",
+                "codex-dynamic",
+                "codex-server",
+                "codex-workflows",
+                "csv2gsheet",
+                "env-safe",
+                "fix-session",
+                "gdoc2docx",
+                "gdoc2md",
+                "gsheet2csv",
+                "md2gdoc",
+                "msg",
+                "msg-hook",
+                "tmux-cli",
+                "vault",
+                "voice-type",
+            ]
+            .map(str::to_string)
         );
     }
 
