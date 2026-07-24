@@ -42,6 +42,7 @@ src-tauri/target
 .agents/
 .claude/
 _bmad/
+.github/copilot-instructions.md
 
 # BMAD UX working scratch — screenshots, Playwright CLI logs, mockup
 # iterations, and memlogs. Regenerable exploration output, not deliverables;
@@ -57,15 +58,6 @@ _bmad/
 # regenerates docs/project-scan-report.json. Git already versions the
 # canonical file, so these archive copies stay out of the repo.
 docs/.archive/
-
-# Kanban Pro overlay — auto-generated when this repo is opened in Kanban Pro
-# (a separate app), not part of the Pack-Manager codebase. Kanban Pro also
-# overwrites README.md / CLAUDE.md / AGENTS.md on project load; restore those
-# from git if it does.
-.kanban/
-/MAPPING.md
-/ORGANOGRAM.md
-.github/copilot-instructions.md
 
 # Local agent tooling — machine-specific paths and working data.
 .bmad-loop/
