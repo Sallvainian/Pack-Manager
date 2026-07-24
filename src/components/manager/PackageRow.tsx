@@ -53,12 +53,14 @@ export function PackageRow({
   const executables = pkg.meta?.executables ?? [];
   const canExpand = executables.length > 0;
   const upgrading = opState === "upgrading";
-  const showUpgradeButton = pkg.outdated && !pkg.pinned && pkg.kind !== "caskGreedy";
+  const showUpgradeButton =
+    pkg.outdated && !pkg.pinned && pkg.kind !== "caskGreedy";
 
   function onCheckboxClick(e: MouseEvent<HTMLInputElement>) {
     if (!selectable || upgrading) return;
-    // Controlled input — drive selection through the store, not the DOM toggle.
-    e.preventDefault();
+    // `checked` remains controlled by the store. Do not prevent the native
+    // checkbox action: browsers roll it back after the React commit when a
+    // click is cancelled, leaving the DOM out of sync with the store.
     if (e.shiftKey) onRangeSelect(pkg.id);
     else onToggleSelect(pkg.id);
   }
@@ -106,7 +108,9 @@ export function PackageRow({
             <button
               type="button"
               onClick={onToggleExpand}
-              aria-label={expanded ? `Collapse ${pkg.name}` : `Expand ${pkg.name}`}
+              aria-label={
+                expanded ? `Collapse ${pkg.name}` : `Expand ${pkg.name}`
+              }
               aria-expanded={expanded}
               className="text-text-muted hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
@@ -115,12 +119,17 @@ export function PackageRow({
               </span>
             </button>
           )}
-          <span className="truncate font-medium text-text-primary" title={pkg.name}>
+          <span
+            className="truncate font-medium text-text-primary"
+            title={pkg.name}
+          >
             {pkg.name}
           </span>
         </div>
         {KIND_LABEL[pkg.kind] && (
-          <div className="text-[11px] text-text-muted">{KIND_LABEL[pkg.kind]}</div>
+          <div className="text-[11px] text-text-muted">
+            {KIND_LABEL[pkg.kind]}
+          </div>
         )}
         {expanded && canExpand && (
           <div className="mt-1 flex flex-wrap gap-1">
@@ -145,7 +154,11 @@ export function PackageRow({
       </div>
 
       <div role="cell" className="w-[216px] shrink-0 pt-0.5">
-        <VersionDelta installed={pkg.installed} latest={pkg.latest} outdated={pkg.outdated} />
+        <VersionDelta
+          installed={pkg.installed}
+          latest={pkg.latest}
+          outdated={pkg.outdated}
+        />
       </div>
 
       <div role="cell" className="w-[150px] shrink-0 pt-0.5">
@@ -157,7 +170,9 @@ export function PackageRow({
           <Spinner size={14} label={`Upgrading ${pkg.name}`} />
         ) : pkg.pinned ? (
           <Tooltip content={`Run \`brew unpin ${pkg.name}\` to upgrade`}>
-            <span className="text-[11px] uppercase tracking-wide text-text-muted">pinned</span>
+            <span className="text-[11px] uppercase tracking-wide text-text-muted">
+              pinned
+            </span>
           </Tooltip>
         ) : showUpgradeButton ? (
           <button

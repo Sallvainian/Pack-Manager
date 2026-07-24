@@ -245,6 +245,29 @@ Where older story text conflicts, these replacements are binding:
 `AUT-003` is retained as historical evidence of superseded behavior and must
 not support revised `F5-AC3`.
 
+### 2026-07-24 Story repair and decomposition applied
+
+The affected stories are no longer governed only by the global supersession
+note above. On 2026-07-24 their local contracts were rewritten directly so an
+implementer or test author reading a single story cannot build the superseded
+experience:
+
+- **UX-PB.1–UX-PB.5 decomposed** into 28 dependency-ordered vertical
+  sub-stories (`UX-PB.1a`–`UX-PB.5e`), each delivering one shippable behavior
+  across the TypeScript/Rust/persistence/acceptance layers it needs, with
+  explicit Given/When/Then happy- and failure-path criteria. They remain inside
+  this Product Behavior Prerequisite and do not create a ninth readiness batch.
+- **12 stories rewritten** to remove superseded wording and express Decisions
+  D27–D30 and AD-16 directly: 3.2, 3.3, 3.5, 3.6, 4.6, 5.2, 5.4, 5.5, 6.3, 6.4,
+  6.5, 7.10.
+- **7 stories additively aligned** where the local text did not contradict the
+  target but omitted required coverage: 3.1, 3.4, 4.1, 6.7, 7.6, 7.7, 8.7.
+
+The amendment table above is retained as the revision record of the prior
+wording. Named assignees/dates, the 55 versioned scenario-contract files and
+their digests, DR-1/DR-4, and revision-2 coverage-map approval remain open and
+are handled by their own workflows.
+
 ### FR Coverage Map
 
 This map assigns each FR exactly once to its primary epic for planning accountability. An epic may reference additional FRs as cross-cutting acceptance constraints without creating duplicate primary ownership. Exact P0 criterion ownership is governed separately by the 72-row story allocation.
@@ -308,143 +331,689 @@ closure batch. It must complete before affected Stories in Epics 3–7 can enter
 evidence implementation. Its completion does not change any readiness status;
 TIR-1 behavior-present reconciliation must follow.
 
-#### Story UX-PB.1: Make every update persistent Upgrade Plan membership
+#### Story UX-PB.1a: Persistent draft domain with single-entry membership and Rust rebuild
 
 **Primary concern:** Product Behavior  
-**Dependencies:** Decisions D27-D30; finalized UX spines; AD-16  
-**Blocks:** Stories 3.1–3.3, 3.5–3.6, 5.2, and their affected evidence  
+**Dependencies:** D27-D30; AD-16; finalized UX spines  
+**Blocks:** UX-PB.1b, UX-PB.1c; Story 3.5 and its affected evidence  
 **Assignee:** Unassigned  
 **Calendar date:** Unassigned
 
-As a Pack-Manager user, I want every Package and Manager update action to edit
-one persistent plan so that nothing bypasses the visual organization layer.
+As a Pack-Manager user, I want one eligible Package to become persistent draft-plan membership so that acting on a single row never executes and always has a reviewable home.
 
 **Acceptance Criteria:**
 
-- [ ] Package-row, selected-Package, Manager-header, Manager-wide, and
-      `Update Everything` actions add eligible canonical identities to one
-      draft and never execute.
-- [ ] The sidecar is hidden when empty, appears after the first addition,
-      persists across Manager navigation, and closes after the last removal.
-- [ ] Manager updates are independent removable items; no global
-      `includeSelfUpdates` control remains.
-- [ ] Pinned, current, excluded, and unavailable Packages remain inert while
-      keyboard, pointer, and VoiceOver interaction explains why.
-- [ ] The Manager workspace uses standardized description, path, version,
-      Manager-status, ownership, Package counts, and update delta presentation.
-- [ ] Rust rebuilds the plan from canonical intent after each draft change;
-      executable display text is never trusted input.
+**Given** an eligible Package row in a Manager workspace
+**When** I toggle its plan Checkbox by pointer, Enter/Space, or the grid Space key
+**Then** the Package's canonical identity is added to the one persistent draft Upgrade Plan, nothing executes, and Rust rebuilds the exact command from canonical intent.
+**And** the frontend never authors or edits executable command text; executable display text is never trusted input.
 
-#### Story UX-PB.2: Establish durable confirmed Plan Attempts
+**Given** a Package already staged in the draft
+**When** I toggle its Checkbox off or activate its `Remove` control
+**Then** its canonical identity leaves the draft, Rust rebuilds the remaining plan from canonical intent, and nothing executes.
+
+**Given** a draft mutation (add or remove)
+**When** the Rust canonical rebuild errors or rejects
+**Then** the draft surfaces the specific error, the prior coherent draft and its last authenticated preview are preserved, no executable display text is trusted, and nothing is admitted for execution.
+
+**Given** a Package that becomes pinned, already current, or removed between my add action and the Rust rebuild
+**When** the rebuild resolves the draft from canonical identities
+**Then** the now-ineligible item is dropped or flagged with what changed, the plan is rebuilt from current canonical truth rather than the stale display, and a fresh review is required before anything can run.
+
+#### Story UX-PB.1b: Sidecar lifecycle and navigation-persistent visibility
 
 **Primary concern:** Product Behavior  
-**Dependencies:** Story UX-PB.1; AD-3; AD-16  
-**Blocks:** Stories 4.1, 4.6, 6.3, 6.4, and their affected evidence  
+**Dependencies:** UX-PB.1a; D27-D30; AD-16  
+**Blocks:** UX-PB.1d, UX-PB.1e  
 **Assignee:** Unassigned  
 **Calendar date:** Unassigned
 
-As a user, I want each confirmed plan to have one durable identity so that its
-Operations, verification, Results, and recovery remain reconstructible.
+As a Pack-Manager user, I want the Upgrade Sidecar to appear, persist, and close in step with the draft so that my proposed plan always has a stable reviewable home and no empty drawer clutters the workspace.
 
 **Acceptance Criteria:**
 
-- [ ] One-use preview `planId` and durable `planAttemptId` are distinct wire,
-      domain, persistence, and TypeScript types.
-- [ ] Confirmation atomically returns a new `planAttemptId` and the admitted
-      Operation identities; a second active confirmation fails closed.
-- [ ] Operations, events, transcripts, journal records, diagnostics, and
-      verification refreshes carry `planAttemptId` where applicable.
-- [ ] Attempt persistence stores reviewed intent and exact command snapshot
-      without converting historical display strings back into executable input.
-- [ ] Plan-level cancellation marks unstarted work `Skipped`, escalates running
-      process groups through existing mechanics, and preserves every outcome.
-- [ ] Legacy Operations without attempt identity remain honest legacy records
-      and are never inferred into plan groups.
+**Given** an empty draft and no visible sidecar
+**When** I add the first eligible item
+**Then** the Upgrade Sidecar opens showing the draft grouped by Manager with `Updates`, `Managers`, and `Commands` counts, and focus stays on the source control that created it.
 
-#### Story UX-PB.3: Transform the sidecar into trusted Activity and Results
+**Given** a non-empty draft with the sidecar open
+**When** I switch between Dashboard and Manager workspaces
+**Then** the sidecar and its exact membership persist unchanged across navigation, and when hidden the main workspace reclaims its width with no reserved empty column.
+
+**Given** a draft with one remaining item
+**When** I remove the last item
+**Then** the sidecar closes, the draft returns to empty, and nothing lingers in Activity or History.
+
+**Given** an in-progress draft when the app crashes or is force-quit
+**When** Pack-Manager relaunches
+**Then** the draft's canonical membership is reconstructed into the sidecar, or — if it cannot be recovered — the sidecar returns to empty with no fabricated membership and nothing executes; a draft is never surfaced as Activity or History.
+
+#### Story UX-PB.1c: Remaining draft entry points as independent removable items
 
 **Primary concern:** Product Behavior  
-**Dependencies:** Stories UX-PB.1 and UX-PB.2  
-**Blocks:** Stories 5.4, 5.5, 6.5, 7.6, and their affected evidence  
+**Dependencies:** UX-PB.1a; D27-D30; AD-16  
+**Blocks:** UX-PB.1d, UX-PB.1e; Stories 3.3 and 3.6 and their affected evidence  
 **Assignee:** Unassigned  
 **Calendar date:** Unassigned
 
-As a user, I want the same plan to show live progress and verified Results so
-that I understand what is happening without reading a terminal.
+As a Pack-Manager user, I want selected-Package, Manager-header, Manager-wide, and `Update Everything` actions to all feed the same draft as independent removable items so that every entry point stages into one plan and no global toggle bypasses it.
 
 **Acceptance Criteria:**
 
-- [ ] The confirmed sidecar becomes the one active plan summary; full Activity
-      is a first-class detailed view of the same state.
-- [ ] Per-item state shows queued/waiting/running/verifying/terminal outcomes;
-      verified completion replaces the old-to-new delta with the single new
-      version.
-- [ ] Terminal Results wait for required refresh verification and distinguish
-      mutation failure, verification failure, cancelled, skipped, timed out,
-      and interrupted work.
-- [ ] Known failures explain what happened and a safe next step before
-      presenting Retry; deterministic causes are not framed as likely fixed by
-      repeated retries.
-- [ ] `Interaction required` comes only from a closed Manager-specific
-      classifier or explicit native signal; unmatched silence remains a stall.
-- [ ] Primary cancellation is labeled `Cancel plan`; `Cancel operation` is used
-      only for an explicitly Operation-scoped diagnostic action.
+**Given** eligible work reachable from the count-labeled header Checkbox, the Manager Header `Update Manager` action, a Manager-wide action, and `Update Everything`
+**When** I invoke each entry point
+**Then** each adds its eligible canonical identities to the same one persistent draft, `Update Everything` seeds all eligible work while remaining editable, every staged Package and every Manager self-update is an independent item with its own visible `Remove`, and no global `includeSelfUpdates` control exists.
 
-#### Story UX-PB.4: Make History and Retry plan-attempt based
+**Given** a staged Manager self-update in the draft
+**When** I remove it
+**Then** only that Manager self-update leaves the plan, Package items in the same Manager group are unaffected, and Rust dedups and rebuilds the authenticated preview from the remaining canonical identities.
+
+**Given** a draft seeded by `Update Everything` as an `AllEligible` intent
+**When** I remove any item
+**Then** the draft converts to an `Explicit` intent of the surviving PackageRefs and Manager self-update identities and rebuilds the authenticated preview from the backend, never from edited display text.
+
+**Given** two entry classes mutating the same draft in close succession
+**When** both mutations resolve
+**Then** the draft converges to one coherent deduplicated membership set, no item is doubled or lost, and a single authenticated rebuild reflects the final canonical intent.
+
+#### Story UX-PB.1d: Ineligible-control inertness with keyboard, pointer, and VoiceOver explanation
 
 **Primary concern:** Product Behavior  
-**Dependencies:** Stories UX-PB.2 and UX-PB.3  
-**Blocks:** Stories 6.3–6.5, 8.7, and their affected evidence  
+**Dependencies:** UX-PB.1a, UX-PB.1c; D27-D30; AD-16  
+**Blocks:** Story 3.2 and its affected evidence  
 **Assignee:** Unassigned  
 **Calendar date:** Unassigned
 
-As a user, I want one History entry per plan I confirmed so that I can replay
-the complete outcome instead of piecing together unrelated commands.
+As a Pack-Manager user, I want pinned, current, excluded, and unavailable Packages to stay inert and explain themselves through keyboard, pointer, and VoiceOver so that I understand why they cannot join the plan without guessing.
 
 **Acceptance Criteria:**
 
-- [ ] Every confirmed attempt creates exactly one immutable History row,
-      including failed, cancelled, interrupted, or partially skipped attempts.
-- [ ] Opening a row routes Activity into read-only replay with Manager groups,
-      Package/version changes, commands, Operation outcomes, errors, timings,
-      and retained output.
-- [ ] A concurrent live attempt remains clearly primary and offers
-      `Back to live activity`.
-- [ ] Retry first exposes the proposed failed-item scope, rebuilds current
-      intent, and creates a new attempt linked by `retryOfPlanAttemptId`.
-- [ ] The original failed result remains immutable and visible after Retry.
-- [ ] Legacy Operation History remains accessible and explicitly labeled
-      without fabricated plan grouping.
+**Given** pinned, current, excluded, and unavailable Package controls
+**When** I activate any of them by pointer, Enter/Space, or the grid Space key
+**Then** membership never changes and each exposes its plain-language reason — pinned `This Package is pinned and cannot be updated. Unpin it, then refresh Pack-Manager to make it selectable.`, excluded `This Package is excluded by your Settings. Change the setting, then refresh Pack-Manager.`, current `This Package is already current.`, and unavailable `An update target is not available. Refresh or view details.`
+**And** the bulk header Checkbox scope covers only eligible Packages matching the active filter and adds no ineligible identity.
 
-#### Story UX-PB.5: Deliver the separate confirmation and finalized safety settings
+**Given** an explanatory-disabled Package control
+**When** a keyboard or VoiceOver user reaches it
+**Then** it uses `aria-disabled="true"` rather than native `disabled`, keeps focus, announces its persistent reason as an accessible description, stays inert on activation, and retains focus when Escape closes its supplemental Tooltip/Popover.
+
+**Given** a Package whose update is delegated to another Manager
+**When** its row renders
+**Then** it reads `Managed through <Manager>` in plain language and explains the update is grouped and executed through that Manager rather than exposing internal route/owner jargon.
+
+#### Story UX-PB.1e: Standardized Manager workspace presentation
 
 **Primary concern:** Product Behavior  
-**Dependencies:** Stories UX-PB.1 and UX-PB.2; finalized focus and high-zoom contracts  
-**Blocks:** Stories 3.4, 6.7, 7.6, 7.7, 7.10, and their affected evidence  
+**Dependencies:** UX-PB.1c; D27-D30; AD-16  
+**Blocks:** Stories 3.1 and 5.2 and their affected evidence  
 **Assignee:** Unassigned  
 **Calendar date:** Unassigned
 
-As a user, I want a clear final confirmation that I can deliberately disable
-and restore so that the default stays safe without forcing permanent friction.
+As a Pack-Manager user, I want each Manager Header and Card to present standardized identity, version, status, ownership, counts, and deltas so that every Manager reads consistently and its self-update staging is obvious.
 
 **Acceptance Criteria:**
 
-- [ ] With confirmation enabled, the plan contains one blue
-      `Confirm N Updates` action and no safety checkbox.
-- [ ] That action opens `Proceed with Upgrade Plan?`, dims the background,
-      shows exact commands, and provides `Change Plan` and
-      `Confirm N Updates`.
-- [ ] Only the dialog contains
-      `Disable upgrade plan command execution confirmation`, its safety
-      explanation, and Settings restoration guidance.
-- [ ] `skipUpgradePlanConfirmation` defaults to `false`, persists atomically,
-      and is reversible in Settings; `autoOpenDrawer` is inactive legacy input.
-- [ ] With confirmation disabled, command display expands and the explicit run
-      action still performs native rebuild/stale validation.
-- [ ] Focus trapping/restoration, VoiceOver names/announcements, reduced
-      motion, 900 × 600, 150%, and 200% zoom keep every safety action reachable.
-- [ ] The application updater uses `Pack-Manager Update Ready!` and remains
-      separate from Package Upgrade Plans and History.
+**Given** a detected Manager
+**When** its workspace Header and Dashboard Card render
+**Then** they show a standardized short description (for example `macOS package manager` or `Runtime version manager`), executable path, installed version beside the name, Manager status, ownership, Package counts in `34 managed packages · 8 package updates` order, and the self-update delta beneath the Manager status.
+**And** Manager self-state stays separate from managed-Package health, and update availability is never colored as a system-health problem.
+
+**Given** a Manager whose self-update has been staged into the plan
+**When** the Manager Header renders
+**Then** it shows `IN PLAN` plus a separate visible `Remove` action named `Remove <Manager> update from Upgrade Plan`, keeps no separate self-update row, and the `Update Manager` action stages the self-update into the plan and never executes it.
+
+**Given** a Manager whose refresh has failed
+**When** its Header and Card render
+**Then** they retain the last-good snapshot with its timestamp, state the exact failure summary with `Retry refresh`, and use text rather than an invented Health Meter value.
+
+#### Story UX-PB.2a: Distinct one-use preview planId and durable planAttemptId identity types
+
+**Primary concern:** Product Behavior  
+**Dependencies:** UX-PB.1 complete (PB.1a-e); AD-3; AD-16; D29  
+**Blocks:** UX-PB.2b, UX-PB.2f; Story 4.1  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a Pack-Manager user, I want the one-use preview identity and the durable confirmed-attempt identity to be separate, non-interchangeable types so that a short-lived authorization can never masquerade as the permanent record of what I confirmed.
+
+**Acceptance Criteria:**
+
+**Given** the reviewed-preview authorization and the confirmed-attempt identity
+**When** each is defined across the Rust wire model, the Rust/TypeScript domain, persistence, and the TypeScript surface
+**Then** a one-use preview `planId` and a durable `planAttemptId` exist as distinct branded types that round-trip through every layer
+**And** neither type is assignable to or substitutable for the other at any boundary.
+
+**Given** a one-use preview `planId`
+**When** any surface attempts to reuse it as a durable History or attempt identity
+**Then** the type boundary and its guard reject the reuse, because `planId` is a bounded one-use authorization for exactly one reviewed preview and is never a durable identity.
+
+#### Story UX-PB.2b: Atomic admission mints one planAttemptId and fails a second attempt closed
+
+**Primary concern:** Product Behavior  
+**Dependencies:** UX-PB.2a; AD-3; AD-16; D29-D30  
+**Blocks:** UX-PB.2c, UX-PB.2d, UX-PB.2e; Story 4.6  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a Pack-Manager user, I want confirming a reviewed plan to atomically create exactly one durable attempt identity so that every Operation it launches shares one reconstructible identity and no two confirmed attempts can ever run at once.
+
+**Acceptance Criteria:**
+
+**Given** a reviewed plan authorized by a one-use preview `planId`
+**When** I invoke the confirmed run action (`Confirm N Updates`, or the confirmation-off run action) and admission succeeds
+**Then** `execute_plan` atomically returns one new durable `planAttemptId` plus the created Operation identities
+**And** the full plan is admitted as a unit with no partial silent admission.
+
+**Given** one confirmed Upgrade Plan attempt is already active
+**When** a second confirmation is attempted
+**Then** admission fails closed, no second `planAttemptId` is minted, and only that one confirmed attempt remains active
+**And** the scheduler still permits safe cross-Manager concurrency inside the single active attempt.
+
+#### Story UX-PB.2c: Persist reviewed intent and the exact command snapshot durably
+
+**Primary concern:** Product Behavior  
+**Dependencies:** UX-PB.2b; AD-16; D29  
+**Blocks:** UX-PB.3 (on UX-PB.2 completion)  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a Pack-Manager user, I want the confirmed attempt to durably store exactly what I reviewed and the exact commands as a snapshot so that recovery and history are reconstructible and never rebuild executable input from display text.
+
+**Acceptance Criteria:**
+
+**Given** a plan admitted under a new `planAttemptId`
+**When** the attempt is persisted
+**Then** the append-only record stores the reviewed Manager/Package scope, Manager self-update identities, exact command snapshot, version evidence, timestamps, and result/verification state as immutable plan-admission metadata
+**And** the stored command snapshot is read back only as evidence and is never converted back into executable input.
+
+**Given** a plan admitted under a new `planAttemptId`
+**When** persisting the reviewed intent or command snapshot fails
+**Then** the failure is surfaced, no partial attempt record is left behind, and the prior consistent state is preserved rather than proceeding as if durably recorded.
+
+**Given** a `planAttemptId` was minted but its durable record was lost to a crash or forced quit mid-admission
+**When** Pack-Manager relaunches
+**Then** it reconstructs the attempt only from durable plan-admission metadata that actually persisted, leaves no orphaned executable command text, and never resurrects an unpersisted attempt as a completed durable record.
+
+**Given** a persisted attempt whose command snapshot is later read as corrupted or incomplete
+**When** the record is loaded
+**Then** the integrity failure is detected and the snapshot is refused as an execution source, blocking any display-to-executable round-trip so a damaged snapshot can never be silently re-run.
+
+#### Story UX-PB.2d: Correlate every Operation, event, and durable record by planAttemptId
+
+**Primary concern:** Product Behavior  
+**Dependencies:** UX-PB.2b; AD-16; D29  
+**Blocks:** UX-PB.2e; Story 6.3  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a Pack-Manager user, I want every Operation, event, and durable record produced by a confirmed attempt to carry that attempt's identity so that its progress, output, and evidence reconstruct as one coherent whole.
+
+**Acceptance Criteria:**
+
+**Given** a plan admitted under one `planAttemptId`
+**When** its Operations run and emit state
+**Then** every produced Operation carries that same `planAttemptId` through the Rust and TypeScript wire models, the `op:status`/`op:output`/attention events, transcript metadata, and in-memory stores
+**And** every live surface resolves each line back to the one admitting attempt.
+
+**Given** the same admitted attempt
+**When** its durable and diagnostic records are written
+**Then** crash-journal start/finish records, diagnostics, and verification refreshes carry the same `planAttemptId` where applicable
+**And** persisted evidence stays correlated to the attempt that produced it rather than standing as flat, uncorrelated Operation records.
+
+#### Story UX-PB.2e: Plan-level cancellation that skips unstarted work and escalates running process groups
+
+**Primary concern:** Product Behavior  
+**Dependencies:** UX-PB.2b, UX-PB.2d; AD-16; D30  
+**Blocks:** UX-PB.3 (on UX-PB.2 completion)  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a Pack-Manager user, I want cancelling the plan to stop only that attempt's work honestly so that unstarted items are marked Skipped, running work is escalated through existing mechanics, and every real outcome is preserved.
+
+**Acceptance Criteria:**
+
+**Given** a confirmed attempt with some Operations running and others not yet started
+**When** I choose `Cancel plan`
+**Then** cancellation operates only on the Operation IDs bound to that `planAttemptId`: running work moves to `Cancelling` and escalates through the existing process-group mechanics, unstarted attempt work is prevented from beginning and recorded as `Skipped`, no second confirmation is required, rollback is not promised
+**And** every prior outcome is preserved.
+
+**Given** a plan cancellation where process-group escalation cannot stop some running work
+**When** the escalation partially fails
+**Then** the work that could not be stopped is reported honestly and never falsely marked cancelled, the successfully cancelled and skipped outcomes remain preserved
+**And** no terminal outcome is fabricated for work whose true state is unknown.
+
+#### Story UX-PB.2f: Keep legacy Operations honest without inferred plan grouping
+
+**Primary concern:** Product Behavior  
+**Dependencies:** UX-PB.2a; AD-16; D29  
+**Blocks:** Story 6.4  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a Pack-Manager user, I want Operations that predate the attempt model to stay honestly labeled as legacy so that older records are never fabricated into plans that never existed.
+
+**Acceptance Criteria:**
+
+**Given** Operation records that have no `planAttemptId`
+**When** they are read and displayed
+**Then** they remain honest legacy Operation entries, stay readable, and are never silently grouped or inferred into a plan attempt.
+
+**Given** a legacy Operation record that superficially resembles part of a plan
+**When** it is loaded alongside genuine plan-attempt records
+**Then** it is still presented as a standalone legacy Operation with no fabricated attempt grouping, preserving legacy readability without inventing plan structure.
+
+#### Story UX-PB.3a: Confirmed sidecar as the single active plan summary
+
+**Primary concern:** Product Behavior  
+**Dependencies:** UX-PB.2 complete (PB.2a-f); D27-D30; AD-16; finalized UX spines  
+**Blocks:** UX-PB.3b  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a Pack-Manager user, I want the sidecar I confirmed to become the one live summary of the admitted attempt so that I follow a single plan from review into execution without a new surface appearing.
+
+**Acceptance Criteria:**
+
+**Given** a confirmed plan whose atomic admission returned one durable `planAttemptId`
+**When** final confirmation closes the Confirmation Dialog
+**Then** the same Upgrade Sidecar transforms in place into the one active plan summary for that `planAttemptId`, focus moves to its programmatically focusable Upgrade Activity summary heading, and the status channel announces plan start.
+
+**Given** a confirmed attempt already summarized live in the sidecar
+**When** the user keeps reviewing a draft or attempts a second confirmation
+**Then** only one confirmed Upgrade Plan attempt is active — the new draft stays in the Upgrade Plan and cannot be confirmed until the active attempt is terminal, and no second live summary is created.
+
+#### Story UX-PB.3b: Full Activity as detailed view of the same attempt
+
+**Primary concern:** Product Behavior  
+**Dependencies:** UX-PB.3a; D29-D30; AD-16  
+**Blocks:** UX-PB.3c  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a user, I want full Activity to be a deeper view of the very same attempt shown in the sidecar so that the compact summary and the detailed evidence are never two different executions.
+
+**Acceptance Criteria:**
+
+**Given** an active attempt rendered in the sidecar
+**When** the Activity destination opens for the same `planAttemptId`
+**Then** the sidecar and full Activity render one shared live state — the sidecar stays the compact live summary while full Activity shows detailed Operation evidence — and neither is a separate execution.
+
+**Given** the compact sidecar while an Operation needs attention
+**When** the condition is summarized there
+**Then** the sidecar offers `View full Activity` and defers `Keep waiting`, `Copy command`, `Cancel plan`, and expanded command evidence to full Activity rather than crowding the summary.
+
+**And** if a History replay opens during the live plan, the sidecar remains visibly live, full Activity is labeled `Viewing past activity`, and `Back to live activity` returns the workspace to the active attempt.
+
+#### Story UX-PB.3c: Per-item live progress states
+
+**Primary concern:** Product Behavior  
+**Dependencies:** UX-PB.3b, UX-PB.2d; D29-D30; AD-16 rule 4  
+**Blocks:** UX-PB.3d, UX-PB.3f  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a user, I want each Package and Manager item to show its own honest live state so that I can see what is running, what is waiting, and what has verified without reading a terminal.
+
+**Acceptance Criteria:**
+
+**Given** an admitted attempt whose Operations carry the same `planAttemptId`
+**When** each item advances
+**Then** it shows queued, waiting (with the lock or ownership reason), running (indeterminate unless the adapter provides a trustworthy total), verifying, or a terminal state, and a row or status update never moves focus.
+
+**Given** an item whose process has exited successfully
+**When** its affected Manager state has refreshed and verified
+**Then** only that verified row collapses its `old → new` delta to the single new current version, and an unverified successful exit remains `Verifying`.
+
+**Given** an attempt in progress (live-state stream disconnect/reconnect)
+**When** the per-item progress source drops mid-attempt and later reconnects
+**Then** each item keeps its last known honest state and is never silently shown complete, the interruption to the live stream is surfaced rather than guessed, and reconnection resumes correlated `planAttemptId` state without fabricating progress.
+
+#### Story UX-PB.3d: Verification-gated Results with outcome taxonomy
+
+**Primary concern:** Product Behavior  
+**Dependencies:** UX-PB.3c; D29-D30; AD-16 rules 6-7  
+**Blocks:** UX-PB.3e, UX-PB.3g; Stories 5.4, 6.5, 7.6 and their affected evidence  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a user, I want the plan to become Results only after affected state is verified so that success is earned, not assumed from a process exit.
+
+**Acceptance Criteria:**
+
+**Given** an active attempt whose mutations have all reached a process-terminal state
+**When** the required refresh verification for the affected Managers completes
+**Then** the attempt becomes terminal, the sidecar transforms in place into a persistent Results Summary that remains until `Done`, focus preserves the current viable node or moves to the Results heading, and one atomic outcome summary is announced (e.g. `12 of 12 updates verified` or `10 of 12 verified · 2 failed`).
+
+**Given** a completed attempt
+**When** Results renders
+**Then** the overall outcome is exactly one of success, partial, failed, cancelled, timed out, or interrupted, and each item is verified, failed, cancelled, or skipped — mutation failure and verification failure are distinguished, `Skipped` marks only work that never started, and crash-reconstructed unfinished work reads as `Interrupted`.
+
+**Given** an Operation whose process exited successfully (verification-refresh failure/timeout)
+**When** the required refresh verification itself errors or times out, distinct from a mutation failure
+**Then** the item does not declare success — it stays `Verifying` until it resolves, then reports verification failure with its evidence, and is never colored successful on the strength of the exit code alone.
+
+**Given** an attempt reaching terminal state (Results persistence failure)
+**When** the transformed persistent Results / terminal outcome cannot be written
+**Then** the failure to persist is surfaced honestly, the visible Results are not presented as durably recorded, and no fabricated success is shown.
+
+#### Story UX-PB.3e: Failure guidance and safe next step before Retry
+
+**Primary concern:** Product Behavior  
+**Dependencies:** UX-PB.3d; D30; AD-16  
+**Blocks:** UX-PB.4 and its affected evidence  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a user, I want a failed item to explain what happened and what to do next before I see Retry so that I fix the real cause instead of repeating a doomed attempt.
+
+**Acceptance Criteria:**
+
+**Given** a failed item with a known, curated cause
+**When** I expand it in Results
+**Then** it presents `What happened` and `What to do next` with evidence and safe contextual actions before a secondary Retry, and it names the object that failed (e.g. `rustup refresh failed`) rather than a generic message.
+
+**Given** a failure whose cause is deterministic rather than transient
+**When** guidance is shown
+**Then** it is not framed as likely fixed by repeated retries; a repeated identical failure says it repeated and emphasizes resolving the known cause before Retry, and an unknown non-zero exit shows evidence without inventing advice.
+
+#### Story UX-PB.3f: Trusted Interaction-required classifier
+
+**Primary concern:** Product Behavior  
+**Dependencies:** UX-PB.3c; D30; AD-16 (interaction-required policy)  
+**Blocks:** UX-PB.4 and its affected evidence  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a user, I want `Interaction required` to appear only when a trusted classifier recognizes a real prompt so that Pack-Manager never invents prompt meaning from arbitrary output.
+
+**Acceptance Criteria:**
+
+**Given** a running Operation with null input
+**When** a closed Manager-specific classifier or explicit native signal recognizes a known prompt
+**Then** the Operation shows `Interaction required` with a plain-language explanation plus `Copy command` and `Cancel plan`, and Pack-Manager never accepts the response inline or requests a password.
+
+**Given** a running Operation that has gone silent
+**When** no trusted classifier matches the output at the 120-second threshold
+**Then** the Operation remains an ordinary stall presenting exactly `Keep waiting`, `Copy command`, and `Cancel plan`, never `Interaction required`.
+
+**Given** output the classifier does not recognize, or a real recognized prompt (interaction-classifier false positive/negative)
+**When** the state is derived
+**Then** unmatched output is never guessed into `Interaction required` and a classifier-recognized prompt is never left as a silent stall — only trusted classification, never regex or heuristic guessing, converts a stall into interaction.
+
+#### Story UX-PB.3g: Two labeled cancellation scopes
+
+**Primary concern:** Product Behavior  
+**Dependencies:** UX-PB.3d, UX-PB.2e; D30; AD-16 rules 8, 10  
+**Blocks:** Story 5.5 and its affected evidence; UX-PB.4  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a user, I want the primary cancel action to clearly stop the whole plan, with an Operation-only cancel reserved for a deliberate diagnostic, so that I always know the scope of what I am stopping.
+
+**Acceptance Criteria:**
+
+**Given** an active confirmed attempt
+**When** I choose the primary cancellation labeled `Cancel plan`
+**Then** it requires no second confirmation, changes still-running Operations bound to that `planAttemptId` to `Cancelling`, prevents unstarted attempt work from beginning and marks it `Skipped`, promises no rollback, and never delays cancellation behind a dialog.
+
+**Given** a deliberately Operation-scoped diagnostic action
+**When** an Operation-level cancel is offered
+**Then** it is the only place labeled `Cancel operation`, while generic `Cancel` is reserved for closing a dialog or retry-scope editor without mutating running work.
+
+**Given** an attempt in the verifying window with processes exited and refresh verification pending (cancellation while verifying)
+**When** `Cancel plan` is issued
+**Then** cancellation is honored immediately for that `planAttemptId`, verifying items resolve to honest terminal outcomes (cancelled or skipped rather than falsely verified), and no item is reported successful because its exit preceded the cancel.
+
+#### Story UX-PB.4a: One immutable History row per confirmed attempt
+
+**Primary concern:** Product Behavior  
+**Dependencies:** D29; AD-16 rules 2 and 5; UX-PB.3 complete (PB.3a-g)  
+**Blocks:** UX-PB.4b, UX-PB.4e; Story 6.3 and its affected evidence  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a Pack-Manager user, I want each plan I confirm to become exactly one immutable History entry so that every attempt has one durable record instead of scattered per-command rows.
+
+**Acceptance Criteria:**
+
+**Given** a confirmed plan attempt that reaches a terminal state — succeeded, failed, cancelled, interrupted, or partially skipped, and regardless of how many Managers, commands, Packages, failures, or skips it contained
+**When** it terminates
+**Then** exactly one immutable History row is created for that `planAttemptId`, its Operation-level evidence is nested inside that row, and its summary uses verified-outcome wording such as `10 of 12 verified · 2 failed` rather than a generic completion ratio
+**And** no attempt ever yields more than one row or a per-Package or per-command row.
+
+**Given** a confirmed attempt has terminated
+**When** its single immutable History row cannot be persisted
+**Then** the write failure is surfaced honestly, no partial or fabricated row is presented as a complete History entry, and the durable Operation and crash-journal evidence for that `planAttemptId` remains recoverable rather than silently lost.
+
+**Given** a confirmed attempt was admitted but the app crashed or relaunched before the attempt reached a terminal row
+**When** History reconciles on the next launch
+**Then** the in-flight attempt is reconciled from its durable `planAttemptId` records into one honest row, an attempt that never reached terminal is shown as interrupted, and no completed outcome is fabricated for work that did not finish.
+
+#### Story UX-PB.4b: Read-only Activity replay of a History row
+
+**Primary concern:** Product Behavior  
+**Dependencies:** D29-D30; AD-16; UX-PB.4a  
+**Blocks:** UX-PB.4c, UX-PB.4d; Story 6.4 and its affected evidence  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a Pack-Manager user, I want opening a History row to route Activity into read-only replay so that I can inspect exactly what a prior attempt did instead of piecing together unrelated commands.
+
+**Acceptance Criteria:**
+
+**Given** a completed History row for a confirmed `planAttemptId`
+**When** I open it
+**Then** Activity enters a clearly labeled read-only replay that reconstructs the attempt's Manager groups, Package/version changes, Manager self-updates, exact commands, Operation outcomes, errors, timings, and retained output
+**And** no control in the replay can mutate, re-run, or execute anything.
+
+**Given** a History row whose persisted attempt is corrupted or missing
+**When** I try to open its replay
+**Then** the load failure states what could not be reconstructed, the History list stays intact and navigable, and no partial reconstruction is presented as a complete or trustworthy replay.
+
+#### Story UX-PB.4c: Live and replay coexistence with the live attempt primary
+
+**Primary concern:** Product Behavior  
+**Dependencies:** D30; UX-PB.4b  
+**Blocks:** No dependent sub-story or evidence Story (leaf of the UX-PB.4 spine)  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a Pack-Manager user, I want a replay I open during a live upgrade to stay clearly secondary so that the one running attempt never looks paused or lost while I inspect a past one.
+
+**Acceptance Criteria:**
+
+**Given** a confirmed plan attempt is running when I open a History replay
+**When** the read-only replay opens
+**Then** the live sidecar stays visibly live, full Activity is labeled `Viewing past activity`, `Back to live activity` is offered, and choosing it returns the main workspace to the one active attempt without disturbing its progress.
+
+**Given** a replay is open alongside the live attempt
+**When** the live attempt emits new status or reaches terminal Results
+**Then** the live attempt remains the primary object with authoritative sidecar and Results, and the concurrent replay never suppresses, delays, or overwrites live status.
+
+#### Story UX-PB.4d: Retry scope preview and linked new attempt
+
+**Primary concern:** Product Behavior  
+**Dependencies:** D29; AD-16 rule 5; UX-PB.4b, UX-PB.2b  
+**Blocks:** Story 6.5 and its affected evidence  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a Pack-Manager user, I want Retry to first show the failed-item scope and then create a new linked attempt so that I can re-run only what failed while the original result stays untouched.
+
+**Acceptance Criteria:**
+
+**Given** a terminal Results or History entry with failed items and Retry available
+**When** I invoke Retry
+**Then** it first reveals the proposed failed-item scope inline with `Cancel` and `Create new plan`; `Create new plan` rebuilds current canonical intent into a new reviewable draft, and confirming that draft creates a new attempt with a fresh `planAttemptId` linked by `retryOfPlanAttemptId` and a `Retry of plan from <time>` History entry
+**And** the original failed result stays immutable and reachable through `View previous result`.
+
+**Given** Retry has exposed the failed-item scope
+**When** current canonical intent cannot be rebuilt for that scope — for example an item is now pinned, current, removed, or unavailable
+**Then** the rebuild failure is explained, no new attempt is admitted, and the original immutable failed result is left unchanged and still visible.
+
+**Given** a Retry attempt links back to its source through `retryOfPlanAttemptId`
+**When** the source is missing, the link is dangling or orphaned, or the original would be mutated by the Retry
+**Then** the original attempt's History row and result remain immutable and are never overwritten, the lineage is surfaced honestly including when its source cannot be resolved, and no fabricated or repaired lineage is presented as valid.
+
+#### Story UX-PB.4e: Legacy Operation History honest labeling
+
+**Primary concern:** Product Behavior  
+**Dependencies:** D29; AD-16 rule 9; UX-PB.4a, UX-PB.2f  
+**Blocks:** Story 8.7 and its affected evidence  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a Pack-Manager user, I want legacy Operation records that predate plan attempts to stay honestly labeled so that older history remains readable without being faked into plans it never had.
+
+**Acceptance Criteria:**
+
+**Given** legacy Operation History records that lack a `planAttemptId`
+**When** History renders them
+**Then** they remain accessible, are explicitly labeled as legacy Operation entries, are visibly distinct from plan-attempt History rows, and are never grouped or fabricated into a plan attempt they never belonged to.
+
+**Given** a History list mixing legacy Operation entries and plan-attempt rows
+**When** the user filters, searches, or opens detail
+**Then** legacy entries open their own honest Operation-level detail rather than a fabricated plan replay, plan-attempt rows open read-only plan replay, and the two kinds never merge into a single invented grouping.
+
+#### Story UX-PB.5a: Separate final confirmation gate with the `Confirm N Updates` action and `Proceed with Upgrade Plan?` dialog
+
+**Primary concern:** Product Behavior  
+**Dependencies:** UX-PB.1 and UX-PB.2 complete; D27, D28; AD-16; finalized UX spines  
+**Blocks:** UX-PB.5b, UX-PB.5d  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a Pack-Manager user, I want the persistent Upgrade Plan to present one deliberate final confirmation before anything runs so that a review step always stands between staging and execution and nothing bypasses it silently.
+
+**Acceptance Criteria:**
+
+**Given** a non-empty Upgrade Plan with confirmation enabled (`skipUpgradePlanConfirmation` is `false`)
+**When** the plan footer renders
+**Then** it contains exactly one blue `Confirm N Updates` action where N is the count of staged updates, exact commands stay hidden behind `Show update command`, and no safety or skip checkbox appears on the base plan.
+
+**Given** the enabled base plan
+**When** I invoke `Confirm N Updates`
+**Then** the `Proceed with Upgrade Plan?` Confirmation Dialog opens over a dimmed, focus-trapped background, shows the exact commands that will run, and offers `Change Plan` plus a final `Confirm N Updates`, and nothing executes until the final confirmation is chosen.
+
+**Given** the open Confirmation Dialog
+**When** focus lands and I use `Change Plan`, Escape, or the backdrop
+**Then** focus moves to the dialog heading/command summary with `Change Plan` as the first actionable control so a final confirmation is never the accidental default for an unfocused Enter, `Change Plan` returns focus to the first staged Remove control or the plan heading, and Escape/backdrop dismiss only while no command has begun and restore focus to the originating `Confirm N Updates` action.
+
+**Given** the open dialog
+**When** I choose the final `Confirm N Updates`
+**Then** the full plan is admitted atomically through the same review, execution, verification, Results, and History lifecycle as any plan, partial silent admission never occurs, and only one confirmed attempt becomes active.
+
+**Given** a confirmed admission
+**When** admission fails
+**Then** nothing executes, the dialog explains why, and the plan remains editable for re-review.
+
+#### Story UX-PB.5b: Dialog-only disable control with atomic `skipUpgradePlanConfirmation` persistence and Settings migration
+
+**Primary concern:** Product Behavior  
+**Dependencies:** UX-PB.5a; D28; FR-17; Settings migration  
+**Blocks:** UX-PB.5c; Stories 3.4 and 6.7 and their affected evidence  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a user, I want to deliberately disable the final confirmation from the dialog and restore it from Settings so that I can remove friction without ever losing a safe default.
+
+**Acceptance Criteria:**
+
+**Given** the `Proceed with Upgrade Plan?` dialog
+**When** it renders
+**Then** only this dialog contains the `Disable upgrade plan command execution confirmation` control, its safety explanation, and Settings-restoration guidance, and the base plan never surfaces that control.
+
+**Given** the dialog with `Disable upgrade plan command execution confirmation` selected
+**When** I choose the final `Confirm N Updates`
+**Then** `skipUpgradePlanConfirmation: true` is written atomically, the new value takes effect only after persistence succeeds, and the plan is admitted.
+
+**Given** Settings
+**When** the confirmation preference renders
+**Then** `skipUpgradePlanConfirmation` defaults to `false`, is reversible there, saves immediately and atomically with visible Saving/Saved/failure states, and any persisted `autoOpenDrawer` is tolerated as inactive legacy input without becoming active.
+
+**Given** a change to `skipUpgradePlanConfirmation` from either the dialog or Settings
+**When** the atomic save fails
+**Then** the prior preference is retained as both active and persisted state, an inline error is shown, and no partial or legacy value becomes active.
+
+**Given** an interrupted atomic write of the confirmation preference across a crash and relaunch
+**When** the app relaunches
+**Then** the setting reconstructs to exactly one coherent value, old or new and never partial, and migration re-applies the tolerate-`autoOpenDrawer`-as-inactive-legacy rule.
+
+#### Story UX-PB.5c: Confirmation-disabled bypass with expanded commands and native rebuild/stale-validation-gated run
+
+**Primary concern:** Product Behavior  
+**Dependencies:** UX-PB.5b; D27, D28; AD-16  
+**Blocks:** None (leaf of the confirmation branch)  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a user who has disabled the final confirmation, I want the run action to still rebuild the commands natively and stale-check the plan so that removing the dialog never removes the real safety.
+
+**Acceptance Criteria:**
+
+**Given** confirmation disabled (`skipUpgradePlanConfirmation` is `true`) and a non-empty plan
+**When** the sidecar renders
+**Then** exact commands automatically expand, a persistent `Confirmation is off. Changes will run immediately when you choose Run N Updates. Change in Settings.` warning links to Settings, the immediate action is `Run N Updates`, and no dialog opens.
+
+**Given** the confirmation-disabled plan
+**When** I choose `Run N Updates`
+**Then** Rust rebuilds the exact commands from canonical intent and runs the stale-plan check before the plan is atomically admitted, so the bypass removes only the final dialog and never the persistent plan, native rebuild, stale check, or explicit user action.
+
+**Given** the confirmation-disabled bypass path
+**When** native rebuild or stale validation fails, for example a Package pinned, updated, or removed since staging
+**Then** the run is blocked, the invalidated details are replaced and what changed is explained, and nothing executes until the plan is rebuilt and re-authorized.
+
+#### Story UX-PB.5d: Accessibility and responsiveness of the confirmation and safety surfaces
+
+**Primary concern:** Product Behavior  
+**Dependencies:** UX-PB.5a; finalized focus and high-zoom contracts; FR-19  
+**Blocks:** Story 7.6 and its affected evidence  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a keyboard and VoiceOver user at high zoom, I want every safety action reachable and announced so that the confirmation gate protects everyone at the 900 x 600 minimum and at 150-200% zoom.
+
+**Acceptance Criteria:**
+
+**Given** the plan and the `Proceed with Upgrade Plan?` dialog
+**When** a keyboard/VoiceOver user operates them with reduced motion active
+**Then** the dialog traps focus, exposes meaningful names, roles, and states, honors reduced motion, and every safety action (`Confirm N Updates`, `Change Plan`, the disable checkbox, and `Run N Updates`) has an accessible name and a reachable focus order.
+
+**Given** the 900 x 600 minimum window at 100%, 150%, and 200% zoom
+**When** the Plan, Confirmation, Activity, and Results surfaces render
+**Then** below 720 usable CSS pixels the layout enters high-zoom mode, navigation collapses to an accessible rail or temporary panel, and Plan/Confirmation/Activity/Results present as a full-workspace or stacked surface with a visible Back route, no overlapping panes, and no two-dimensional scrolling for the primary task, keeping every safety action reachable.
+
+**Given** the open Confirmation Dialog
+**When** it is dismissed via `Change Plan`, Escape, backdrop, or final confirm and the return target no longer survives
+**Then** focus is restored to a defined fallback (the first staged Remove control or the plan heading) rather than lost to the document body, and focus is never stranded inside a closed dialog.
+
+**Given** 150% zoom, 200% zoom, or the 900 x 600 minimum
+**When** a safety action would otherwise clip or overflow
+**Then** it remains fully visible and operable with its name, state, versions, primary action, error/recovery, focus order, and announcements preserved, and no safety action becomes unreachable behind an overlapping or two-dimensionally scrolling pane.
+
+#### Story UX-PB.5e: Application-update presentation kept separate from Package plans and History
+
+**Primary concern:** Product Behavior  
+**Dependencies:** UX-PB.4 complete (History must exist to assert separation); finalized application-update presentation  
+**Blocks:** Stories 7.7 and 7.10 and their affected evidence  
+**Assignee:** Unassigned  
+**Calendar date:** Unassigned
+
+As a user, I want the application's own update to appear only as a restrained `Pack-Manager Update Ready!` badge that links into Settings so that it never mixes with Package Upgrade Plans, Activity, Results, or History.
+
+**Acceptance Criteria:**
+
+**Given** an available application update
+**When** the shell and Settings render
+**Then** one restrained application-level `Pack-Manager Update Ready!` badge links to Settings, Pack-Manager updates, where the update card heading is simply `Pack-Manager` and the installed-to-target version delta stays on one unbroken line with the installed version in warning yellow and the target version in success green.
+
+**Given** active or historical Package work
+**When** application-update state changes (checking, available, downloading, ready to restart, blocked by active work, or error)
+**Then** it never appears in a Package Upgrade Plan, draft plan, live confirmed plan attempt, Results, or plan-attempt History, and Package Activity and History never absorb the application update.
+
+**Given** a plan-attempt History row open in read-only Activity replay
+**When** an application update becomes ready during the replay
+**Then** readiness surfaces only via the separate `Pack-Manager Update Ready!` badge and the Settings card and never injects into the replayed attempt, its Operations, or the History list.
 
 ### Epic 1: Restore Trustworthy `mas` and Target-Mac Truth
 
@@ -994,7 +1563,7 @@ So that I can understand what each Manager reports without losing Manager-specif
 - Behavior-present handling: All four rows are `BP`; any absent/incorrect state creates Product Behavior work and a reviewed map revision before regression credit
 - Versioned scenario contract: `contracts/readiness/scenarios/v1/b3-package-state-detail.json`
 - Scenario-contract digest: Unassigned; freeze the exact file before implementation entry
-- Expected evidence artifact: `b3-package-state-detail.json` with rendered roles/text, row-state matrix, expansion/search outcomes, and self-card/table assertions
+- Expected evidence artifact: `b3-package-state-detail.json` with rendered roles/text, row-state matrix, expansion/search outcomes, and Package plan-membership plus Manager Card/Header staging (`Update Manager`, `IN PLAN`, `Remove`) assertions
 - Accountable role: Development
 - Assignee: Unassigned
 - Calendar date: Unassigned
@@ -1006,12 +1575,12 @@ So that I can understand what each Manager reports without losing Manager-specif
 
 **Given** representative current, Outdated, pinned, self-updating/greedy, unknown-version, and error Packages
 **When** Manager Package tables render
-**Then** name, installed/latest values, status text, eligibility, selection, and row action are complete and understandable without relying on color.
+**Then** name, installed/latest values, status text, eligibility, selection, and the row plan action that adds or removes the Package's stable identity in the one persistent editable draft Upgrade Plan without executing are complete and understandable without relying on color.
 
 **Given** uv executable details and npm's own outdated row
 **When** the user expands/searches uv content and views npm
 **Then** uv executables are reachable and searchable
-**And** npm self state appears only on its Manager card while the four ordinary Package rows remain.
+**And** npm self state appears only in its Manager Card/Header — where `Update Manager` stages an independent, individually-removable self-update plan item surfaced as `IN PLAN` / `Remove` and never executes directly — while the four ordinary Package rows remain.
 
 **Given** any behavior-present assertion fails
 **When** classification occurs
@@ -1048,8 +1617,8 @@ So that no plan silently overrides a pin or includes default-excluded work.
 **Acceptance Criteria:**
 
 **Given** pinned Homebrew formulae
-**When** selection, row update, per-Manager update-all, update-selected, and Update Everything paths are exercised
-**Then** pinned rows are explained, disabled, and excluded from every plan with the correct reason.
+**When** selection, row plan-add, per-Manager update-all, update-selected, and Update Everything draft-entry paths are exercised across every active filter
+**Then** pinned rows stay inert, add nothing to the draft Upgrade Plan, and are explained, disabled, and excluded from every plan with the correct reason.
 
 **Given** ordinary and greedy-only casks
 **When** the default and explicit opt-in flows execute
@@ -1062,8 +1631,8 @@ So that no plan silently overrides a pin or includes default-excluded work.
 ### Story 3.3: Build Plans from Every User Entry Point
 
 As a Pack-Manager user,
-I want global and per-Manager update actions to open an exact plan or explain why planning failed,
-So that no bulk work starts without a reviewable command set.
+I want every update entry point — one Package, one Manager self-update, a per-Manager-wide action, and Update Everything — to stage eligible work into the one persistent editable Upgrade Plan or explain why planning failed,
+So that nothing executes from an entry point and no work is authorized without a reviewable, editable command set.
 
 **Story Contract:**
 
@@ -1089,12 +1658,12 @@ So that no bulk work starts without a reviewable command set.
 **Acceptance Criteria:**
 
 **Given** eligible state from the Dashboard or a Manager pane
-**When** Update Everything or per-Manager update-all is selected
-**Then** the exact eligible request is built, the Upgrade Plan opens, and commands, exclusions, notes, warnings, and Manager self-update defaults are visible before authorization.
+**When** a single Package, a single Manager self-update, a per-Manager-wide action, or Update Everything is invoked
+**Then** each eligible identity is added to the one persistent editable Upgrade Plan whose sidecar opens on the first addition, nothing executes, and the exact commands, exclusions, notes, warnings, and every explicit per-Manager self-update — surfaced as an individually removable plan item — are visible before authorization.
 
 **Given** plan construction fails or inputs are stale
-**When** the user initiates either entry path
-**Then** no Operation is admitted, the failure is visible and actionable, and the interface cannot present a confirmable stale plan as current.
+**When** the user invokes any entry class
+**Then** no plan preview (`planId`) or durable plan attempt (`planAttemptId`) is admitted, the failure is visible and actionable, and the interface cannot present a confirmable stale plan as current.
 
 **Given** the scenario passes without ignored/unexecuted checks
 **When** the result is admitted
@@ -1129,9 +1698,10 @@ So that configuration changes and environment evidence remain trustworthy.
 
 **Acceptance Criteria:**
 
-**Given** every configurable Setting, its default, valid bounds, invalid input, and a persistence failure
+**Given** the retained editable stall threshold, hard cap, and log level plus `skipUpgradePlanConfirmation` (default `false`) as the configurable Settings — each with its default, valid bounds, invalid input, and a persistence failure — and an old persisted `autoOpenDrawer` value carried over after the Activity auto-open preference was removed
 **When** the user changes Settings
-**Then** valid values persist before becoming active, invalid values are rejected, save failure changes neither active nor persisted state, and log-level changes apply live only after persistence.
+**Then** valid values persist before becoming active, invalid values are rejected, save failure changes neither active nor persisted state, and log-level changes apply live only after persistence
+**And** `skipUpgradePlanConfirmation` is validated and persisted as a first-class control, the Activity auto-open preference is removed from active Settings while any old persisted `autoOpenDrawer` value is tolerated during migration without ever becoming active, the new value applies only after atomic persistence succeeds, and every control saves immediately and atomically with visible `Saving`/`Saved`/failure state.
 
 **Given** the complete current detection and ToolEnv state
 **When** Environment Report opens and Copy is used
@@ -1142,11 +1712,11 @@ So that configuration changes and environment evidence remain trustworthy.
 **When** the source-bound attempt is admitted
 **Then** both criteria become only **eligible for later FULL reassessment**.
 
-### Story 3.5: Preserve Exact Keyboard Selection and Row Updates
+### Story 3.5: Preserve Exact Keyboard Selection and Row Plan Actions
 
 As a Pack-Manager user,
-I want keyboard selection and direct row updates to preserve exact Package identity,
-So that I can act efficiently without updating excluded or unrelated Packages.
+I want keyboard selection and single-row plan actions to preserve exact Package identity,
+So that I can act efficiently without adding excluded or unrelated Packages to the Upgrade Plan.
 
 **Story Contract:**
 
@@ -1158,10 +1728,10 @@ So that I can act efficiently without updating excluded or unrelated Packages.
 - Execution lane / evidence depth: `forced-offline` / source-bound
 - Dependencies: Stories 3.1–3.3; semantic keyboard/focus locators; deterministic bridge
 - ASR and risk links: ASR-05, TIR-1, TIR-2, TIR-8; R-003, R-008
-- Behavior-present handling: Both criteria are `BP`; missing/incorrect selection or row-update behavior creates Product Behavior work before regression credit
+- Behavior-present handling: Both criteria are `BP`; missing/incorrect selection or row plan-action behavior creates Product Behavior work before regression credit
 - Versioned scenario contract: `contracts/readiness/scenarios/v1/b3-selection-row-update.json`
 - Scenario-contract digest: Unassigned; freeze the exact file before implementation entry
-- Expected evidence artifact: `b3-selection-row-update.json` with selected PackageRefs, keyboard/focus state, plan/execute calls, command visibility, and both rejection paths
+- Expected evidence artifact: `b3-selection-row-update.json` with selected PackageRefs, keyboard/focus state, draft plan-membership add/remove calls and durable plan-attempt admission (`planAttemptId`), command visibility, and both rejection paths
 - Accountable role: Development
 - Assignee: Unassigned
 - Calendar date: Unassigned
@@ -1177,9 +1747,10 @@ So that I can act efficiently without updating excluded or unrelated Packages.
 **And** excluded rows never enter selection.
 
 **Given** one eligible or ineligible Package row
-**When** direct Upgrade is invoked
-**Then** exactly one eligible Package is submitted and its command becomes visible
-**And** build and execute rejection are visible, enqueue nothing, and do not expand the selection.
+**When** the single-row plan action is invoked
+**Then** exactly one eligible Package's canonical identity is added to (or removed from) the persistent draft Upgrade Plan, nothing is built, submitted, enqueued, or executed, and the sidecar reflects the membership change
+**And** ineligible, pinned, or current rows add nothing, stay inert with an explained reason, and never expand the selection
+**And** the resulting one-Package plan flows through the same review, separate confirmation, execution, verification, Results, and History lifecycle as a multi-Package plan.
 
 **Given** all required interactions execute and pass
 **When** the result is admitted
@@ -1221,7 +1792,7 @@ So that non-semver truth, mise consequences, and plan defaults are not inherited
 **Given** the mise fixture and the complete plan-policy matrix
 **When** revalidation executes
 **Then** six Outdated mise rows and clean stable Rust behavior remain correct
-**And** Manager self-updates default on, greedy casks default off, rust dedup/explanations hold, stale rebuild requires reconfirmation, and confirm-current behavior matches the source contract.
+**And** each Manager self-update enters the persistent Upgrade Plan as an explicit, individually-removable per-Manager membership—seeded when `Update Everything` runs but never a single global default-on toggle—greedy casks default off, rust dedup/explanations hold, stale rebuild requires reconfirmation, and confirm-current behavior matches the source contract.
 
 **Given** the historical FULL statuses
 **When** the current first attempt passes and is admitted
@@ -1257,6 +1828,7 @@ So that shipped and native-acceptance boundaries cannot drift independently.
 - Calendar date: Unassigned
 - Implementation entry: Blocked by native harness decision, assignee/date, and frozen contract inputs
 - Candidate subjects and invalidation: No candidate artifacts; production surface changes require one atomic catalog/registration/wire/acceptance update
+- Plan-attempt boundary extension (AD-16): the same one atomic catalog/registration/wire/acceptance change also adds the revised `PlanIntent`, the one-use preview `planId`, the durable `planAttemptId`, the `execute_plan` admission return, the plan-attempt query/list/replay contract, `cancel_plan_attempt`, per-Operation `planAttemptId` event correlation, the trusted interaction-attention event or typed attention reason, and the revised Settings fields as one AD-3 contract change; command and event counts may change and stay a current baseline
 - Attempt contract: First qualification attempt retained; automatic retry count zero
 
 **Acceptance Criteria:**
@@ -1274,6 +1846,11 @@ So that shipped and native-acceptance boundaries cannot drift independently.
 **When** any affected contract component is missing or divergent
 **Then** qualification fails closed
 **And** no duplicated test registry or test-only command/event can satisfy ASR-01.
+
+**Given** the AD-16 plan-attempt boundary extension — the revised `PlanIntent`, the one-use preview `planId`, the durable `planAttemptId`, the `execute_plan` admission return, the plan-attempt query/list/replay contract, `cancel_plan_attempt`, per-Operation `planAttemptId` correlation across `op:status`, `op:output`, and attention events, the trusted interaction-attention event or typed attention reason, and the revised Settings fields
+**When** their commands, types, events, and IPC fixtures enter the catalog
+**Then** every revised command/type/event/fixture is admitted through the same single atomic catalog/registration/wire/acceptance change, with set-equality across production Rust registration, Rust/TypeScript wire schemas and guards, wrappers, subscriptions, shared fixtures, native acceptance vectors, and native inventory
+**And** the changed command and event counts remain a current baseline rather than permanent counts, and no plan-attempt surface may be registered outside this one atomic contract change.
 
 ### Story 4.2: Deliver the Deterministic Process-Control Core
 
@@ -1447,7 +2024,7 @@ So that previous FULL status does not hide a registration, fixture, or runtime-g
 ### Story 4.6: Revalidate Reviewed Plans and Native Admission
 
 As a QA Lead,
-I want exact reviewed plans and PackageRefs revalidated through native serialization and admission,
+I want exact reviewed plans, PackageRefs, and Manager self-update identities revalidated through native serialization, the separate final confirmation, and durable plan-attempt admission,
 So that an older FULL result cannot conceal a transport or capability mismatch.
 
 **Story Contract:**
@@ -1463,7 +2040,7 @@ So that an older FULL result cannot conceal a transport or capability mismatch.
 - Behavior-present handling: Not `BP`; historical FULL is planning history only
 - Versioned scenario contract: `contracts/readiness/scenarios/v1/rv-b4-plan-admission.json`
 - Scenario-contract digest: Unassigned; freeze the exact file before implementation entry
-- Expected evidence artifact: `rv-b4-plan-admission.json` with reviewed command bytes, exclusions/warnings/notes, exact PackageRefs, one-use capability result, and selection-clear timing
+- Expected evidence artifact: `rv-b4-plan-admission.json` with reviewed command bytes, exclusions/warnings/notes, exact PackageRefs and Manager self-update identities, one-use preview `planId` result, the durable `planAttemptId` and its propagation, the separate final confirmation, and draft/selection-clear-on-Activity timing
 - Accountable role: Architecture
 - Assignee: Unassigned
 - Calendar date: Unassigned
@@ -1477,9 +2054,10 @@ So that an older FULL result cannot conceal a transport or capability mismatch.
 **When** plans cross the production boundary
 **Then** exact commands, exclusions, warnings, notes, request semantics, and serialized bytes match the reviewed plan.
 
-**Given** update-selected through component, browser, and native paths
-**When** the one-use capability is admitted or rejected
-**Then** the exact PackageRefs reach the backend, no unintended Package is added, and selection clears only after successful admission.
+**Given** update-selected staged into the draft plan and reviewed through component, browser, and native paths, then passed through the separate final `Proceed with Upgrade Plan?` confirmation
+**When** the one-use preview `planId` authorizes the reviewed preview and atomic admission mints one durable `planAttemptId` with its created Operation IDs, or admission is rejected
+**Then** the exact PackageRefs and Manager self-update identities reach final admission, no unintended Package is added, and draft/selection membership clears only when the confirmed plan becomes Activity — not at draft addition and not at the bounded one-use `planId` preview admission
+**And** the minted `planAttemptId` propagates identically through Rust/TypeScript wire models, `op:status`/`op:output`/attention events, transcript metadata, crash-journal start/finish records, in-memory stores, and diagnostics, while a rejected admission mints no `planAttemptId`, admits no Package, and clears nothing.
 
 **Given** both historical FULL rows
 **When** current evidence is admitted
@@ -1531,7 +2109,7 @@ So that subject and executor state cannot disagree after an update.
 **When** the source-bound result is admitted
 **Then** `F2-AC9` becomes only **eligible for later FULL reassessment**.
 
-### Story 5.2: Prove Dynamic Self-Update Routes and Native Card State
+### Story 5.2: Prove Dynamic Self-Update Routes and Manager Header/Card Plan State
 
 As a Pack-Manager user,
 I want Manager self-update Routes, versions, and queue consequences to reflect current topology,
@@ -1550,7 +2128,7 @@ So that I understand what will run, through which executor, and why.
 - Behavior-present handling: Not `BP`; missing behavior is still classified honestly as Product Behavior rather than hidden by the harness
 - Versioned scenario contract: `contracts/readiness/scenarios/v1/b5-self-update-routes.json`
 - Scenario-contract digest: Unassigned; freeze the exact file before implementation entry
-- Expected evidence artifact: `b5-self-update-routes.json` with route-precedence decisions, serialized self state, production events, card text/actions, and queue states
+- Expected evidence artifact: `b5-self-update-routes.json` with route-precedence decisions, serialized self state, production events, Manager Header/Card text/actions with `IN PLAN`/`Remove` plan-membership states, and queue states
 - Accountable role: Development
 - Assignee: Unassigned
 - Calendar date: Unassigned
@@ -1570,8 +2148,8 @@ So that I understand what will run, through which executor, and why.
 **Then** installed state is preserved, latest state is patched, the self row is not duplicated, and wire values match the catalog.
 
 **Given** production status/snapshot events
-**When** the SelfUpdateCard renders
-**Then** route, queue, npm-reset, and unavailable-executor states are understandable
+**When** the Manager Header/Card renders
+**Then** its Route, unavailable-executor, queued, npm-reset, and `IN PLAN`/`Remove` draft-membership states are understandable, and its `Update Manager` action stages an independent, removable Manager self-update into the one persistent Upgrade Plan and never executes directly
 **And** all three criteria become only **eligible for later FULL reassessment** after valid admission.
 
 ### Story 5.3: Reject Unsafe Spawns and Hold Complete Locks
@@ -1650,9 +2228,10 @@ So that I can follow work without losing durable context.
 **When** native output batching runs
 **Then** stream identity and byte order are preserved and each documented boundary flushes exactly as required.
 
-**Given** more than 5,000 live lines and production Operation events
-**When** Activity renders
-**Then** it appends, repaints, pins/unpins, bounds memory, preserves Operation context, and points to the complete durable transcript.
+**Given** a confirmed plan attempt with more than 5,000 live lines and production Operation events correlated by its `planAttemptId`
+**When** the one shared confirmed-plan model renders in the contextual right sidecar and the full Activity destination
+**Then** both surfaces render that single plan model identically, presenting human-readable Package/Manager progress first and exact command/output as secondary evidence, and they append, repaint, pin/unpin, bound memory over the 5,000+ lines, and preserve Operation evidence and the complete durable transcript.
+**And** the sidecar is absent when empty and otherwise persists as a draft across Manager navigation, transforming into a persistent Results Summary only once all plan Operations and required verification refreshes reach terminal state.
 
 **Given** human and machine outputs agree on the first attempt
 **When** admission evaluates them
@@ -1661,7 +2240,7 @@ So that I can follow work without losing durable context.
 ### Story 5.5: Cancel, Stall, Time Out, and Shut Down Honestly
 
 As a Pack-Manager user,
-I want cancellation, stalls, timeouts, and shutdown to reach explicit safe outcomes,
+I want plan cancellation, stalls, timeouts, trusted interaction detection, and shutdown to reach explicit safe outcomes,
 So that silent or stuck work never waits for hidden input or leaves dishonest state.
 
 **Story Contract:**
@@ -1687,14 +2266,19 @@ So that silent or stuck work never waits for hidden input or leaves dishonest st
 
 **Acceptance Criteria:**
 
-**Given** controlled processes that exit on SIGTERM or require SIGKILL
-**When** cancellation or application shutdown occurs
-**Then** the complete process group is signaled, grace/escalation is recorded, children are reaped, terminal state/events/journal/transcript agree, and no confirmation dialog delays cancellation.
+**Given** the one active confirmed Upgrade Plan attempt with controlled Operations that exit on SIGTERM or require SIGKILL
+**When** `Cancel plan` or application shutdown occurs
+**Then** every still-running Operation bound to that `planAttemptId` is cancelled, its complete process group is signaled with grace/escalation recorded and children reaped, queued attempt Operations never start and are recorded as `Skipped`, terminal state/events/journal/transcript agree, no rollback is promised, and cancellation stays immediate with no second confirmation dialog.
 
-**Given** a null-stdin silent process and controlled time
+**Given** a null-stdin silent process under the active plan attempt and controlled time
 **When** stall and hard-cap thresholds are reached
-**Then** Keep waiting, Copy command, Cancel, and Timed out consequences match the contract
+**Then** the stalled Operation presents exactly `Keep waiting`, `Copy command`, and `Cancel plan`, the hard cap ends it as `Timed out`, and every consequence matches the contract
 **And** no password/admin input is possible.
+
+**Given** native output from an Operation in the active plan attempt
+**When** a closed, adapter-specific classifier recognizes a supported prompt signature
+**Then** `Interaction required` is presented with `Copy command` and `Cancel plan` and no response is ever accepted
+**And** unrecognized silence remains `Stalled` and arbitrary output is never guessed to be a prompt.
 
 **Given** complete first-attempt cleanup evidence
 **When** admission occurs
@@ -1952,8 +2536,8 @@ So that lifecycle acceptance can execute safely and repeatably.
 ### Story 6.3: Preserve Real Transcripts and Atomic Journals
 
 As a Pack-Manager user,
-I want every Operation transcript and journal transition to survive failure coherently,
-So that I can reconstruct what ran without partial or corrupt durable state.
+I want every Operation transcript and journal transition to survive failure coherently and stay correlated to the plan attempt that admitted it,
+So that I can reconstruct both Operation crash truth and its plan-attempt context without partial or corrupt durable state.
 
 **Story Contract:**
 
@@ -1968,7 +2552,7 @@ So that I can reconstruct what ran without partial or corrupt durable state.
 - Behavior-present handling: Not `BP`
 - Versioned scenario contract: `contracts/readiness/scenarios/v1/b6-transcript-journal.json`
 - Scenario-contract digest: Unassigned; freeze the exact file before implementation entry
-- Expected evidence artifact: `b6-transcript-journal.json` plus retained transcript/journal files and byte/digest inventory
+- Expected evidence artifact: `b6-transcript-journal.json` plus retained transcript/journal files, plan-attempt-correlated durable records (`planAttemptId`, immutable plan-admission metadata, persisted verification facts, and `retryOfPlanAttemptId` links), and byte/digest inventory
 - Accountable role: QA
 - Assignee: Unassigned
 - Calendar date: Unassigned
@@ -1980,12 +2564,13 @@ So that I can reconstruct what ran without partial or corrupt durable state.
 
 **Given** controlled successful, failed, cancelled, timed-out, and abruptly terminated Operations
 **When** real transcript creation, incremental line flush, and terminal footer behavior execute
-**Then** canonical metadata, output, and available terminal state remain reconstructible
+**Then** canonical metadata — including the admitting plan attempt's `planAttemptId` — output, and available terminal state remain reconstructible
 **And** transcript creation failure prevents spawn while later write failure is recorded without hanging work.
 
 **Given** journal start/finish, cancel-before-start, corruption, rewrite failure, and compaction boundaries
 **When** the native journal lifecycle executes
-**Then** append/read/compaction remain atomic, corruption is handled explicitly, and newest-1,000 retention is enforced without partial state.
+**Then** append/read/compaction remain atomic, corruption is handled explicitly, and every crash-journal start/finish record and compaction carries the admitting `planAttemptId` with immutable plan-admission metadata, persisted verification facts, and `retryOfPlanAttemptId` links, so durable records preserve both Operation crash truth and plan-attempt correlation
+**And** newest-1,000 plan-attempt retention semantics are enforced without partial state and without prematurely deleting referenced Operation evidence.
 
 **Given** the complete first attempt is admitted
 **When** the two slots are evaluated
@@ -2010,7 +2595,7 @@ So that I can diagnose failures without endangering a reused process identifier.
 - Behavior-present handling: Not `BP`
 - Versioned scenario contract: `contracts/readiness/scenarios/v1/b6-interrupted-history.json`
 - Scenario-contract digest: Unassigned; freeze the exact file before implementation entry
-- Expected evidence artifact: `b6-interrupted-history.json` with crash/relaunch traces, retained data, sentinel observations, History results, transcript detail, and Reveal success/failure
+- Expected evidence artifact: `b6-interrupted-history.json` with crash/relaunch traces, retained data, sentinel observations, plan-attempt History rows with nested Operation evidence, read-only Activity replay reconstruction, and native Reveal success/failure
 - Accountable role: QA
 - Assignee: Unassigned
 - Calendar date: Unassigned
@@ -2025,9 +2610,10 @@ So that I can diagnose failures without endangering a reused process identifier.
 **Then** the Operation appears as Interrupted with retained transcript/history context
 **And** a live sentinel at the recorded historical process identifier is never signaled.
 
-**Given** durable and current-session History records
-**When** the user filters, searches, opens detail, inspects transcript content, and selects Reveal
-**Then** records combine coherently and native Reveal success/failure is visible without dangling actions.
+**Given** durable and current-session confirmed plan attempts, each carrying a `planAttemptId` and nested Operation, verification-refresh, reviewed-command, and result evidence
+**When** the user filters and searches History, opens a plan attempt, and enters its read-only Activity replay
+**Then** History shows exactly one immutable row per confirmed `planAttemptId` — linking its Operations, verification refreshes, reviewed commands, results, and optional `retryOfPlanAttemptId` — and the replay reconstructs Manager groups, Package/version changes, commands, outcomes, timing, errors, and retained output
+**And** legacy Operation records without a plan-attempt identity stay clearly labeled legacy entries and are never fabricated into a grouping, while native Reveal success/failure remains visible without dangling actions.
 
 **Given** the first lifecycle attempt passes
 **When** admission evaluates it
@@ -2066,9 +2652,9 @@ So that support evidence is complete, inspectable, and actionable.
 **When** diagnostics export runs through the production native command
 **Then** the timestamped ZIP path and visible success/failure match the contract.
 
-**Given** more than three app logs, 25 transcripts, and 1,000 journal records
+**Given** more than three app logs, 25 transcripts, 1,000 journal records, and durable plan-attempt records correlated by `planAttemptId`
 **When** the produced ZIP is opened and inspected
-**Then** it contains `report.json`, the newest three app logs, newest 25 transcripts, and `operations.jsonl` with exact expected contents and no missing required entry.
+**Then** it contains `report.json`, the newest three app logs, newest 25 transcripts, `operations.jsonl`, and the durable plan-attempt records that correlate the exported evidence — each carrying its `planAttemptId`, reviewed Manager/Package scope, exact commands, verification facts, results, and optional `retryOfPlanAttemptId` — with exact expected contents and no missing required entry, including those plan-attempt entries.
 
 **Given** Export diagnostics and Open Logs actions
 **When** native command/opener success and failure are controlled
@@ -2148,6 +2734,10 @@ So that configuration and recovery controls remain trustworthy after relaunch.
 **Given** missing, corrupt, partial, valid, and write-failing Settings files
 **When** the native app loads, changes, persists, and relaunches
 **Then** defaults and valid values behave as specified, writes are atomic, and a failed save changes neither active nor persisted state.
+
+**Given** a persisted legacy `autoOpenDrawer` value, an absent `skipUpgradePlanConfirmation` key, and the retained editable stall threshold, hard cap, and log level
+**When** the native app migrates Settings, sets and reverses the confirmation preference, and edits each retained control
+**Then** the Activity auto-open preference is absent from active Settings while any old persisted `autoOpenDrawer` value is tolerated without becoming active, `skipUpgradePlanConfirmation` defaults to `false`, persists atomically, and is reversible, the stall threshold, hard cap, and log level stay editable, and every control shows `Saving`, activates the new value only after atomic persistence succeeds, then shows `Saved`, with a failed write retaining or restoring the prior value behind a visible failure state.
 
 **Given** Re-detect, diagnostics export, and Open Logs actions
 **When** their native success and failure outcomes execute
@@ -2418,6 +3008,15 @@ So that browser-only checks cannot conceal a WKWebView, focus, contrast, motion,
 **When** packaged capacity scenarios execute
 **Then** the final row/actions remain reachable, the newest 5,000 live lines remain usable with full transcript disclosure, and essential columns remain reachable without overlap.
 
+**Given** the finalized packaged shell — a persistent editable Upgrade Plan sidecar, an eligible Package Grid of at least 101 rows, and Managers as a disclosure — at 100%, 150%, and 200% zoom in the 900×600 minimum window
+**When** one roving row Tab stop, stable virtual Package identity, total/row-position metadata, exact filter-wide bulk scope, final-row reachability, and the high-zoom navigation collapse are exercised
+**Then** the Package Grid preserves a single roving row focus with the final row and its actions reachable, and at 150–200% zoom navigation collapses so the Upgrade Plan, Activity, and Results present as full-workspace or stacked surfaces with no overlapping panes or two-dimensional scrolling for the primary task.
+
+**Given** the separate Confirmation Dialog, the shared sidecar and full Activity surfaces, the persistent Results Summary, and the Settings `Pack-Manager Update Ready!` badge inside packaged WKWebView
+**When** dialog focus trapping/restoration, the one atomic Activity/Results announcement channel, and the application-update badge presentation are evaluated with VoiceOver at 100%, 150%, and 200% zoom
+**Then** the Confirmation Dialog traps focus on its heading and command summary and restores focus on dismissal, the shared Activity and Results surfaces announce plan start, each Manager's completion summary, and the final outcome without overlap, and the `Pack-Manager Update Ready!` badge stays reachable and separate from Package Upgrade Plans, Activity, Results, and History
+**And** manual VoiceOver confirms dialog focus order and Activity/Results announcements without implying broader WCAG/legal compliance.
+
 **Given** a valid first attempt bound to both candidate subjects
 **When** the Registrar admits it
 **Then** `F10-AC1` becomes only **eligible for later FULL reassessment**
@@ -2460,6 +3059,11 @@ So that I can understand a real authorized update without installing it silently
 **Given** wrong/missing metadata, URL failure, archive mismatch, invalid signature, interrupted download, or event failure
 **When** each controlled outcome occurs
 **Then** the state is actionable and never appears Ready without a complete authorized download.
+
+**Given** the installed prior version with an authorized update ready
+**When** the finalized application-update presentation renders in the title/status area and in Settings → Pack-Manager updates
+**Then** one restrained application-level badge labeled `Pack-Manager Update Ready!` announces availability and links to Settings → Pack-Manager updates, and the update card heads simply `Pack-Manager` and shows the installed-to-target version delta on one line with the installed version in warning yellow and the target version in success green
+**And** the badge and card use the finalized presentation without entering Package Activity or History and stay separate from every Package Upgrade Plan and Results.
 
 **Given** the first candidate-bound attempt passes
 **When** the Registrar validates exact subjects and provenance
@@ -2548,7 +3152,7 @@ So that Pack-Manager never weakens its no-administrator boundary.
 
 As a Pack-Manager user,
 I want update checks and in-process state continuity to follow the adopted trigger policy,
-So that application updates remain understandable and separate from Package History.
+So that application updates remain understandable and separate from draft Upgrade Plans, live plan attempts, Results, and plan-attempt History.
 
 **Story Contract:**
 
@@ -2563,7 +3167,7 @@ So that application updates remain understandable and separate from Package Hist
 - Behavior-present handling: RP-1 is a mandatory prerequisite; missing behavior creates Product Behavior work and cannot be waived into the denominator
 - Versioned scenario contract: `contracts/readiness/scenarios/v1/rp-1-update-state-continuity.json`
 - Scenario-contract digest: Unassigned; freeze the exact file before implementation entry
-- Expected evidence artifact: `rp-1-update-state-continuity.json` with trigger timing/menu invocations, UI recreation state, relaunch result, error/retry policy, and Package History separation
+- Expected evidence artifact: `rp-1-update-state-continuity.json` with trigger timing/menu invocations, UI recreation state, relaunch result, error/retry policy, and separation from draft Upgrade Plans, live plan attempts, Results, and plan-attempt History
 - Accountable role: QA
 - Assignee: Unassigned
 - Calendar date: Unassigned
@@ -2582,8 +3186,8 @@ So that application updates remain understandable and separate from Package Hist
 **Then** in-process state is restored, normal relaunch starts from saved policy, failed/interrupted download becomes Error rather than Ready, and updater restart returns Current for the installed version.
 
 **Given** application-update state
-**When** Package Operation queue and History are inspected
-**Then** updater state remains separate and no non-Operation update appears as Package History
+**When** the draft Upgrade Plan(s), the live confirmed plan attempt (`planAttemptId`), Results, and plan-attempt History are inspected
+**Then** application-update state remains separate from every one of those plan surfaces and no application update is admitted into a draft plan, a confirmed plan attempt, Results, or plan-attempt History
 **And** RP-1 is only **eligible for later FULL reassessment** as an external prerequisite
 **And** that wording neither creates a denominator row nor changes any criterion status.
 
@@ -2898,6 +3502,8 @@ So that QA and Development can hand a coherent Evidence Set to a later Trace wor
 - Dependencies: All preceding Epic 1–8 criterion/RP/enabler stories; unchanged Candidate Manifest; frozen Acceptance Profile; protected Registrar; complete immutable objects and records
 - ASR and risk links: ASR-04 — Release accountable; ASR-05; TIR-8, RE-10/RE-11, GP-1/GP-2; R-001 through R-008
 - Behavior-present handling: Every approved behavior-present reclassification must already be represented in the frozen map/profile; aggregation cannot repair or hide missing behavior
+- Approved map/profile revision scope: The story freezes and replays only the later approved revision-2 Candidate Manifest map and Acceptance Profile and their updated scenario-contract digests; the superseded revision-1 map/profile is not admitted, and the frozen map/profile referenced throughout is that revision-2 pair
+- Superseded-evidence preservation: `AUT-003` is retained as historical evidence of superseded behavior, carried through the complete Evidence Index unchanged, and must not support revised `F5-AC3`; aggregation preserves it as superseded and never repairs, relabels, or promotes it
 - Versioned scenario contract: `contracts/readiness/scenarios/v1/b8-ledger-trace-handoff.json`
 - Scenario-contract digest: Unassigned; freeze the exact file before implementation entry
 - Expected evidence artifact: Complete `evidence-index.ndjson`, immutable index snapshots/records/objects/Registrar attestations, replay report, slot-completeness report, and Trace handoff manifest; no regenerated trace/gate decision
@@ -2925,3 +3531,8 @@ So that QA and Development can hand a coherent Evidence Set to a later Trace wor
 **Then** QA and Development receive the exact Manifest/Profile/Index digests and immutable result links
 **And** the package states only “eligible to invoke the later candidate-bound Trace workflow”
 **And** this story does not regenerate traceability, move any criterion to FULL, or claim readiness.
+
+**Given** only the later approved revision-2 map/profile, its updated scenario-contract digests, and the retained superseded-evidence record `AUT-003`
+**When** the ledger is frozen, replayed, and aggregated for handoff
+**Then** replay and completeness consume only the revision-2 map/profile and its updated digests, and any earlier revision-1 map/profile is refused
+**And** `AUT-003` is preserved as historical superseded-behavior evidence, never supports revised `F5-AC3`, and is neither repaired, relabeled, nor promoted.

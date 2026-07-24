@@ -1,210 +1,578 @@
-# Pack-Manager
+# Kanban Pro - Agent Context & Ruleset
 
-macOS desktop app that auto-detects the package managers on the machine
-(`brew`, `mise`, `npm`, `uv`, `rustup`, `mas`), lists every package with
-installed/latest versions, and upgrades everything or a hand-picked selection —
-with dynamically-derived self-update routing, live streaming output,
-cancellation, and byte-faithful transcripts.
+> [!IMPORTANT]
+> **ATTENTION AI AGENTS**: If you are directly performing CRUD operations on tickets in this directory instead of going through the UI, you **MUST** strictly adhere to the following data conventions. Failure to do so will cause application crashes or data loss.
 
-Authoritative design docs: `docs/SPEC.md`, `docs/DECISIONS.md`,
-`docs/IMPL_PLAN.md`.
+> [!TIP]
+> **START HERE → Read `MAPPING.md`** at the project root before reading individual ticket files. It contains a token-efficient table of every ticket's metadata (ID, title, status, priority, type, assignee, tags, dates, epic, sprint, subtasks done/total) — enough to triage the full board without opening any ticket file. After modifying tickets directly, regenerate `MAPPING.md` to keep it current for other agents. See §10 for regeneration steps.
 
-## Features
+## File System Structure
+- **`.kanban/`**: Internal configuration directory. DO NOT manually modify unless absolutely necessary.
+- **`.kanban/board.json`**: Contains the board topology (Columns, Fields, Tags), sprint definitions, epic definitions, and Gantt configuration.
+- **`tickets/`**: The folder containing all ticket data.
+- **`attachments/`**: Folder containing attachments linked to tickets.
+- **`MAPPING.md`**: Auto-generated ticket index. Read this first for board overview. See §10.
+- **`team/`**: Auto-generated per-agent dossiers (`team/<slug>.md`). Read-only projection of `.kanban/team/members/`; see §14.
+- **`skills/`**: Authored agentic skill catalog (`skills/<id>/SKILL.md`). Reusable capabilities granted to agents; your dossier's "Skills" section lists the ones available to you. See §14.
 
-- **Manager auto-detection** — resolves each manager on a constructed search
-  path (login-shell probe + static fallback, so Finder launches work), probes
-  `--version`, and classifies who-manages-whom from paths with a
-  human-readable evidence string ("resolved at ~/.local/share/mise/shims/uv").
-  Absent managers (mas here) render as "Not installed" with a copyable
-  install hint — never an error.
-- **Refresh with per-manager isolation** — inventory + outdated overlay per
-  manager, run in parallel with independent timeouts; one failing manager
-  never blanks the others, and the previous snapshot stays browsable, marked
-  stale. The manager's own outdated verdict is authoritative — Pack-Manager
-  never computes version comparisons to decide outdatedness.
-- **Package tables** — virtualized, with version-delta highlighting
-  (display-only severity coloring), pinned-formula exclusion, greedy
-  self-updating casks in their own opt-in section, uv executable expansion,
-  search, and outdated-only filtering.
-- **Upgrade plan sheet** — every bulk upgrade previews the EXACT commands
-  (`brew upgrade dolt`, `mise upgrade deno ruby …`, `npm install -g
-  typescript@latest`), with excluded rows and reasons (pinned / greedy /
-  rust-dedup) and staleness warnings. Nothing runs that was not shown.
-- **Dynamic self-update routing** — derived at detection, never hardcoded:
-  brew→`brew update`, mise→via brew, npm→in-band (it reports itself
-  outdated), uv→via mise, rustup→`rustup self update`. Routed updates hold
-  both managers' locks so a binary is never replaced under a running op.
-- **Lock-set scheduler** — all brew-binary operations serialize (Homebrew is
-  never contended); different managers run in parallel; npm/uv ops take the
-  mise lock when mise-managed (shared tree); FIFO with skip-ahead and a 120s
-  aging guard.
-- **Live streaming + cancellation + stall detection** — batched line
-  streaming into a virtualized log view; cancel = SIGTERM → 5s → SIGKILL on
-  the process group; silent commands trigger a stall dialog with a
-  copy-to-terminal handoff (Pack-Manager never enters passwords — no sudo,
-  ever; child stdin is /dev/null).
-- **History + transcripts + crash-safe journal** — every operation writes a
-  plain-text transcript (argv/PATH/env header, timestamped output, result
-  footer) and start/finish journal records; ops interrupted by a crash
-  surface as `Interrupted` on relaunch, and recorded pgids are never signaled
-  on startup.
-- **Diagnostics export** — one zip on the Desktop: report.json (detection with
-  evidence, search path + source, settings), recent app logs, last 25
-  transcripts, and the journal.
-- **In-app auto-update** — checks on launch, every 6h, and on demand from the
-  macOS app menu (**Pack-Manager → Check for Updates…**). A found update
-  downloads in the background with progress in the status bar, then that
-  indicator becomes a **Restart to update** button. Installing is never
-  automatic — the click is the gate. If the app bundle's directory isn't
-  writable the updater would need an admin prompt, so it stops and says so
-  instead (Pack-Manager never asks for a password). DECISIONS D25.
+## Ticket Data Conventions (CRITICAL)
+Every ticket is a single Markdown (`.md`) file located in the `tickets/` directory.
 
-## Stack
+### 1. Filename matches ID
+The filename **MUST** exactly match the ticket's `id` field defined in the YAML frontmatter and must end in `.md`.
+- Use timestamp-based IDs to prevent sync collisions: `T-<13-digit-timestamp>` (e.g. `T-1771665662192.md`).
 
-- Backend: Tauri 2 + Rust (tokio, tracing)
-- Frontend: React 19 + TypeScript + Vite 7 + Tailwind v4 (dark-only MVP)
-- State: zustand · Virtualized tables: @tanstack/react-virtual
-- Tests: cargo test (offline, fixture-grounded) + Vitest 4 (jsdom, RTL) +
-  Playwright (Chromium/WebKit browser journeys)
+### 2. Strict YAML Frontmatter
+Every ticket **MUST** begin with valid YAML frontmatter enclosed by `---`. 
+The frontmatter **MUST** contain at least the following standard fields:
+- `id` (string): Unique identifier matching the filename.
+- `title` (string): Concise, descriptive title (under 80 characters).
+- `status` (string): Foreign key matching a valid column ID from `.kanban/board.json` (e.g. `col_todo`). Invalid statuses throw tickets into "Uncategorized".
+- `rank` (string): Lexicographical fraction string used for ordering (`fractional-indexing`). For **NEW** tickets, generate unique sequential ranks within each target column starting fresh per column: `"a0"`, `"a1"`, `"a2"`, …. Use only fractional-indexing format keys — never single characters like `"a"` or `"b"`, which the library rejects as invalid order keys at drop time. Duplicates are tolerated (the system rebalances after the first successful drop), but distinct ranks avoid the rebalance write.
+- `created` (string): Current timestamp in ISO 8601 format (e.g. `2026-02-21T11:27:42.192Z`).
+- `type` (string): `task` | `bug` | `feature` | `story` | `spike`.
+- `priority` (string): `none` | `low` | `medium` | `high` | `critical`.
+- `assignee` (string): The assigned profile. Use `''` (empty string) if unassigned.
+- `tags` (array of strings): Relevant keywords (e.g. `["bug", "ui"]`). Default to `[]`.
+- `modified` (string): ISO 8601 timestamp of your last edit to this ticket. On **new** tickets, set to the same value as `created`.
+- `modifiedBy` (string): Your stable identifier — short, lowercase (e.g. `claude-code`, `codex`, `jules`). Shown in the Activity Feed. The Kanban Pro UI sets this to the active profile's display name.
 
-## Dev commands
+**Optional Fields:**
+- `dueDate` (string): Quoted ISO 8601 datetime, e.g. `'2026-05-11T00:00:00.000Z'`. Use `''` if unset. Unquoted `YYYY-MM-DD` is coerced to a YAML date object and rejected.
+- `icon` (string): Lucide icon name representing the nature of the ticket (e.g. `bug`, `lightbulb`, `clipboard-check`, `zap`).
+- `iconColor` (string): Hex color code applied to the icon (e.g. `#81c784`, `#ef9a9a`).
+- `links` (array of objects): Typed relationships to other tickets. See §5 Ticket Linking Conventions below for full details.
+- `subtasks` (array of objects): Embedded checklist items on the parent ticket. See §5.1 Subtask Conventions.
+- `startDate` (string): Same format as `dueDate` (quoted ISO 8601 datetime). Used by the Gantt view as the bar start when schedule mode is `field_mapping`.
+- `sprint` (string): Foreign key referencing a `SprintDefinition.id` from `.kanban/board.json`. Empty string if unassigned. When Gantt schedule mode is `sprint`, the ticket inherits its bar dates from the referenced sprint.
+- `epic` (string): Foreign key referencing an `EpicDefinition.id` from `.kanban/board.json`. Empty string if unassigned. Used to group tickets under a shared initiative across all views.
 
-```sh
-nvm install && nvm use     # Node 24 from .nvmrc
-npm ci                     # locked frontend dependencies
-npm run tauri dev          # run the app (dev)
-npm test                   # Vitest suite
-npm run test:e2e:install   # first browser-test run / browser updates
-npm run test:e2e:typecheck # Playwright TypeScript validation
-npm run test:e2e           # Chromium + WebKit journeys
-npx tsc --noEmit           # application typecheck
-npm run test:rust          # Rust suite (live smoke remains #[ignore])
+### 3. Custom Fields
+Any keys starting with `field_` are parsed as custom fields. Avoid using them unless the user has explicitly defined the custom field schema in `.kanban/board.json`.
+
+### 4. Sprint Conventions
+Sprints are time-boxed iterations stored in `.kanban/board.json` under the `sprints` array. Each sprint object has the shape:
+```
+{ id, name, startDate, endDate, color, created }
+```
+- `id`: Format `sprint_<5-char-hex>` (e.g. `sprint_a8f2c`). Do **not** invent IDs; read `board.json` to discover existing sprints.
+- `name`: Display label (e.g. "Sprint 12").
+- `startDate` / `endDate`: ISO 8601 `YYYY-MM-DD`.
+- `color`: OKLCH color string. May be empty (the UI auto-assigns one).
+- `created`: Full ISO 8601 timestamp.
+
+To assign a ticket to a sprint, set its `sprint` frontmatter field to a valid sprint `id`. To remove the assignment, set to empty string (`''`).
+
+### 5. Ticket Linking Conventions
+Tickets can be linked to other tickets using typed, bidirectional relationships. Links are stored in the `links` array in each ticket's YAML frontmatter.
+
+Each link object has the shape:
+```
+{ targetId, type, isInverse? }
+```
+- `targetId` (string): The `id` of the other ticket (e.g. `T-1771665662192`). Must reference a valid ticket file.
+- `type` (string): One of `blocks` | `relates_to` | `duplicates`.
+- `isInverse` (boolean, optional): Set to `true` **only** on the reciprocal copy stored on the target ticket. Omit (or leave absent) on the source ticket.
+
+**Bidirectional requirement:** Links are always bidirectional. When creating a link from ticket A to ticket B, you **MUST** write entries on **both** tickets:
+- On **A** (the source): `{ targetId: "B-id", type: "blocks" }`
+- On **B** (the target): `{ targetId: "A-id", type: "blocks", isInverse: true }`
+
+The `isInverse` flag controls which display label the UI shows. The label mapping is:
+
+| `type` value | Source label (no `isInverse`) | Target label (`isInverse: true`) |
+|---|---|---|
+| `blocks` | Blocks | Blocked by |
+| `relates_to` | Related to | Related to |
+| `duplicates` | Duplicates | Duplicate of |
+| `parent` | Parent of | Subtask of |
+
+**Deleting a link:** When removing a link from A → B, you must also remove the reciprocal entry from B's `links` array. Failure to do so leaves orphaned one-directional links.
+
+**Example** — Ticket A blocks Ticket B:
+```yaml
+# In A's frontmatter:
+links:
+  - targetId: "T-1771665662200"
+    type: blocks
+
+# In B's frontmatter:
+links:
+  - targetId: "T-1771665662192"
+    type: blocks
+    isInverse: true
 ```
 
-Use `npm run test:e2e:install:ci` only on Linux CI runners. See
-[`tests/README.md`](tests/README.md) for the browser-test architecture,
-commands, and troubleshooting guide.
+### 5.1 Subtask Conventions
 
-Building the app bundle:
+Tickets may carry an embedded checklist in the `subtasks` frontmatter array.
+Subtasks are **NOT** separate ticket files — they live inside the parent
+ticket and are deliberately leaner than tickets (no `status`, `rank`,
+`priority`, `type`, or `tags`).
 
-```sh
-fnox exec -- npm run tauri build
+Each subtask object has the shape:
+```
+{ id, title, done, assignee?, dueDate?, created?, description? }
+```
+- `id` (string): Format `st-<13-digit-timestamp>` (e.g. `st-1789456123001`).
+  Generate it once and **NEVER** change it — the app diffs subtasks by `id`
+  for activity, undo, and audit. On a same-millisecond collision, suffix
+  `-1`, `-2`, ….
+- `title` (string, required): Concise, under 80 characters. The parser drops
+  untitled entries.
+- `done` (boolean): Completion state. Always write it explicitly (`false`
+  for new subtasks).
+- `assignee` (string, optional): Same semantics as the ticket `assignee`.
+- `dueDate` (string, optional): Quoted date with the same coercion rules as
+  the ticket `dueDate` — unquoted `YYYY-MM-DD` is coerced to a YAML date
+  object and rejected.
+- `created` (string, optional): ISO 8601 timestamp.
+- `description` (string, optional): Markdown via a YAML block scalar
+  (`description: |`).
+
+**Example:**
+```yaml
+subtasks:
+  - id: st-1789456123001
+    title: Wire the OCC baseline
+    done: false
+    created: '2026-07-15T09:30:00.000Z'
+  - id: st-1789456123002
+    title: Draft agent README section
+    done: true
+    assignee: claude-code
+    dueDate: '2026-07-18'
+    created: '2026-07-15T09:31:12.412Z'
+    description: |
+      Markdown body via YAML block scalar.
 ```
 
-Build output lands under `src-tauri/target/release/bundle/` — the app and its
-updater archive in `macos/` (`Pack-Manager.app`, `Pack-Manager.app.tar.gz`,
-`.sig`), the installer in `dmg/`.
+Rules:
+- Array order **IS** display order — reorder by rewriting the array.
+- Keep the list small (<= 20 items); more usually signals the work should be
+  promoted to standalone tickets.
+- Toggling `done` is an ordinary full-file rewrite per §9, with updated
+  `modified` / `modifiedBy` per §11.
+- Re-read the parent file immediately before writing — two agents may edit
+  different subtasks of the same parent, and stale writes are rejected.
+- When ALL subtasks are done, the app offers the user a one-click move to
+  the next column. Do **not** move the parent's `status` yourself unless
+  explicitly asked.
 
-`tauri build` needs the updater's minisign key, because `bundle.createUpdaterArtifacts`
-is on and the CLI refuses to bundle when it finds a configured `pubkey` with no
-private key ("A public key has been found, but no private key"). `fnox exec`
-supplies `TAURI_SIGNING_PRIVATE_KEY` and its password; CI reads the same two
-values from GitHub secrets of the same name. To build without signing at all,
-add `--no-sign` (what `ci.yml`'s build-smoke job does).
+**Promotion (subtask → standalone ticket):** Create a new ticket file per
+§§1–2 (title from the subtask `title`, body from its `description`, carry
+`assignee` / `dueDate`). In the **SAME** edit, remove the subtask from the
+parent's `subtasks` array and link both tickets with the `parent` link type:
+- On the **parent**: `{ targetId: "<new-ticket-id>", type: "parent" }`
+- On the **child**: `{ targetId: "<parent-id>", type: "parent", isInverse: true }`
 
-Lint/format gates (CI runs all of these):
+The UI labels these "Parent of" / "Subtask of" (see the §5 label table).
 
-```sh
-cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings
+### 6. Epic Conventions
+Epics are lightweight grouping containers for organizing related tickets across the project. They are stored in `.kanban/board.json` under the `epics` array. Each epic object has the shape:
+```
+{ id, name, color, description, targetDate, icon, iconColor, created }
+```
+- `id`: Format `epic_<base36-timestamp><random-suffix>` (e.g. `epic_lxk4f2a8b3`). Do **not** invent IDs; read `board.json` to discover existing epics.
+- `name`: Display label (e.g. "User Authentication", "Performance Sprint").
+- `color`: OKLCH color string from the curated palette (e.g. `oklch(0.7 0.18 250)`). Used for visual accents across all views.
+- `description`: Markdown description of the epic's scope and goals. May be empty.
+- `targetDate`: ISO 8601 `YYYY-MM-DD` target completion date, or empty string if unset.
+- `icon`: Icon identifier using the app's icon system (e.g. `lucide:rocket`, `emoji:🚀`). Empty string for no icon.
+- `iconColor`: Hex color for the icon (e.g. `#64b5f6`). Empty string falls back to epic color.
+- `created`: Full ISO 8601 timestamp.
+
+**Assigning tickets to epics:** Set the ticket's `epic` frontmatter field to a valid epic `id`. To remove the assignment, set to empty string (`''`).
+
+**Creating new epics (agents):** Append a new object to the `epics` array in `board.json`. Generate the `id` using `epic_` + base-36 timestamp + random suffix. Pick a color from the palette cycling by index: `EPIC_COLOR_PALETTE[epics.length % 12].value`. The 12 palette colors are:
+`oklch(0.7 0.18 250)` (Ocean Blue), `oklch(0.7 0.18 150)` (Emerald), `oklch(0.7 0.18 30)` (Coral), `oklch(0.7 0.18 300)` (Violet), `oklch(0.7 0.18 80)` (Amber), `oklch(0.7 0.18 200)` (Teal), `oklch(0.7 0.18 350)` (Rose), `oklch(0.7 0.18 120)` (Lime), `oklch(0.7 0.18 270)` (Indigo), `oklch(0.7 0.18 50)` (Tangerine), `oklch(0.7 0.18 170)` (Mint), `oklch(0.7 0.18 330)` (Magenta).
+
+**Deleting epics:** Remove the epic from the `epics` array in `board.json`, then clear the `epic` field on any tickets that referenced the deleted epic's `id`.
+
+### 7. Gantt Schedule Modes
+The project's Gantt view uses a `scheduleMode` (in `.kanban/board.json` → `ganttConfig`) to determine how ticket bars are placed on the timeline:
+- **`field_mapping`** (default): Bar start/end come from the fields named in `startFieldYamlKey` / `endFieldYamlKey`. The special value `__created` for `startFieldYamlKey` uses the ticket's `created` timestamp as the start date.
+- **`sprint`**: Bar dates are inherited from the sprint assigned to the ticket; `startFieldYamlKey` / `endFieldYamlKey` are ignored.
+
+Do **not** modify `ganttConfig` in `board.json` unless explicitly asked by the user.
+
+### 8. Markdown Body Content
+The description or body of the ticket is placed **after** the closing `---` of the YAML frontmatter.
+- Use explicit Acceptance Criteria with `- [ ]` checkboxes for testable requirements.
+- Follow structure guidelines like outlining the problem formulation, reproducing steps, requirements, tech context, and testing methodology via `# ` / `## ` Markdown headings.
+
+### 9. Atomic File Operations & File Watcher
+When modifying a ticket, rewrite the ENTIRE file completely. Do not leave partial YAML blocks. Since Chokidar is actively watching this directory, partial writes will cause corruption. Read the full file contents into memory, modify the parsed values, and write out the completely re-serialized file.
+
+### 10. Ticket Mapping File
+
+The project root contains a `MAPPING.md` file that provides a token-efficient
+index of all tickets. This file is auto-generated by Kanban Pro and should
+NEVER be manually edited by humans.
+
+**Reading**: Agents should read `MAPPING.md` FIRST to understand the board
+state before reading individual ticket files. Each row contains the ticket's
+ID, title, status (column ID), priority, type, assignee, tags, due date,
+start date, epic, sprint, subtasks (`done/total`, empty when the ticket has
+none — see §5.1), and last modified by — enough metadata to decide which tickets to read in full.
+
+**Regeneration**: The app regenerates `MAPPING.md` on every ticket CRUD event
+(create, update, delete, move) and on every project load. The file includes a
+`Last updated` ISO 8601 timestamp for staleness checks.
+
+**Agent responsibility**: When modifying ticket files directly (bypassing the
+Kanban Pro UI), agents SHOULD regenerate `MAPPING.md` after their changes to
+maintain inter-agent consistency. To regenerate:
+
+1. Read `.kanban/board.json` to get column definitions and their `order` values.
+2. Read all `.md` files in `tickets/`, parsing only YAML frontmatter.
+3. Sort tickets by column order (ascending), then by `rank` (lexicographic).
+4. Write the Markdown table to `MAPPING.md` at the project root.
+5. Escape pipe characters (`|`) in title/tag values as `\|`.
+
+If an agent cannot regenerate the full file, it is acceptable to skip this
+step — the app will reconcile on next project load. However, other agents
+reading `MAPPING.md` between now and the next app load will see stale data.
+
+**Cloud sync**: `MAPPING.md` is deterministically derived from ticket state.
+Conflicts are harmless — accept either version and the app will regenerate.
+
+### 11. Agent Identity and Attribution (Required)
+
+Every ticket edit MUST include updated `modified` and `modifiedBy` fields.
+The app surfaces all changes — human and agent — in a unified Activity Feed
+view. Consistent `modifiedBy` values allow the app to:
+
+- Display your agent name next to every change you make.
+- Group your activity in the feed so users can see what each agent did.
+- Distinguish agent changes from human changes visually (agent label vs profile).
+
+Rules:
+- Use the SAME `modifiedBy` value across all your edits in a session.
+- Use a short lowercase identifier: `claude-code`, `codex`, `jules`, `copilot-agent`, `windsurf`.
+- Do NOT use the user's profile name as your `modifiedBy` — that would attribute your changes to the human.
+- When creating a ticket, set `modified` to the same value as `created`.
+- When updating a ticket, set `modified` to the current ISO 8601 timestamp.
+
+If `modifiedBy` is omitted, the change may appear as External (unknown attribution) in the Activity Feed.
+
+### 12. Batch Operations
+
+When creating or modifying many tickets at once:
+
+1. Write all files first.
+2. Wait 3 seconds for the app's file watcher to stabilize.
+3. The app will batch-process changes automatically.
+
+Do NOT modify `MAPPING.md` during a batch — the app regenerates it
+automatically after detecting your changes (2 s debounce).
+
+### 13. Agent Instruction Files
+This project contains auto-generated instruction files for various AI coding tools:
+- `README.md` — Canonical ruleset (this file)
+- `CLAUDE.md` — Claude Code / Zed instruction file (full ruleset)
+- `AGENTS.md` — OpenAI Codex / Google Jules / Windsurf instruction file (full ruleset)
+- `.github/copilot-instructions.md` — GitHub Copilot instruction file (summary + pointer)
+- `MAPPING.md` — Auto-generated ticket index (see §10; includes Last Modified By)
+
+All files are auto-generated by Kanban Pro. Do not edit — they are overwritten on project load.
+
+### 14. Agent Instances & Team Graph
+
+> [!IMPORTANT]
+> Kanban Pro projects ship with a **team graph** (the cast of human + agent
+> members that own work) and an **agent-runtime registry** (which CLI / SDK
+> each member is launched under). Three project-root and `.kanban/` files
+> together describe the convention. Read this section before assuming who
+> you are acting as.
+
+- **`ORGANOGRAM.md` (project root).** Auto-generated, token-efficient
+  Markdown index of every member: id, name, kind (`human` or `agent`),
+  persona, mandate, reports-to chain, current runtime binding, and
+  status. Same shape as `MAPPING.md`. Agents read this first to
+  understand who is on the team, who supervises whom, and which runtime
+  each member should be launched under. Full schema:
+  `docs/ORGANOGRAM.md`.
+
+- **`team/<slug>.md` (project root `team/` folder).** Auto-generated
+  per-agent **dossier** — one Markdown file per agent member, named by a
+  slug of its display name (e.g. `team/robo-ben.md`). Each dossier
+  restates that agent's identity, mandate, persona, role, reporting line,
+  and recommended runtime in prose. When you start a Kanban-launched
+  session, your bootstrap message points you at *your* dossier ("Your
+  dossier … is in `team/<slug>.md`. Read it now."): open it to learn who
+  you are acting as before doing any work. Dossiers are a read-only
+  projection of `.kanban/team/members/<id>.md` — edit the member file,
+  not the dossier (it regenerates within 2 s). Full schema:
+  `docs/AGENT_DOSSIERS.md`.
+
+- **`skills/<id>/SKILL.md` (authored skill catalog).** Reusable agentic
+  **skills** — each a kebab-case folder containing a `SKILL.md` with YAML
+  frontmatter (`id`, `name`, `description`, `scope`, `dependsOn?`) and a
+  Markdown body of instructions. Skills are *authored*, not generated, and
+  modelled on the open `SKILL.md` convention. A skill with
+  `scope: universal` applies to every agent; `scope: assignable` skills are
+  granted per-agent via the member's `skills` list (with `skillsOptOut` to
+  decline a universal one). Your **dossier** ("## Skills") lists the skills
+  effectively available to you with a pointer to each `SKILL.md`; open the
+  file for full instructions before applying a skill (progressive
+  disclosure). Full schema: `docs/SKILLS.md`.
+
+- **`.kanban/agents.yaml` (machine-readable registry).** The agent-
+  runtime registry the operator hand-tunes. Declares which CLIs, SDKs,
+  and custom adapters this project recognises, plus the per-machine
+  `memberBindings` that map a `Member.id` to a runtime id. Three tiers
+  (Tier-1 recognised CLIs, Tier-2 frameworks, Tier-3 custom adapters)
+  are described in §15 below. Malformed YAML is quarantined — never
+  silently overwritten — so a single bad edit can't lose the operator's
+  work. Full schema: `docs/AGENTS_YAML.md`.
+
+- **`kp` (the bounded write surface).** A forthcoming CLI binary that
+  agents in Kanban-hosted terminals will use for every mutation. Routes
+  through a closed verb set, produces an audit receipt per call, and
+  reconciles agent-narrated claims against on-disk truth via the
+  ghost-tickets guard. See §16 for the contract and `docs/KP_SHIM_SPEC.md`
+  for the full verb / receipt schema. Until `kp` ships, direct file edits
+  remain the supported integration path.
+
+If `.kanban/team/members/` is missing or empty, the team graph is
+unpopulated — that is a valid state. Add member files at
+`.kanban/team/members/<id>.md` with YAML frontmatter (`id`, `name`,
+`kind`, `persona`, `mandate`, `reportsTo?`, `recommendedRuntime?`,
+`status?`) to get started; `ORGANOGRAM.md` regenerates within 2 s of any
+add / rename / retire / unlink event.
+
+### 15. CLI Bootstrap
+
+> [!TIP]
+> Kanban Pro recognises three tiers of agentic runtimes. The schema lives
+> in `.kanban/agents.yaml` (§14); the operator extends or overrides any
+> tier freely.
+
+#### The three tiers
+
+- **Tier 1 — Recognised CLIs.** First-class agentic CLIs Kanban Pro
+  ships with default install commands and detection probes. 9
+  canonical entries are baked in: `claude`, `codex`, `cursor-agent`, `aider`, `amp`, `opencode`, `agy`, `omc`, `goose`. Operators may extend
+  or override entries in `agents.yaml`.
+- **Tier 2 — Frameworks (SDKs).** Long-lived agentic frameworks rather
+  than turn-key CLIs (Claude Agent SDK, OpenAI Agents SDK, Vercel AI
+  SDK, LangChain, AutoGen, …). A member bound to a Tier-2 runtime
+  typically runs as a persistent process speaking `kp` over stdin/stdout.
+- **Tier 3 — Custom adapters.** Operator-defined per-project. Free-form
+  `command` + optional `cwd` and `env` map. Use this tier for legacy
+  bash / python wrappers, in-house orchestration scripts, or any
+  bespoke launch flow.
+
+#### Canonical Tier-1 install commands
+
+Per-OS install commands for the 9 canonical Tier-1 CLIs (also
+present verbatim under `tier1Recognised` in the default `agents.yaml`).
+Run the row matching your platform.
+
+##### `claude` — Claude Code (Anthropic)
+
+- **Binary on `PATH`:** `claude`
+- **Homepage:** <https://docs.anthropic.com/claude/docs/claude-code>
+- **macOS:** `npm install -g @anthropic-ai/claude-code`
+- **Linux:** `npm install -g @anthropic-ai/claude-code`
+- **Windows:** `npm install -g @anthropic-ai/claude-code`
+- **Notes:** Requires `ANTHROPIC_API_KEY`. Best-of-class for surgical multi-file edits.
+
+##### `codex` — OpenAI Codex (OpenAI)
+
+- **Binary on `PATH`:** `codex`
+- **Homepage:** <https://github.com/openai/codex>
+- **macOS:** `npm install -g @openai/codex`
+- **Linux:** `npm install -g @openai/codex`
+- **Windows:** `npm install -g @openai/codex`
+- **Notes:** Requires `OPENAI_API_KEY`.
+
+##### `cursor-agent` — Cursor Agent (Cursor)
+
+- **Binary on `PATH`:** `cursor-agent`
+- **Homepage:** <https://cursor.com/cli>
+- **macOS:** `curl https://cursor.com/install -fsS | bash`
+- **Linux:** `curl https://cursor.com/install -fsS | bash`
+- **Windows:** `# See https://cursor.com/cli for Windows installation`
+- **Notes:** Ships with Cursor Desktop; the CLI binary is installed via the bootstrap script.
+
+##### `aider` — aider (community)
+
+- **Binary on `PATH`:** `aider`
+- **Homepage:** <https://aider.chat>
+- **macOS:** `brew install aider` · `# Alt: python -m pip install aider-chat`
+- **Linux:** `python -m pip install aider-chat`
+- **Windows:** `python -m pip install aider-chat`
+- **Notes:** Supports many providers via `--model`. Plays well with git.
+
+##### `amp` — Amp (Sourcegraph)
+
+- **Binary on `PATH`:** `amp`
+- **Homepage:** <https://ampcode.com>
+- **macOS:** `curl -fsSL https://ampcode.com/install.sh | sh`
+- **Linux:** `curl -fsSL https://ampcode.com/install.sh | sh`
+- **Windows:** `iwr -useb https://ampcode.com/install.ps1 | iex`
+- **Notes:** Sourcegraph's agentic CLI with strong codebase-search context.
+
+##### `opencode` — OpenCode (community)
+
+- **Binary on `PATH`:** `opencode`
+- **Homepage:** <https://opencode.ai>
+- **macOS:** `brew install sst/tap/opencode` · `# Alt: npm install -g opencode-ai`
+- **Linux:** `npm install -g opencode-ai`
+- **Windows:** `npm install -g opencode-ai`
+- **Notes:** Open-source / provider-agnostic. Useful as a fallback runtime.
+
+##### `agy` — Antigravity (Google)
+
+- **Binary on `PATH`:** `agy`
+- **Homepage:** <https://antigravity.google/cli/>
+- **macOS:** `npm install -g @google/antigravity`
+- **Linux:** `npm install -g @google/antigravity`
+- **Windows:** `npm install -g @google/antigravity`
+- **Notes:** Google's agentic CLI. Authenticates via `GEMINI_API_KEY`.
+
+##### `omc` — oh-my-claudecode (community)
+
+- **Binary on `PATH`:** `omc`
+- **Homepage:** <https://github.com/Yeachan-Heo/oh-my-claudecode>
+- **macOS:** `npm install -g oh-my-claude-sisyphus@latest` · `# Or, inside Claude Code: /plugin install oh-my-claudecode` · `# Then: omc setup  (or  /setup  inside a Claude Code session)`
+- **Linux:** `npm install -g oh-my-claude-sisyphus@latest` · `# Or, inside Claude Code: /plugin install oh-my-claudecode` · `# Then: omc setup  (or  /setup  inside a Claude Code session)`
+- **Windows:** `npm install -g oh-my-claude-sisyphus@latest` · `# Or, inside Claude Code: /plugin install oh-my-claudecode` · `# Then: omc setup  (or  /setup  inside a Claude Code session)`
+- **Notes:** Multi-agent orchestrator (autopilot / team / ralph / ultrawork). Requires Claude Code on PATH. Cross-provider tmux workers spawn Codex panes when `omc team N:codex …` runs.
+
+##### `goose` — Goose (AAIF / Linux Foundation)
+
+- **Binary on `PATH`:** `goose`
+- **Homepage:** <https://goose-docs.ai/>
+- **macOS:** `brew install pressly/tap/goose`
+- **Linux:** `curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | bash`
+- **Windows:** `# See https://goose-docs.ai/docs/getting-started/installation/#windows`
+- **Notes:** Configure providers via `goose configure`. MCP-native; also available as a desktop app — the CLI is what Kanban Pro binds to.
+
+#### Conventional external-clone location: `~/agents/<framework>/`
+
+Tier-2 frameworks and Tier-3 custom adapters that aren't installable via
+a single command (e.g. an experimental SDK cloned from GitHub) live by
+convention under `~/agents/<framework>/` on each developer's machine.
+Kanban Pro consults that path first when resolving a relative
+`tier3Custom.command` or a `Tier2Entry` whose install instructions
+point at a clone-and-run flow. Example:
+
+```shell
+mkdir -p ~/agents/claude-agent-sdk
+git clone https://github.com/anthropics/claude-agent-sdk.git ~/agents/claude-agent-sdk
 ```
 
-Live smoke tests (real commands against THIS machine — developer-run only,
-never CI):
+This convention keeps machine-local agent clones out of every project
+repo while staying discoverable to `kp` and the operator picker.
 
-```sh
-cd src-tauri && cargo test -- --ignored
-```
+#### Optional embedded `agents/` subfolder
 
-IPC contract fixtures live in `dev/fixtures/ipc/`; regenerate with
-`PM_UPDATE_CONTRACT=1 cargo test ipc_contract` (the Vitest type-guard test
-checks the same files — both sides must move together).
+A project may include an optional `agents/` subfolder at the project
+root containing **per-project** runtime configs — prompt presets,
+persona docs, fine-tuning fixtures, or one-off Tier-3 adapter scripts.
+Sync rules:
 
-App icon: `uv run --with pillow python3 dev/icon/generate_icon.py`, then
-`npx tauri icon dev/icon/icon-1024.png`.
+- **Project-shared by default.** `agents/` is committed to the repo so
+  every collaborator gets the same runtime configs.
+- **Machine-local exceptions.** Files matching `agents/**/*.local.*`
+  are machine-local — recommended for `.gitignore`. Use this pattern
+  for per-developer API key files or path overrides.
+- **Discovery order.** `kp` resolves runtime configs in this order:
+  `agents/<id>/` (embedded, project-shared) → `~/agents/<framework>/`
+  (external clone, machine-local) → tier1/2 registry defaults from
+  `agents.yaml`.
 
-## Fixture capture
+Embedded `agents/` is OPTIONAL — many projects need only the
+`agents.yaml` registry plus the per-machine `memberBindings`. Reach for
+`agents/` only when you have project-shared prompts or per-project
+scripts to commit.
 
-Parsers are grounded in real command output committed under `dev/fixtures/`
-(provenance for every file in `dev/fixtures/README.md`). To re-capture the
-offline-safe inventory fixtures (date-stamped, never clobbers an existing
-capture):
+### 16. `kp` Shim — Bounded Write Surface (Forward-Looking)
 
-```sh
-dev/capture-fixtures.sh                    # offline-safe inventory/list commands
-PM_CAPTURE_ONLINE=1 dev/capture-fixtures.sh  # + network-dependent outdated probes
-```
+> [!IMPORTANT]
+> When the `kp` CLI is available on `PATH` (added in a forthcoming Kanban Pro
+> release), agents acting inside a Kanban-hosted terminal SHOULD route all
+> writes through it instead of editing ticket files directly. `kp` produces
+> a per-call receipt in `.kanban/audit.ndjson` that lets the UI reconcile an
+> agent's narrated claims against on-disk truth (the "ghost-tickets" guard).
 
-Synthetic fixtures carry a `_synthetic` suffix, copy values verbatim from real
-captures, and are listed with retirement conditions in the fixtures README.
+Until `kp` ships, direct file edits remain the supported integration path
+and the conventions in §§1–13 above are authoritative. The contract for
+the shim is documented in the Kanban Pro repository at
+`docs/KP_SHIM_SPEC.md`. Highlights:
 
-## Releases
+- A closed verb set (`ticket.list / show / move / set / link / unlink /
+  comment / create`, `members.list`, `member.show`, `context.show`,
+  `session.list / resume`, `audit.tail`) — anything not in this set will
+  never alter project state through `kp`.
+- Every invocation appends exactly one NDJSON line to `.kanban/audit.ndjson`
+  with the verb, args, actor, machine, session, and outcome.
+- Write verbs additionally record an `intendedState` and the
+  `postWriteFileHash` of the file produced, so a claim of "I moved T-1 to
+  Done" can be checked against the on-disk file the next reader sees.
 
-Fully automated by release-please — see `CLAUDE.md` for the rules that matter
-when committing.
+Agents that write tickets directly today (the current supported path)
+SHOULD adopt the same `modified` / `modifiedBy` discipline (§11) so the
+Activity Feed remains accurate. When `kp` becomes available the
+attribution will flow through the same field.
 
-1. Push conventional commits to `main`; release-please opens a
-   `chore(main): release X.Y.Z` PR that bumps the five version files in
-   lockstep and writes `CHANGELOG.md`.
-2. **Merging that PR is the release.** It tags `vX.Y.Z` and publishes the
-   GitHub Release.
-3. `release.yml` then builds a universal (arm64 + x86_64) app, signs it with
-   Developer ID, notarizes and staples it, and attaches:
+### 17. `KP-CONTEXT.md` — Per-Session Project Context (Forward-Looking)
 
-| Asset | For |
-|---|---|
-| `Pack-Manager-X.Y.Z.dmg` | first install |
-| `Pack-Manager-X.Y.Z.zip` | archive |
-| `Pack-Manager-X.Y.Z.app.tar.gz` + `.sig` | the in-app updater |
-| `latest.json` | the updater endpoint |
+> [!IMPORTANT]
+> When an agent is launched inside a Kanban-hosted terminal, Kanban Pro
+> writes a project-aware context file at
+> `.kanban/sessions/<sessionId>/KP-CONTEXT.md` (plus a
+> `KP-CONTEXT.json` twin) that the agent SHOULD read on startup. The
+> file carries the ticket the session is bound to, neighbour tickets,
+> verbatim project rules (`README.md` / `CLAUDE.md` / `AGENTS.md`),
+> the team-graph slice, the board columns, and the identity envelope
+> (`KP_PROJECT`, `KP_TICKET_ID`, `KP_MEMBER_ID`, `KP_SESSION_ID`,
+> `KP_RUNTIME_ID`, …).
 
-Signing and notarization degrade gracefully when the secrets are absent (e.g.
-on a fork): the build stays unsigned and the job still succeeds.
+The full contract is documented at `docs/KP_CONTEXT.md`. Highlights:
 
-Never hand-edit a version — release-please owns `package.json`,
-`package-lock.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and
-`src-tauri/Cargo.lock`, plus `CHANGELOG.md` and `.release-please-manifest.json`.
+- Regenerated automatically (debounced 2 s) when the active ticket,
+  any neighbour, a member file, or `README.md` / `CLAUDE.md` /
+  `AGENTS.md` changes.
+- Idempotent: identical inputs ⇒ no rewrite (mtime is preserved).
+- Atomic-write: partial `KP-CONTEXT.md` is never observable.
+- Deterministic JSON twin: same envelope ⇒ same SHA-256.
 
-## Log locations
+Agents reading the file out-of-band (without going through the Kanban
+host) see the same envelope as agents that inherit the environment.
+This is the single point an agent reads to know where it is, what it
+is acting on, who it is acting as, and which rules apply.
 
-| What | Where |
-|---|---|
-| App log (JSONL, daily rolling) | `~/Library/Logs/Pack-Manager/pack-manager.log.<YYYY-MM-DD>` |
-| Operation transcripts | `~/Library/Logs/Pack-Manager/operations/` |
-| Journal / history | `~/Library/Application Support/Pack-Manager/operations.jsonl` |
-| Settings | `~/Library/Application Support/Pack-Manager/settings.json` |
+### 18. Working Memory & Task State
 
-Log filter precedence: `PACK_MANAGER_LOG` env (EnvFilter syntax) > Settings
-logLevel > default `info,pack_manager_lib=debug`.
+> [!IMPORTANT]
+> When you are working an assigned ticket, that ticket file
+> (`tickets/T-<id>.md`) IS your durable working memory. Do NOT invent a
+> private task store: no `/tmp` scratchpads, `MEMORY.md`, hidden dotfiles,
+> or "plan held only in my context window." Anything not written to the
+> ticket is invisible to humans and to the next agent, and is lost on
+> restart or context compaction.
 
-## Diagnostics
-
-Settings → **Export diagnostics** (or the History footer) writes
-`~/Desktop/Pack-Manager-diagnostics-<YYYYMMDD-HHmmss>.zip` containing
-report.json (app/OS version, resolved search path + source, full detection
-report with evidence, settings, log filter), the last 3 app-log files, the
-last 25 transcripts, and `operations.jsonl`. Only env vars the app sets are
-ever logged — never the inherited environment.
-
-Debugging starts at the transcript: every operation's log file has the exact
-program path, argv, PATH, and set env in its header and the outcome in its
-footer; `grep <opId>` over the app log answers routing and lock-wait
-questions.
-
-## Known limitations
-
-- **Updating from a read-only location** — the updater replaces the `.app` in
-  place, so it needs write access to the bundle's parent directory. Run from
-  `/Applications` (or `~/Applications`); launched straight off a mounted DMG,
-  the in-app update stops at "needs a manual install" rather than raising an
-  admin prompt (DECISIONS D25).
-- **Dark theme only** — tokens are structured for a future light theme, but
-  MVP ships dark-only (DECISIONS D19).
-- **Cask outdated JSON shape is unverified** — both captured fixtures have
-  `"casks": []`; a fixture-tested text parser is wired as automatic recovery
-  (DECISIONS D7).
-- **Updates only** — no package install/uninstall, no auto-upgrades without
-  user action, no telemetry.
-
-## License
-
-MIT — see [LICENSE](LICENSE).
+- Persist your plan, checklist, decisions, and blockers in the ticket's
+  Markdown body (§8). Use `- [ ]` / `- [x]` task lists and keep them
+  updated continuously as you work.
+- Keep your notes under a dedicated `## Agent Working Notes` heading at the
+  end of the body so they stay distinct from human-authored Acceptance
+  Criteria.
+- Before you run any context-clear / compaction command, first write your
+  current plan and progress into the ticket — so state survives the reset.
+- State transitions (status / assignee): edit the ticket frontmatter per
+  §§1-2 and §§8-11 (full-file atomic rewrite, update `modified` /
+  `modifiedBy`). When the `kp` CLI is available (§16), prefer
+  `kp ticket move`, `kp ticket set`, `kp ticket comment`, and
+  `kp ticket assign` so every change is audited. Never use `sed` / `awk`
+  / `echo >` partial edits on `tickets/` or `.kanban/` files — partial
+  writes corrupt YAML and bypass attribution (§9).
+- Hand-off (multi-agent): before reassigning, write a status + reasoning
+  block in the ticket body, then set `assignee` to the target member FK
+  (`m_<id>`; find peers and their mandates in `ORGANOGRAM.md` and
+  `team/<slug>.md`, §14), or `kp ticket assign T-<id> m_<id>` when
+  available. The successor reads the ticket and inherits full context.

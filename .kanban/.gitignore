@@ -1,0 +1,11 @@
+# Kanban Pro — auto-generated. Keep raw transcripts out of VCS.
+# Operators can opt-in to committing transcript metadata, but not the raw bytes.
+sessions/*/transcript.log
+sessions/*/transcript.log.*
+sessions/_archive/
+.cache/**
+machines/**
+leases/**
+heartbeats/**
+conflicts/.scratch/**
+sync-exclusions-applied.json

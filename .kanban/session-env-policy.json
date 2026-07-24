@@ -1,0 +1,8 @@
+{
+  "$schema": "https://kanban-pro.local/schemas/session-env-policy.v1.json",
+  "_comment": "Optional. See docs/KP_SESSIONS.md for the policy contract.",
+  "allow": [],
+  "deny": [],
+  "allowExact": [],
+  "disableBuiltInDeny": false
+}

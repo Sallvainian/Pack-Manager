@@ -1,0 +1,153 @@
+{
+  "version": 8,
+  "columns": [
+    {
+      "id": "col_backlog",
+      "name": "Backlog",
+      "order": 0
+    },
+    {
+      "id": "col_todo",
+      "name": "To Do",
+      "order": 1
+    },
+    {
+      "id": "col_doing",
+      "name": "In Progress",
+      "order": 2
+    },
+    {
+      "id": "col_done",
+      "name": "Done",
+      "order": 3
+    }
+  ],
+  "tagColors": {
+    "bug": "oklch(0.7 0.2 30)",
+    "feature": "oklch(0.7 0.2 140)"
+  },
+  "fieldDefinitions": [
+    {
+      "id": "field_priority",
+      "yamlKey": "priority",
+      "name": "Priority",
+      "dataType": "dropdown",
+      "builtIn": true,
+      "order": 0,
+      "visible": true,
+      "showOnCard": true,
+      "options": [
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "low",
+          "label": "Low"
+        },
+        {
+          "value": "medium",
+          "label": "Medium"
+        },
+        {
+          "value": "high",
+          "label": "High"
+        },
+        {
+          "value": "critical",
+          "label": "Critical"
+        }
+      ],
+      "defaultValue": "none"
+    },
+    {
+      "id": "field_type",
+      "yamlKey": "type",
+      "name": "Type",
+      "dataType": "dropdown",
+      "builtIn": true,
+      "order": 1,
+      "visible": true,
+      "showOnCard": true,
+      "options": [
+        {
+          "value": "task",
+          "label": "Task"
+        },
+        {
+          "value": "bug",
+          "label": "Bug"
+        },
+        {
+          "value": "feature",
+          "label": "Feature"
+        },
+        {
+          "value": "story",
+          "label": "Story"
+        },
+        {
+          "value": "spike",
+          "label": "Spike"
+        }
+      ],
+      "defaultValue": "task"
+    },
+    {
+      "id": "field_assignee",
+      "yamlKey": "assignee",
+      "name": "Assignee",
+      "dataType": "dropdown",
+      "builtIn": true,
+      "order": 2,
+      "visible": true,
+      "showOnCard": true,
+      "defaultValue": "",
+      "options": [],
+      "linkProfiles": true
+    },
+    {
+      "id": "field_dueDate",
+      "yamlKey": "dueDate",
+      "name": "Due Date",
+      "dataType": "date",
+      "builtIn": true,
+      "order": 3,
+      "visible": true,
+      "showOnCard": true,
+      "defaultValue": ""
+    },
+    {
+      "id": "field_startDate",
+      "yamlKey": "startDate",
+      "name": "Start Date",
+      "dataType": "date",
+      "builtIn": true,
+      "order": 2.5,
+      "visible": true,
+      "showOnCard": true,
+      "defaultValue": ""
+    },
+    {
+      "id": "field_tags",
+      "yamlKey": "tags",
+      "name": "Tags",
+      "dataType": "tag",
+      "builtIn": true,
+      "order": 4,
+      "visible": true,
+      "showOnCard": true,
+      "defaultValue": []
+    }
+  ],
+  "displaySettings": {
+    "colorPalette": "ocean",
+    "showDefaultBranding": false,
+    "showProjectName": true,
+    "showAttachmentPreviews": true,
+    "darkModeBackgroundBrightness": 50,
+    "lightModeBackgroundBrightness": 100
+  },
+  "sprints": [],
+  "epics": []
+}
