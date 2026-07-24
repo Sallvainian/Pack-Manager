@@ -1,0 +1,88 @@
+---
+title: Pack-Manager P0 Readiness — What Can Run Together?
+---
+%%{init: {
+  "theme": "base",
+  "flowchart": {
+    "curve": "basis",
+    "htmlLabels": true,
+    "nodeSpacing": 48,
+    "rankSpacing": 54,
+    "padding": 18
+  },
+  "themeVariables": {
+    "fontFamily": "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+    "fontSize": "18px",
+    "lineColor": "#475569",
+    "textColor": "#172033",
+    "primaryTextColor": "#172033",
+    "edgeLabelBackground": "#ffffff"
+  }
+}}%%
+
+flowchart TB
+  START(["START"])
+
+  SETUP["<b>SETUP FIRST</b><br/>Separate the offline, target-Mac,<br/>and release-candidate test environments"]
+  E1["<b>EPIC 1</b><br/>Fix the mas source of truth"]
+
+  START --> SETUP --> E1
+
+  WAVE1(["<b>PARALLEL WAVE 1</b><br/>Start all three after Epic 1"])
+  E1 --> WAVE1
+
+  E2["<b>EPIC 2</b><br/>Detection and refresh"]
+  E3["<b>EPIC 3</b><br/>Packages, planning, and Settings"]
+  E4["<b>EPIC 4</b><br/>Real Tauri command/event boundary"]
+
+  WAVE1 --> E2
+  WAVE1 --> E3
+  WAVE1 --> E4
+
+  WAVE2(["<b>PARALLEL WAVE 2</b><br/>Start both as soon as Epic 4 finishes"])
+  E4 --> WAVE2
+
+  E5["<b>EPIC 5</b><br/>Processes, locks, output,<br/>cancellation, and timeouts"]
+  E6["<b>EPIC 6</b><br/>Crash, relaunch, persistence,<br/>and diagnostics"]
+
+  WAVE2 --> E5
+  WAVE2 --> E6
+
+  JOIN["<b>WAIT HERE</b><br/>Epics 2, 3, 5, and 6 must all finish"]
+  E2 --> JOIN
+  E3 --> JOIN
+  E5 --> JOIN
+  E6 --> JOIN
+
+  PREREQ["<b>RUN IN PARALLEL FROM DAY ONE</b><br/><br/>Approve the coverage map<br/>Decide minimum macOS (DR-1)<br/>Decide gate/retry policy (DR-4)<br/>Build the evidence system (ASR-04)<br/>Prepare Macs, prior app, credentials,<br/>storage, assignees, and dates"]
+
+  START -.-> PREREQ
+
+  FREEZE["<b>RELEASE PREPARATION</b><br/>Freeze one signed, notarized candidate<br/><i>This is a gate, not Epic 9</i>"]
+
+  JOIN --> FREEZE
+  PREREQ --> FREEZE
+
+  E7["<b>EPIC 7</b><br/>Packaged accessibility and updater<br/>on Apple silicon and physical Intel"]
+  E8["<b>EPIC 8</b><br/>Signing, artifacts, reproducibility,<br/>and the final evidence ledger"]
+  DONE(["READY FOR THE LATER<br/>TRACE / READINESS DECISION"])
+
+  FREEZE --> E7 --> E8 --> DONE
+
+  classDef start fill:#f8fafc,stroke:#64748b,stroke-width:2px,color:#0f172a;
+  classDef first fill:#fff1f2,stroke:#be123c,stroke-width:3px,color:#881337;
+  classDef waveOne fill:#eff6ff,stroke:#2563eb,stroke-width:3px,color:#1e3a8a;
+  classDef waveTwo fill:#ecfdf5,stroke:#059669,stroke-width:3px,color:#064e3b;
+  classDef wait fill:#f1f5f9,stroke:#475569,stroke-width:3px,color:#0f172a;
+  classDef prereq fill:#fffbeb,stroke:#d97706,stroke-width:3px,color:#78350f;
+  classDef freeze fill:#fff7ed,stroke:#ea580c,stroke-width:4px,color:#7c2d12;
+  classDef final fill:#f5f3ff,stroke:#7c3aed,stroke-width:3px,color:#4c1d95;
+
+  class START,DONE start;
+  class SETUP,E1 first;
+  class WAVE1,E2,E3,E4 waveOne;
+  class WAVE2,E5,E6 waveTwo;
+  class JOIN wait;
+  class PREREQ prereq;
+  class FREEZE freeze;
+  class E7,E8 final;

@@ -1,7 +1,7 @@
 ---
-project_name: 'Pack-Manager'
-user_name: 'Sallvain'
-date: '2026-07-22'
+project_name: "Pack-Manager"
+user_name: "Sallvain"
+date: "2026-07-24"
 sections_completed:
   - technology_stack
   - language_specific_rules
@@ -11,8 +11,8 @@ sections_completed:
   - development_workflow_rules
   - critical_dont_miss_rules
 existing_patterns_found: 7
-status: 'complete'
-rule_count: 50
+status: "complete"
+rule_count: 58
 optimized_for_llm: true
 ---
 
@@ -87,19 +87,54 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 - The package manager's `outdated` verdict is authoritative. Version-delta logic is display-only and must never decide whether an update exists.
 - Derive manager ownership and self-update routing from detected paths. Classify the raw path before canonicalizing it; mise shims are symlinks and canonicalizing first misroutes npm/uv.
-- Nothing bulk-executes before the user sees the exact commands. Canonicalize explicit plan selections before issuance: preserve `null`, enforce the 2,048-entry/512-byte-ID bounds, and remove exact manager/package duplicates first-seen-order. A bulk `planId` is a bounded, one-use backend capability bound to one monotonic canonical-state revision: execution must exactly match the issued plan and a fresh coherent rebuild, reject active refreshes/revision drift or locks held by an earlier queued/running mutation, and submit only freshly re-derived groups through the scheduler's atomic all-or-none batch admission. Tampering, replay, eviction, or drift returns `plan_stale`; the UI must display a new plan and require another confirmation.
+- Every Package and Manager update enters one persistent Upgrade Plan; no row,
+  Manager header, selection, or Update Everything action executes immediately.
+  Store canonical `PlanIntent`, not executable display strings. Canonicalize
+  explicit Package identities before preview issuance: preserve `null`, enforce
+  the 2,048-entry/512-byte-ID bounds, and remove exact Manager/Package
+  duplicates first-seen-order. Each Manager update is independent removable
+  membership; do not restore the old global `includeSelfUpdates` toggle.
+- Keep the one-use preview `planId` separate from the durable
+  `planAttemptId`. Execution must exactly match the issued preview and a fresh
+  coherent rebuild, reject active refresh/revision drift or an already-active
+  confirmed attempt, and submit only re-derived groups through atomic all-or-none
+  admission. Events, Operations, transcripts, journal records, verification,
+  Results, History, diagnostics, and Retry lineage carry `planAttemptId` when
+  applicable. Never fabricate plan grouping for legacy Operation records.
+- By default `Confirm # updates` opens the separate final confirmation dialog.
+  The skip-future checkbox exists only there. Persist
+  `skipUpgradePlanConfirmation` with default `false`; treat `autoOpenDrawer` as
+  inactive legacy input. Skipping the dialog never skips draft review, Rust
+  rebuild, stale-plan validation, or explicit user action.
 - The single scheduler atomically checks and acquires each operation's complete lock set before start. All Homebrew work takes the Brew lock; routed operations lock executor and subject; mise-managed npm/uv work also protects Mise. Preserve global concurrency, fairness, and refresh coalescing.
 - Never run shell command strings. Spawn resolved absolute executables with structured argv, `env_clear`, an explicit environment, null stdin, and a new process group. Self-update and health-fix argv stays backend-only; derive previews from argv and never split display text back into arguments. No sudo or password prompt path is allowed.
 - Add `HOMEBREW_NO_AUTO_UPDATE=1` to every Brew command except the explicit `brew update` operation. Do not automatically retry external Homebrew lock contention.
 - One manager failure must not blank other managers or overwrite its previous successful snapshot. Parser recovery must merge a complete inventory, not replace it with an outdated-only overlay.
 - A manager-declared expected nonzero exit is not an operation failure; notably, usable npm outdated JSON may exit 1 and must reach the parser before error classification.
-- Keep operations reconstructible: status/output events, transcript, structured log, and crash journal share the operation ID. Preserve the process reader's literal unterminated-notice handling and bounded post-exit EOF grace. On shutdown, cancel and reap process groups; never signal journaled PIDs after restart because PID reuse is unsafe.
+- Keep confirmed attempts reconstructible: plan status/Results and nested
+  Operation status/output events, transcripts, structured logs, crash journal,
+  and verification share `planAttemptId` and `opId`. One confirmed attempt may
+  run at a time; concurrency happens inside it. Primary cancellation targets
+  the attempt, skips unstarted work, and preserves every terminal outcome.
+  Preserve the process reader's literal unterminated-notice handling and
+  bounded post-exit EOF grace. On shutdown, cancel and reap process groups;
+  never signal journaled PIDs after restart because PID reuse is unsafe.
+- Do not declare success at process exit. Enter `Verifying`, refresh every
+  affected subject/executor Manager, and distinguish mutation failure from
+  verification failure in Results. History has one immutable row per confirmed
+  attempt; Retry creates a new linked attempt and never overwrites the first
+  failure.
+- Show `Interaction required` only when a closed Manager-specific classifier
+  or explicit native signal recognizes a trusted prompt. Unknown null-stdin
+  silence follows the ordinary stall path. The primary label is `Cancel plan`
+  when the remaining attempt is affected; reserve `Cancel operation` for
+  explicitly Operation-scoped diagnostics.
 - Settings and journal rewrites remain atomic. Persist a settings patch before publishing it in memory or advancing the canonical revision; a failed save changes neither. Journal-append and structured app-log write failures are nonfatal to package operations; transcript creation failure blocks spawn, while later transcript-write failures are best-effort. Diagnostics must reject symlinks both when selecting and when streaming files.
 - Application-update checks/downloads may run in the background, but installation requires an explicit user Restart action. If the bundle parent is not writable, require manual installation rather than triggering an administrator prompt.
 - Selection must always exclude pinned packages and exclude greedy casks unless the user explicitly opts in. Unknown latest versions remain `null`; never fabricate a version delta.
 - Re-check self-update routes after every freshly parsed refresh snapshot; a manager's own outdated row can override delegated routing, especially npm inside mise.
 - Only the exact recognized uv reinstall suggestion may expose `fixCommand` and trusted fix argv. Altered, missing, or malformed suggestions remain visible in the warning detail but are neither copyable nor runnable.
-- Derive current command/event counts from production registration rather than treating old prose counts as invariants; the present surface is 20 commands and six events. `DECISIONS.md` D23a supersedes D23 for live-verified mas behavior, and D25 supersedes D20 for signed/notarized in-app updates.
+- Derive current command/event counts from production registration rather than treating old prose counts as invariants; the present surface is 20 commands and six events. Coordinate Plan Intent/Attempt IPC changes across Rust models, TypeScript types/guards, registration, wrappers, fixtures, subscriptions, persistence schemas, and boundary tests. `DECISIONS.md` D23a supersedes D23, D25 supersedes D20, and D27-D30 govern the finalized update experience.
 - Tauri CSP is currently `null` and main-window capabilities are deliberately narrow. Treat any external-content, capability, or permission change as security-sensitive.
 
 ---
@@ -117,4 +152,4 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - Keep this file focused on project-specific rules that agents could otherwise miss.
 - Review it after major architecture, tooling, testing, security, or release changes and remove obsolete guidance.
 
-Last Updated: 2026-07-22
+Last Updated: 2026-07-24

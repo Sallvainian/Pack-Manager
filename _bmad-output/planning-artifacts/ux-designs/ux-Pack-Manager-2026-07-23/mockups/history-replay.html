@@ -1,0 +1,1760 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pack-Manager — Activity Replay</title>
+    <link rel="icon" href="data:," />
+    <style>
+      /*
+        Governing UX spine sections:
+        DESIGN.md — Brand & Style; Colors; Typography; Layout & Spacing;
+        Elevation & Depth; Components: Sidebar Navigation, Upgrade Sidecar,
+        Activity Operation Row, History Plan Row, Status Chip,
+        Command Output Disclosure.
+        EXPERIENCE.md — Information Architecture; Component Patterns;
+        State Patterns: Live Activity, History and replay;
+        Interaction Primitives: Focus transitions; Accessibility Floor;
+        Key Flows: AJ-5 — Diagnose and export support evidence.
+      */
+
+      * {
+        box-sizing: border-box;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      :root {
+        color-scheme: dark;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+          system-ui, sans-serif;
+        color: #f4f7fb;
+        background: #090c13;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+        margin: 0;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 600px;
+        background:
+          radial-gradient(circle at 78% 4%, #193b5e 0, transparent 34rem),
+          radial-gradient(circle at 10% 94%, #2b2248 0, transparent 31rem),
+          #090c13;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button,
+      a,
+      summary {
+        color: inherit;
+      }
+
+      button,
+      summary {
+        cursor: pointer;
+      }
+
+      button:focus-visible,
+      input:focus-visible,
+      a:focus-visible,
+      summary:focus-visible {
+        outline: 2px solid #f4f7fb;
+        outline-offset: 3px;
+        box-shadow: 0 0 0 6px #65a7ff66;
+      }
+
+      .window {
+        width: min(1440px, calc(100vw - 32px));
+        height: min(900px, calc(100vh - 32px));
+        min-height: 568px;
+        margin: 16px auto;
+        overflow: hidden;
+        border: 1px solid #2a3548;
+        border-radius: 18px;
+        background: #0f1420f2;
+        box-shadow:
+          0 34px 90px #0000007a,
+          inset 0 1px 0 #ffffff0f;
+        backdrop-filter: blur(28px) saturate(125%);
+      }
+
+      .titlebar {
+        height: 46px;
+        display: grid;
+        grid-template-columns: 190px 1fr 190px;
+        align-items: center;
+        border-bottom: 1px solid #2a3548;
+        background: #101622e8;
+      }
+
+      .traffic {
+        display: flex;
+        gap: 8px;
+        padding-left: 16px;
+      }
+
+      .traffic span {
+        width: 12px;
+        height: 12px;
+        border: 1px solid #00000033;
+        border-radius: 50%;
+      }
+
+      .traffic span:nth-child(1) {
+        background: #ff5f57;
+      }
+
+      .traffic span:nth-child(2) {
+        background: #febc2e;
+      }
+
+      .traffic span:nth-child(3) {
+        background: #28c840;
+      }
+
+      .title {
+        justify-self: center;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+
+      .title-status {
+        justify-self: end;
+        padding-right: 16px;
+        color: #8d99aa;
+        font-size: 11px;
+      }
+
+      .workspace {
+        height: calc(100% - 46px);
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 190px minmax(0, 1fr) 360px;
+        overflow: hidden;
+      }
+
+      .sidebar {
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        padding: 20px 14px 14px;
+        overflow: auto;
+        border-right: 1px solid #2a3548;
+        background: #0d121ce8;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 0 8px 5px;
+      }
+
+      .brand-mark {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        flex: 0 0 34px;
+        place-items: center;
+        border: 1px solid #65a7ff99;
+        border-radius: 11px;
+        background: linear-gradient(145deg, #65a7ff, #745ee7);
+        box-shadow: 0 8px 28px #4f77ff4d;
+        font-size: 17px;
+        font-weight: 900;
+      }
+
+      .brand strong,
+      .brand small {
+        display: block;
+      }
+
+      .brand strong {
+        font-size: 14px;
+      }
+
+      .brand small {
+        color: #8d99aa;
+        font-size: 10px;
+      }
+
+      .nav-label {
+        margin: 0 9px 6px;
+        color: #8d99aa;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+
+      .nav {
+        display: grid;
+        gap: 4px;
+      }
+
+      .nav-item {
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 10px;
+        border: 1px solid transparent;
+        border-radius: 9px;
+        color: #aeb8c7;
+        font-size: 12px;
+        font-weight: 650;
+        text-decoration: none;
+        transition:
+          background 160ms ease,
+          transform 160ms ease;
+      }
+
+      .nav-item:hover {
+        transform: translateX(2px);
+        background: #ffffff08;
+      }
+
+      .nav-item.active {
+        border-color: #65a7ff4d;
+        background: linear-gradient(90deg, #65a7ff26, #65a7ff0a);
+        box-shadow: inset 3px 0 #65a7ff;
+        color: #f4f7fb;
+      }
+
+      .nav-icon {
+        width: 17px;
+        height: 17px;
+        flex: 0 0 17px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+
+      .nav-badge {
+        margin-left: auto;
+        padding: 2px 6px;
+        border: 1px solid #65a7ff55;
+        border-radius: 999px;
+        background: #172a46;
+        color: #7db3ff;
+        font-size: 9px;
+        white-space: nowrap;
+      }
+
+      .sidebar-foot {
+        margin-top: auto;
+        padding: 12px;
+        border: 1px solid #2a3548;
+        border-radius: 13px;
+        background: #151c2a;
+      }
+
+      .sidebar-foot b {
+        display: block;
+        color: #72e6a0;
+        font-size: 11px;
+      }
+
+      .sidebar-foot p {
+        margin: 5px 0 0;
+        color: #aeb8c7;
+        font-size: 10px;
+        line-height: 1.45;
+      }
+
+      .history {
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: #0b1019cc;
+      }
+
+      .page-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 20px 22px 16px;
+        border-bottom: 1px solid #2a3548;
+      }
+
+      .eyebrow {
+        display: block;
+        margin-bottom: 5px;
+        color: #7db3ff;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 4px;
+        font-size: 20px;
+        line-height: 1.3;
+      }
+
+      .page-head p {
+        max-width: 520px;
+        margin-bottom: 0;
+        color: #aeb8c7;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .filters {
+        display: flex;
+        flex: 0 0 auto;
+        gap: 6px;
+      }
+
+      .filter {
+        min-height: 30px;
+        padding: 0 10px;
+        border: 1px solid #2a3548;
+        border-radius: 7px;
+        background: #151c2a;
+        color: #aeb8c7;
+        font-size: 11px;
+        font-weight: 650;
+      }
+
+      .filter.selected {
+        border-color: #65a7ff77;
+        background: #172a46;
+        color: #f4f7fb;
+      }
+
+      .replay-back {
+        flex: 0 0 auto;
+      }
+
+      .history-scroll {
+        min-height: 0;
+        flex: 1;
+        overflow: auto;
+        padding: 16px 18px 24px;
+      }
+
+      .search-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .search {
+        width: 100%;
+        min-height: 34px;
+        padding: 0 12px 0 34px;
+        border: 1px solid #2a3548;
+        border-radius: 9px;
+        background:
+          linear-gradient(
+            90deg,
+            transparent 0 29px,
+            #2a3548 29px 30px,
+            transparent 30px
+          ),
+          #151c2a;
+        color: #f4f7fb;
+        font-size: 12px;
+      }
+
+      .search::placeholder {
+        color: #8d99aa;
+      }
+
+      .search-mark {
+        position: relative;
+      }
+
+      .search-mark::before {
+        position: absolute;
+        z-index: 1;
+        top: 9px;
+        left: 11px;
+        width: 9px;
+        height: 9px;
+        border: 1.6px solid #8d99aa;
+        border-radius: 50%;
+        content: "";
+        pointer-events: none;
+      }
+
+      .search-mark::after {
+        position: absolute;
+        z-index: 1;
+        top: 19px;
+        left: 20px;
+        width: 6px;
+        height: 1.6px;
+        background: #8d99aa;
+        content: "";
+        pointer-events: none;
+        transform: rotate(45deg);
+        transform-origin: left center;
+      }
+
+      .plan-count {
+        align-self: center;
+        color: #8d99aa;
+        font-size: 10px;
+        white-space: nowrap;
+      }
+
+      .history-list {
+        display: grid;
+        gap: 7px;
+      }
+
+      .plan-row {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 94px minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        padding: 11px 12px;
+        border: 1px solid #2a3548;
+        border-radius: 10px;
+        background: #151c2a;
+        color: #f4f7fb;
+        text-align: left;
+        transition:
+          border-color 160ms ease,
+          background 160ms ease;
+      }
+
+      .plan-row:hover {
+        border-color: #465773;
+        background: #1b2434;
+      }
+
+      .plan-row.selected {
+        border-color: #65a7ff88;
+        background: linear-gradient(90deg, #65a7ff15, transparent 45%), #1b2434;
+        box-shadow: inset 3px 0 #65a7ff;
+      }
+
+      .plan-time strong,
+      .plan-time span,
+      .plan-outcome strong,
+      .plan-outcome span {
+        display: block;
+      }
+
+      .plan-time strong {
+        font-size: 11px;
+      }
+
+      .plan-time span {
+        margin-top: 2px;
+        color: #8d99aa;
+        font-size: 10px;
+      }
+
+      .plan-outcome strong {
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .plan-outcome span {
+        margin-top: 3px;
+        color: #aeb8c7;
+        font-size: 10px;
+        line-height: 1.35;
+      }
+
+      .retry-link {
+        color: #7db3ff !important;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+
+      .row-meta {
+        color: #aeb8c7;
+        font-size: 10px;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .row-meta b {
+        display: block;
+        margin-bottom: 3px;
+        color: #f4f7fb;
+        font-size: 10px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 22px;
+        padding: 0 8px;
+        border: 1px solid #465773;
+        border-radius: 999px;
+        background: #ffffff08;
+        color: #aeb8c7;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .chip::before {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        content: "";
+      }
+
+      .chip.success {
+        border-color: #72e6a066;
+        background: #72e6a011;
+        color: #72e6a0;
+      }
+
+      .chip.partial,
+      .chip.timed {
+        border-color: #f1c87566;
+        background: #f1c87511;
+        color: #f1c875;
+      }
+
+      .chip.failed,
+      .chip.cancelled,
+      .chip.interrupted {
+        border-color: #ff879366;
+        background: #ff879311;
+        color: #ff8793;
+      }
+
+      .chip.live,
+      .chip.running {
+        border-color: #65a7ff77;
+        background: #172a46;
+        color: #7db3ff;
+      }
+
+      .replay {
+        margin-top: 0;
+        border: 1px solid #2a3548;
+        border-radius: 13px;
+        overflow: hidden;
+        background: #0f1420;
+      }
+
+      .replay-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px;
+        border-bottom: 1px solid #2a3548;
+        background:
+          linear-gradient(115deg, #65a7ff10, transparent 48%), #151c2a;
+      }
+
+      .replay-title-line {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .replay h2 {
+        margin-bottom: 0;
+        font-size: 16px;
+      }
+
+      .readonly {
+        display: inline-flex;
+        min-height: 21px;
+        align-items: center;
+        padding: 0 7px;
+        border: 1px solid #465773;
+        border-radius: 999px;
+        color: #aeb8c7;
+        font-size: 8px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .replay-head p {
+        margin: 6px 0 0;
+        color: #aeb8c7;
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
+      .replay-summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(68px, 1fr));
+        gap: 6px;
+        min-width: 245px;
+      }
+
+      .replay-summary span {
+        padding: 7px 8px;
+        border: 1px solid #2a3548;
+        border-radius: 8px;
+        background: #0f1420;
+        color: #8d99aa;
+        font-size: 9px;
+      }
+
+      .replay-summary b {
+        display: block;
+        margin-bottom: 2px;
+        color: #f4f7fb;
+        font-size: 12px;
+      }
+
+      .replay-body {
+        padding: 10px;
+      }
+
+      .manager-group + .manager-group {
+        margin-top: 9px;
+      }
+
+      .manager-group {
+        border: 1px solid #2a3548;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #151c2a;
+      }
+
+      .manager-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 11px;
+        border-bottom: 1px solid #2a3548;
+      }
+
+      .manager-head h3 {
+        margin: 0;
+        font-size: 12px;
+      }
+
+      .manager-head p {
+        margin: 0 0 0 auto;
+        color: #aeb8c7;
+        font-size: 10px;
+      }
+
+      .manager-head .chip {
+        min-height: 19px;
+        padding: 0 6px;
+        font-size: 8px;
+      }
+
+      .command-row {
+        padding: 10px 11px 11px;
+      }
+
+      .command-row + .command-row {
+        border-top: 1px solid #2a3548;
+      }
+
+      .command-title {
+        display: grid;
+        grid-template-columns: 60px minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .command-title time {
+        color: #8d99aa;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 9px;
+      }
+
+      .command-title strong {
+        font-size: 11px;
+      }
+
+      .outcome {
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .outcome.success {
+        color: #72e6a0;
+      }
+
+      .outcome.failed {
+        color: #ff8793;
+      }
+
+      .package-results {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin: 8px 0 0 70px;
+      }
+
+      .package-result {
+        padding: 4px 7px;
+        border: 1px solid #2a3548;
+        border-radius: 7px;
+        background: #0f1420;
+        color: #aeb8c7;
+        font-size: 9px;
+      }
+
+      .package-result b {
+        color: #f4f7fb;
+      }
+
+      .package-result.verified {
+        border-color: #72e6a033;
+      }
+
+      .package-result.failed {
+        border-color: #ff879355;
+        color: #ffbac1;
+      }
+
+      .failure-note {
+        margin: 9px 0 0 70px;
+        padding: 9px 10px;
+        border: 1px solid #ff879355;
+        border-radius: 8px;
+        background: #ff87930c;
+        color: #d9e0ea;
+        font-size: 10px;
+        line-height: 1.45;
+      }
+
+      .failure-note b {
+        color: #ffbac1;
+      }
+
+      details {
+        margin: 8px 0 0 70px;
+      }
+
+      summary {
+        width: fit-content;
+        color: #aeb8c7;
+        font-size: 10px;
+        font-weight: 700;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      .command-output {
+        margin-top: 8px;
+        padding: 10px;
+        overflow: auto;
+        border: 1px solid #465773;
+        border-radius: 8px;
+        background: #070b12;
+        color: #c9d4e3;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 9px;
+        line-height: 1.55;
+        white-space: pre-wrap;
+      }
+
+      .activity-sidecar {
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border-left: 1px solid #465773;
+        background:
+          linear-gradient(180deg, #65a7ff0d, transparent 26%), #111824;
+        box-shadow: -20px 0 48px #0000002b;
+      }
+
+      .live-head {
+        padding: 18px 16px 15px;
+        border-top: 3px solid #65a7ff;
+        border-bottom: 1px solid #2a3548;
+        background: #151c2ae8;
+      }
+
+      .live-headline {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .live-head h2 {
+        margin: 6px 0 5px;
+        font-size: 18px;
+      }
+
+      .live-head p {
+        margin-bottom: 12px;
+        color: #aeb8c7;
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
+      .back-live {
+        width: 100%;
+        min-height: 36px;
+        border: 1px solid #7db3ff;
+        border-radius: 7px;
+        background: #65a7ff;
+        color: #07101d;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .overall {
+        margin-top: 12px;
+      }
+
+      .overall-copy {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 6px;
+        color: #aeb8c7;
+        font-size: 10px;
+      }
+
+      .overall-copy b {
+        color: #f4f7fb;
+      }
+
+      .progress-track {
+        height: 6px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #070b12;
+      }
+
+      .progress-fill {
+        width: 66.666%;
+        height: 100%;
+        border-radius: inherit;
+        background: #72e6a0;
+      }
+
+      .activity-scroll {
+        min-height: 0;
+        flex: 1;
+        overflow: auto;
+        padding: 12px;
+      }
+
+      .live-manager {
+        overflow: hidden;
+        border: 1px solid #2a3548;
+        border-radius: 11px;
+        background: #151c2a;
+      }
+
+      .live-manager + .live-manager {
+        margin-top: 9px;
+      }
+
+      .live-manager-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px;
+        border-bottom: 1px solid #2a3548;
+      }
+
+      .manager-glyph {
+        width: 27px;
+        height: 27px;
+        display: grid;
+        flex: 0 0 27px;
+        place-items: center;
+        border: 1px solid #465773;
+        border-radius: 8px;
+        background: #202a3c;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .live-manager-head strong {
+        font-size: 11px;
+      }
+
+      .live-manager-head span {
+        margin-left: auto;
+        color: #aeb8c7;
+        font-size: 9px;
+      }
+
+      .operation {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        padding: 9px 10px;
+        overflow: hidden;
+      }
+
+      .operation + .operation {
+        border-top: 1px solid #2a3548;
+      }
+
+      .operation::before {
+        position: absolute;
+        inset: auto auto 0 0;
+        width: var(--operation-progress, 0%);
+        height: 2px;
+        background: var(--operation-color, #65a7ff);
+        content: "";
+      }
+
+      .operation.running::before {
+        width: 44%;
+        background: linear-gradient(90deg, transparent, #65a7ff, transparent);
+        animation: sweep 1.5s ease-in-out infinite;
+      }
+
+      @keyframes sweep {
+        from {
+          transform: translateX(-110%);
+        }
+
+        to {
+          transform: translateX(240%);
+        }
+      }
+
+      .operation strong,
+      .operation small {
+        display: block;
+      }
+
+      .operation strong {
+        font-size: 10px;
+      }
+
+      .operation small {
+        margin-top: 2px;
+        color: #8d99aa;
+        font-size: 9px;
+        line-height: 1.35;
+      }
+
+      .operation-state {
+        align-self: center;
+        color: #aeb8c7;
+        font-size: 9px;
+        font-weight: 750;
+      }
+
+      .operation.verified .operation-state,
+      .operation.verified small {
+        color: #72e6a0;
+      }
+
+      .operation.running .operation-state {
+        color: #7db3ff;
+      }
+
+      .operation.queued .operation-state {
+        color: #f1c875;
+      }
+
+      .live-foot {
+        padding: 11px 14px;
+        border-top: 1px solid #2a3548;
+        background: #0f1420;
+        color: #8d99aa;
+        font-size: 9px;
+        line-height: 1.45;
+      }
+
+      @media (max-width: 1180px) {
+        .titlebar {
+          grid-template-columns: 68px 1fr 110px;
+        }
+
+        .workspace {
+          grid-template-columns: 68px minmax(0, 1fr) 316px;
+        }
+
+        .sidebar {
+          align-items: center;
+          padding: 16px 8px 10px;
+        }
+
+        .brand {
+          padding: 0;
+        }
+
+        .brand div:last-child,
+        .nav-label,
+        .nav-item > span:not(.nav-badge),
+        .sidebar-foot {
+          display: none;
+        }
+
+        .nav {
+          gap: 7px;
+        }
+
+        .nav-item {
+          width: 42px;
+          justify-content: center;
+          padding: 0;
+        }
+
+        .nav-badge {
+          position: absolute;
+          margin: -25px 0 0 27px;
+          padding: 1px 4px;
+          font-size: 7px;
+        }
+
+        .page-head {
+          align-items: flex-start;
+          padding: 16px;
+        }
+
+        .filters {
+          display: none;
+        }
+
+        .history-scroll {
+          padding: 12px;
+        }
+
+        .plan-row {
+          grid-template-columns: 74px minmax(0, 1fr);
+        }
+
+        .row-meta {
+          grid-column: 2;
+          text-align: left;
+        }
+
+        .row-meta b {
+          display: inline;
+          margin-right: 5px;
+        }
+
+        .replay-head {
+          display: block;
+        }
+
+        .replay-summary {
+          margin-top: 10px;
+          min-width: 0;
+        }
+
+        .command-title {
+          grid-template-columns: 50px minmax(0, 1fr);
+        }
+
+        .command-title .outcome {
+          grid-column: 2;
+        }
+
+        .package-results,
+        .failure-note,
+        details {
+          margin-left: 60px;
+        }
+      }
+
+      @media (max-height: 700px) {
+        .window {
+          width: 100vw;
+          height: 100vh;
+          min-height: 600px;
+          margin: 0;
+          border-radius: 0;
+        }
+
+        .page-head {
+          padding-top: 12px;
+          padding-bottom: 11px;
+        }
+
+        .live-head {
+          padding-top: 12px;
+          padding-bottom: 11px;
+        }
+
+        .live-head p {
+          display: none;
+        }
+
+        .sidebar {
+          gap: 12px;
+        }
+      }
+
+      @media (max-width: 720px) {
+        body {
+          min-height: 0;
+        }
+
+        .window {
+          width: 100vw;
+          height: auto;
+          min-height: 100vh;
+          margin: 0;
+          overflow: visible;
+          border-radius: 0;
+        }
+
+        .titlebar {
+          position: sticky;
+          z-index: 5;
+          top: 0;
+          grid-template-columns: 64px 1fr 64px;
+        }
+
+        .title-status {
+          display: none;
+        }
+
+        .workspace {
+          height: auto;
+          display: flex;
+          flex-direction: column;
+          overflow: visible;
+        }
+
+        .sidebar {
+          position: sticky;
+          z-index: 4;
+          top: 46px;
+          width: 100%;
+          min-height: 54px;
+          flex-direction: row;
+          justify-content: space-between;
+          padding: 7px 10px;
+          overflow-x: auto;
+          border-right: 0;
+          border-bottom: 1px solid #2a3548;
+        }
+
+        .brand {
+          display: none;
+        }
+
+        .sidebar > div:nth-child(2),
+        .sidebar .nav {
+          display: flex;
+        }
+
+        .history,
+        .activity-sidecar {
+          overflow: visible;
+        }
+
+        .history-scroll,
+        .activity-scroll {
+          overflow: visible;
+        }
+
+        .activity-sidecar {
+          border-top: 1px solid #465773;
+          border-left: 0;
+        }
+
+        .page-head {
+          display: block;
+        }
+
+        .search-row {
+          grid-template-columns: 1fr;
+        }
+
+        .plan-count {
+          display: none;
+        }
+
+        .plan-row {
+          grid-template-columns: 1fr;
+        }
+
+        .row-meta {
+          grid-column: 1;
+        }
+
+        .replay-summary {
+          grid-template-columns: 1fr;
+        }
+
+        .command-title {
+          grid-template-columns: 1fr;
+        }
+
+        .command-title .outcome {
+          grid-column: 1;
+        }
+
+        .package-results,
+        .failure-note,
+        details {
+          margin-left: 0;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.001ms !important;
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+        }
+
+        .operation.running::before {
+          width: 100%;
+          background: #65a7ff;
+          opacity: 0.65;
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <section
+      class="window"
+      aria-label="Pack-Manager Activity replay with live Activity sidecar"
+    >
+      <header class="titlebar">
+        <div class="traffic" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="title">Pack-Manager</div>
+        <div class="title-status">1 upgrade active</div>
+      </header>
+
+      <div class="workspace">
+        <aside class="sidebar" aria-label="Primary navigation">
+          <div class="brand">
+            <div class="brand-mark" aria-hidden="true">P</div>
+            <div>
+              <strong>Pack-Manager</strong>
+              <small>Control deck</small>
+            </div>
+          </div>
+
+          <div>
+            <p class="nav-label">Workspace</p>
+            <nav class="nav" aria-label="Workspace">
+              <a class="nav-item" href="#history" aria-label="Dashboard">
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3" y="3" width="7" height="9" rx="1.5"></rect>
+                  <rect x="14" y="3" width="7" height="5" rx="1.5"></rect>
+                  <rect x="3" y="16" width="7" height="5" rx="1.5"></rect>
+                  <rect x="14" y="12" width="7" height="9" rx="1.5"></rect>
+                </svg>
+                <span>Dashboard</span>
+              </a>
+              <a
+                class="nav-item"
+                href="#history"
+                aria-label="Managers, collapsed"
+              >
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="4" y="3" width="16" height="5" rx="1.8"></rect>
+                  <rect x="4" y="10" width="16" height="5" rx="1.8"></rect>
+                  <rect x="4" y="17" width="16" height="4" rx="1.8"></rect>
+                  <path d="M8 5.5h.01M8 12.5h.01M8 19h.01"></path>
+                </svg>
+                <span>Managers</span>
+              </a>
+              <a
+                class="nav-item active"
+                href="#activity-replay"
+                aria-current="page"
+                aria-label="Activity, one live upgrade"
+              >
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 12h4l2.5-6 4.5 12 2.5-6H21"></path>
+                </svg>
+                <span>Activity</span>
+                <span class="nav-badge">1 live</span>
+              </a>
+              <a class="nav-item" href="#history" aria-label="History">
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 12a9 9 0 1 0 3-6.7"></path>
+                  <path d="M3 3v5h5"></path>
+                  <path d="M12 7v5l3 2"></path>
+                </svg>
+                <span>History</span>
+              </a>
+            </nav>
+          </div>
+
+          <div class="sidebar-foot">
+            <b>Live work remains primary</b>
+            <p>
+              History opened this read-only Activity replay. The active plan
+              remains visible at right.
+            </p>
+          </div>
+
+          <nav class="nav" aria-label="Application">
+            <a class="nav-item" href="#history" aria-label="Settings">
+              <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path
+                  d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34A1.7 1.7 0 0 0 14 20.93V21h-4v-.07A1.7 1.7 0 0 0 8.97 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15 1.7 1.7 0 0 0 3.07 14H3v-4h.07A1.7 1.7 0 0 0 4.6 8.97a1.7 1.7 0 0 0-.34-1.88l-.06-.06L7.03 4.2l.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 10 3.07V3h4v.07a1.7 1.7 0 0 0 1.03 1.53 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06a1.7 1.7 0 0 0-.34 1.88A1.7 1.7 0 0 0 20.93 10H21v4h-.07A1.7 1.7 0 0 0 19.4 15Z"
+                ></path>
+              </svg>
+              <span>Settings</span>
+            </a>
+          </nav>
+        </aside>
+
+        <main class="history" id="activity-replay">
+          <header class="page-head">
+            <div>
+              <span class="eyebrow">Past plan replay</span>
+              <h1>Upgrade Activity</h1>
+              <p>
+                Read-only command and Package outcomes for the plan selected in
+                History.
+              </p>
+            </div>
+            <button class="filter selected replay-back" type="button">
+              Back to History
+            </button>
+          </header>
+
+          <div class="history-scroll">
+            <div class="search-row" hidden>
+              <label class="search-mark">
+                <span
+                  class="eyebrow"
+                  style="
+                    position: absolute;
+                    width: 1px;
+                    height: 1px;
+                    overflow: hidden;
+                  "
+                  >Search history</span
+                >
+                <input
+                  class="search"
+                  type="search"
+                  placeholder="Search plans, Managers, or Packages"
+                />
+              </label>
+              <span class="plan-count">18 confirmed execution attempts</span>
+            </div>
+
+            <section
+              class="history-list"
+              aria-label="Upgrade Plan history"
+              hidden
+            >
+              <button
+                class="plan-row selected"
+                type="button"
+                aria-pressed="true"
+              >
+                <span class="plan-time">
+                  <strong>Today</strong>
+                  <span>10:42 AM</span>
+                </span>
+                <span class="plan-outcome">
+                  <strong><span class="chip partial">Partial</span></strong>
+                  <span>10 of 12 verified · 2 failed</span>
+                </span>
+                <span class="row-meta"><b>3 Managers</b>2m 18s</span>
+              </button>
+
+              <button class="plan-row" type="button">
+                <span class="plan-time">
+                  <strong>Today</strong>
+                  <span>10:58 AM</span>
+                </span>
+                <span class="plan-outcome">
+                  <strong><span class="chip success">Success</span></strong>
+                  <span>2 of 2 verified</span>
+                  <span class="retry-link">Retry of plan from 10:42 AM</span>
+                </span>
+                <span class="row-meta"><b>1 Manager</b>24s</span>
+              </button>
+
+              <button class="plan-row" type="button">
+                <span class="plan-time">
+                  <strong>Yesterday</strong>
+                  <span>4:18 PM</span>
+                </span>
+                <span class="plan-outcome">
+                  <strong><span class="chip success">Success</span></strong>
+                  <span>6 of 6 verified</span>
+                </span>
+                <span class="row-meta"><b>2 Managers</b>1m 06s</span>
+              </button>
+
+              <button class="plan-row" type="button">
+                <span class="plan-time">
+                  <strong>Jul 22</strong>
+                  <span>8:31 PM</span>
+                </span>
+                <span class="plan-outcome">
+                  <strong><span class="chip timed">Timed out</span></strong>
+                  <span>3 of 8 verified · 1 timed out · 4 skipped</span>
+                </span>
+                <span class="row-meta"><b>2 Managers</b>30m 00s</span>
+              </button>
+
+              <button class="plan-row" type="button">
+                <span class="plan-time">
+                  <strong>Jul 21</strong>
+                  <span>7:06 AM</span>
+                </span>
+                <span class="plan-outcome">
+                  <strong
+                    ><span class="chip interrupted">Interrupted</span></strong
+                  >
+                  <span>4 of 9 verified · 5 interrupted</span>
+                </span>
+                <span class="row-meta"
+                  ><b>3 Managers</b>duration unavailable</span
+                >
+              </button>
+            </section>
+
+            <section class="replay" aria-labelledby="replay-title">
+              <header class="replay-head">
+                <div>
+                  <span class="eyebrow">Viewing past activity</span>
+                  <div class="replay-title-line">
+                    <h2 id="replay-title" tabindex="-1">
+                      Plan from today at 10:42 AM
+                    </h2>
+                    <span class="readonly">Read-only replay</span>
+                    <span class="chip partial">Partial</span>
+                  </div>
+                  <p>
+                    This completed attempt cannot be changed. Commands and
+                    Package outcomes are correlated below.
+                  </p>
+                </div>
+                <div class="replay-summary" aria-label="Selected plan summary">
+                  <span><b>10 of 12</b>verified</span>
+                  <span><b>3</b>Managers</span>
+                  <span><b>2m 18s</b>duration</span>
+                </div>
+              </header>
+
+              <div class="replay-body">
+                <section
+                  class="manager-group"
+                  aria-labelledby="replay-homebrew"
+                >
+                  <header class="manager-head">
+                    <h3 id="replay-homebrew">Homebrew</h3>
+                    <span class="chip success">Verified</span>
+                    <p>6 of 6 verified</p>
+                  </header>
+                  <div class="command-row">
+                    <div class="command-title">
+                      <time datetime="2026-07-24T10:42:03-04:00">10:42:03</time>
+                      <strong>Refresh Homebrew metadata</strong>
+                      <span class="outcome success">Succeeded · 7s</span>
+                    </div>
+                    <details>
+                      <summary>Show command output</summary>
+                      <pre class="command-output">
+/opt/homebrew/bin/brew update
+Already up-to-date.</pre>
+                    </details>
+                  </div>
+                  <div class="command-row">
+                    <div class="command-title">
+                      <time datetime="2026-07-24T10:42:10-04:00">10:42:10</time>
+                      <strong>Upgrade 6 Homebrew Packages</strong>
+                      <span class="outcome success">Succeeded · 58s</span>
+                    </div>
+                    <div
+                      class="package-results"
+                      aria-label="Verified Homebrew Packages"
+                    >
+                      <span class="package-result verified"
+                        ><b>ripgrep</b> 14.1.1</span
+                      >
+                      <span class="package-result verified"
+                        ><b>gh</b> 2.77.0</span
+                      >
+                      <span class="package-result verified"
+                        ><b>node@24</b> 24.5.1</span
+                      >
+                      <span class="package-result verified"
+                        ><b>jq</b> 1.8.0</span
+                      >
+                      <span class="package-result verified"
+                        ><b>git</b> 2.50.2</span
+                      >
+                      <span class="package-result verified"
+                        ><b>fd</b> 10.2.0</span
+                      >
+                    </div>
+                    <details>
+                      <summary>Show command output</summary>
+                      <pre class="command-output">
+/opt/homebrew/bin/brew upgrade ripgrep gh node@24 jq git fd
+6 Packages upgraded. Refresh verified every target version.</pre>
+                    </details>
+                  </div>
+                </section>
+
+                <section class="manager-group" aria-labelledby="replay-mise">
+                  <header class="manager-head">
+                    <h3 id="replay-mise">mise</h3>
+                    <span class="chip success">Verified</span>
+                    <p>3 of 3 verified</p>
+                  </header>
+                  <div class="command-row">
+                    <div class="command-title">
+                      <time datetime="2026-07-24T10:43:08-04:00">10:43:08</time>
+                      <strong>Upgrade 3 mise Packages</strong>
+                      <span class="outcome success">Succeeded · 42s</span>
+                    </div>
+                    <div
+                      class="package-results"
+                      aria-label="Verified mise Packages"
+                    >
+                      <span class="package-result verified"
+                        ><b>node@24</b> 24.5.1</span
+                      >
+                      <span class="package-result verified"
+                        ><b>python@3.13</b> 3.13.6</span
+                      >
+                      <span class="package-result verified"
+                        ><b>pnpm</b> 10.14.0</span
+                      >
+                    </div>
+                    <details>
+                      <summary>Show command output</summary>
+                      <pre class="command-output">
+/opt/homebrew/bin/mise upgrade node@24 python@3.13 pnpm
+3 Packages upgraded and verified.</pre>
+                    </details>
+                  </div>
+                </section>
+
+                <section class="manager-group" aria-labelledby="replay-npm">
+                  <header class="manager-head">
+                    <h3 id="replay-npm">npm</h3>
+                    <span class="chip failed">2 failed</span>
+                    <p>1 of 3 verified</p>
+                  </header>
+                  <div class="command-row">
+                    <div class="command-title">
+                      <time datetime="2026-07-24T10:43:50-04:00">10:43:50</time>
+                      <strong>Upgrade 3 npm Packages</strong>
+                      <span class="outcome failed">Exited 1 · 30s</span>
+                    </div>
+                    <div
+                      class="package-results"
+                      aria-label="npm Package outcomes"
+                    >
+                      <span class="package-result verified"
+                        ><b>@openai/codex</b> 0.41.0</span
+                      >
+                      <span class="package-result failed"
+                        ><b>vite</b> 7.0.5 → 7.0.6 failed</span
+                      >
+                      <span class="package-result failed"
+                        ><b>typescript</b> 5.8.2 → 5.8.3 failed</span
+                      >
+                    </div>
+                    <div class="failure-note">
+                      <b>What happened:</b> npm exited with code 1. Refresh
+                      verified @openai/codex, but vite and typescript still
+                      report their previous versions.
+                      <br />
+                      <b>What to do next:</b> Review the retained output before
+                      creating a new retry plan.
+                    </div>
+                    <details>
+                      <summary>Show command output</summary>
+                      <pre class="command-output">
+/Users/sallvain/.local/share/mise/installs/node/24/bin/npm update -g @openai/codex vite typescript
+npm error code EACCES
+npm error A complete log is retained for this operation.</pre>
+                    </details>
+                  </div>
+                </section>
+              </div>
+            </section>
+          </div>
+        </main>
+
+        <aside
+          class="activity-sidecar"
+          id="live-activity"
+          aria-labelledby="live-title"
+        >
+          <header class="live-head">
+            <div class="live-headline">
+              <span class="eyebrow">Live Upgrade Activity</span>
+              <span class="chip live">Running</span>
+            </div>
+            <h2 id="live-title" tabindex="-1">6 of 9 verified</h2>
+            <p>
+              One Package is updating now. The past plan at left remains
+              read-only.
+            </p>
+            <button class="back-live" type="button">
+              Back to live activity
+            </button>
+            <div
+              class="overall"
+              aria-label="6 of 9 current plan items verified"
+            >
+              <div class="overall-copy">
+                <span><b>6 verified</b> · 1 running · 2 queued</span>
+                <span>1m 14s</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill"></div>
+              </div>
+            </div>
+          </header>
+
+          <div class="activity-scroll">
+            <section class="live-manager" aria-labelledby="live-homebrew">
+              <header class="live-manager-head">
+                <span class="manager-glyph" aria-hidden="true">H</span>
+                <strong id="live-homebrew">Homebrew</strong>
+                <span>4 of 4 verified</span>
+              </header>
+              <div
+                class="operation verified"
+                style="--operation-progress: 100%; --operation-color: #72e6a0"
+              >
+                <div>
+                  <strong>ripgrep</strong>
+                  <small>Verified current version 14.1.1</small>
+                </div>
+                <span class="operation-state">Verified</span>
+              </div>
+              <div
+                class="operation verified"
+                style="--operation-progress: 100%; --operation-color: #72e6a0"
+              >
+                <div>
+                  <strong>gh</strong>
+                  <small>Verified current version 2.77.0</small>
+                </div>
+                <span class="operation-state">Verified</span>
+              </div>
+              <div
+                class="operation verified"
+                style="--operation-progress: 100%; --operation-color: #72e6a0"
+              >
+                <div>
+                  <strong>jq and git</strong>
+                  <small>2 Packages verified</small>
+                </div>
+                <span class="operation-state">Verified</span>
+              </div>
+            </section>
+
+            <section class="live-manager" aria-labelledby="live-mise">
+              <header class="live-manager-head">
+                <span class="manager-glyph" aria-hidden="true">mi</span>
+                <strong id="live-mise">mise</strong>
+                <span>2 of 3 verified</span>
+              </header>
+              <div
+                class="operation verified"
+                style="--operation-progress: 100%; --operation-color: #72e6a0"
+              >
+                <div>
+                  <strong>node@24</strong>
+                  <small>Verified current version 24.5.1</small>
+                </div>
+                <span class="operation-state">Verified</span>
+              </div>
+              <div
+                class="operation verified"
+                style="--operation-progress: 100%; --operation-color: #72e6a0"
+              >
+                <div>
+                  <strong>pnpm</strong>
+                  <small>Verified current version 10.14.0</small>
+                </div>
+                <span class="operation-state">Verified</span>
+              </div>
+              <div class="operation running">
+                <div>
+                  <strong>python@3.13</strong>
+                  <small>3.13.5 → 3.13.6 · upgrading now</small>
+                </div>
+                <span class="operation-state">Running</span>
+              </div>
+            </section>
+
+            <section class="live-manager" aria-labelledby="live-npm">
+              <header class="live-manager-head">
+                <span class="manager-glyph" aria-hidden="true">n</span>
+                <strong id="live-npm">npm</strong>
+                <span>0 of 2 verified</span>
+              </header>
+              <div class="operation queued">
+                <div>
+                  <strong>@openai/codex</strong>
+                  <small>Waiting for mise to finish the Node runtime</small>
+                </div>
+                <span class="operation-state">Queued</span>
+              </div>
+              <div class="operation queued">
+                <div>
+                  <strong>vite</strong>
+                  <small>Waiting for mise to finish the Node runtime</small>
+                </div>
+                <span class="operation-state">Queued</span>
+              </div>
+            </section>
+          </div>
+
+          <footer class="live-foot">
+            Progress updates do not move focus. Exact command output remains
+            available from the live Activity detail.
+          </footer>
+        </aside>
+      </div>
+    </section>
+  </body>
+</html>

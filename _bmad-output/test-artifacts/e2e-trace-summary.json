@@ -1,0 +1,264 @@
+{
+  "schema_version": "0.1.0",
+  "snapshot_at": "2026-07-23T02:34:59.314Z",
+  "repo": "Pack-Manager",
+  "collection_mode": "contract_static",
+  "collection_status": "COLLECTED",
+  "inventory_basis": "acceptance_criteria",
+  "gate_basis": "priority_thresholds",
+  "source_sha": "fe2881f3e48d26c0561857f72143c6570a5620fc",
+  "target": {
+    "type": "release",
+    "id": null,
+    "label": "Pack-Manager product and release requirements"
+  },
+  "decision_mode": "deterministic",
+  "evaluator": "Sallvain",
+  "confidence": "high",
+  "oracle": {
+    "resolution_mode": "formal_requirements",
+    "confidence": "high",
+    "sources": ["docs/SPEC.md", "docs/DECISIONS.md"],
+    "external_pointer_status": "not_used",
+    "synthetic": false
+  },
+  "coverage": {
+    "inventory": {
+      "covered": 14,
+      "total": 80,
+      "pct": 18
+    },
+    "priority_breakdown": {
+      "P0": {
+        "total": 72,
+        "covered": 14,
+        "pct": 19
+      },
+      "P1": {
+        "total": 8,
+        "covered": 0,
+        "pct": 0
+      },
+      "P2": {
+        "total": 0,
+        "covered": 0,
+        "pct": 100
+      },
+      "P3": {
+        "total": 0,
+        "covered": 0,
+        "pct": 100
+      }
+    },
+    "by_level": {
+      "e2e": {
+        "tests": 6,
+        "criteria_covered": 9
+      },
+      "api": {
+        "tests": 0,
+        "criteria_covered": 0
+      },
+      "component": {
+        "tests": 55,
+        "criteria_covered": 40
+      },
+      "unit": {
+        "tests": 177,
+        "criteria_covered": 57
+      },
+      "other": {
+        "tests": 0,
+        "criteria_covered": 0
+      }
+    }
+  },
+  "tests": {
+    "files": 53,
+    "cases": 238,
+    "skipped_cases": 0,
+    "fixme_cases": 0,
+    "pending_cases": 0
+  },
+  "risk_summary": {
+    "critical_open": 5,
+    "high_open": 5,
+    "medium_open": 0,
+    "low_open": 0
+  },
+  "heuristics": {
+    "endpoint_gaps": 0,
+    "auth_negative_path_status": "present",
+    "error_path_status": "none",
+    "ui_journey_status": "not_applicable",
+    "ui_state_status": "not_applicable"
+  },
+  "blockers": [],
+  "recommendations": [
+    {
+      "priority": "URGENT",
+      "action": "Run bmad-testarch-atdd for the five uncovered P0 requirements.",
+      "requirements": ["F1-AC7", "D23a-AC4", "F10-AC2", "F10-AC3", "F10-AC4"]
+    },
+    {
+      "priority": "URGENT",
+      "action": "Correct D23a oracle drift and replace the stale mas live-smoke expectation before relying on target-machine acceptance.",
+      "requirements": ["F1-AC7", "D23a-AC4"]
+    },
+    {
+      "priority": "URGENT",
+      "action": "Add release-artifact verification for icon/bundle contents, universal architecture, signature, notarization/stapling, updater metadata, Finder launch, and install/relaunch.",
+      "requirements": [
+        "F10-AC2",
+        "F10-AC3",
+        "F10-AC4",
+        "D25-AC2",
+        "D25-AC3",
+        "D25-AC4",
+        "D25A-AC2"
+      ]
+    },
+    {
+      "priority": "HIGH",
+      "action": "Add a native Tauri integration harness for representative read, mutation, filesystem, updater, and event paths.",
+      "requirements": [
+        "F1-AC1",
+        "F4-AC4",
+        "F5-AC2",
+        "F6-AC4",
+        "F7-AC2",
+        "F9-AC1",
+        "D25-AC2"
+      ]
+    },
+    {
+      "priority": "HIGH",
+      "action": "Run bmad-testarch-automate for the five uncovered P1 requirements after deciding which deferred features will ship.",
+      "requirements": ["D25A-AC1", "F14-AC1", "F15-AC1", "F16-AC1", "F17-AC1"]
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Complete coverage for the 38 PARTIAL criteria, starting with updater, cancellation/stall, crash recovery, offline refresh, diagnostics privacy, and row-upgrade errors.",
+      "requirements": [
+        "F1-AC1",
+        "F1-AC2",
+        "F1-AC6",
+        "F1-AC8",
+        "F2-AC6",
+        "F2-AC8",
+        "F2-AC9",
+        "F3-AC1",
+        "F3-AC2",
+        "F3-AC3",
+        "F3-AC4",
+        "F3-AC6",
+        "F3-AC8",
+        "D23a-AC1",
+        "D23a-AC2",
+        "F4-AC1",
+        "F5-AC1",
+        "F5-AC3",
+        "F6-AC1",
+        "F7-AC2",
+        "F7-AC3",
+        "F7-AC4",
+        "F8-AC3",
+        "F8-AC4",
+        "F9-AC1",
+        "F9-AC4",
+        "F10-AC1",
+        "F11-AC2",
+        "F11-AC3",
+        "F11-AC4",
+        "F12-AC1",
+        "F12-AC2",
+        "D25-AC1",
+        "D25-AC2",
+        "D25-AC3",
+        "D25-AC4",
+        "D25-AC5",
+        "F13-AC1"
+      ]
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Promote critical UNIT-ONLY behavior across a native or packaged boundary without replacing deterministic unit coverage.",
+      "requirements": [
+        "F1-AC3",
+        "F1-AC4",
+        "F7-AC1",
+        "F8-AC1",
+        "F8-AC2",
+        "F9-AC3",
+        "F11-AC1",
+        "D26-AC1",
+        "D26-AC2"
+      ]
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Add red-path and missing-state browser/component tests for the nine happy-path-only criteria and six uncovered journey families.",
+      "requirements": [
+        "F4-AC1",
+        "F5-AC3",
+        "F8-AC4",
+        "F9-AC1",
+        "F9-AC4",
+        "F11-AC2",
+        "F11-AC3",
+        "F11-AC4",
+        "F13-AC1",
+        "F7-AC2",
+        "F7-AC3",
+        "F7-AC4",
+        "F1-AC6",
+        "F2-AC7",
+        "F2-AC8",
+        "F6-AC1",
+        "F6-AC3",
+        "F6-AC4",
+        "F3-AC3",
+        "F3-AC4",
+        "F4-AC3",
+        "F5-AC1",
+        "F10-AC3",
+        "F10-AC4",
+        "D25-AC1",
+        "D25-AC2",
+        "D25-AC3",
+        "D25-AC4",
+        "D25-AC5",
+        "D25A-AC1",
+        "D25A-AC2",
+        "F14-AC1",
+        "F15-AC1",
+        "F16-AC1",
+        "F17-AC1"
+      ]
+    },
+    {
+      "priority": "LOW",
+      "action": "Run bmad-testarch-test-review to assess test quality after the critical coverage work.",
+      "requirements": []
+    }
+  ],
+  "links": {
+    "trace_report_path": "_bmad-output/test-artifacts/traceability-matrix.md",
+    "trace_report_url": "",
+    "artifact_url": "",
+    "journey_evidence_url": ""
+  },
+  "gate_status": "FAIL",
+  "gate_criteria": {
+    "p0_coverage_required": "100%",
+    "p0_coverage_actual": "19%",
+    "p0_status": "NOT_MET",
+    "p1_coverage_target": "90%",
+    "p1_coverage_minimum": "80%",
+    "p1_coverage_actual": "0%",
+    "p1_status": "NOT_MET",
+    "overall_coverage_minimum": "80%",
+    "overall_coverage_actual": "18%",
+    "overall_status": "NOT_MET"
+  }
+}

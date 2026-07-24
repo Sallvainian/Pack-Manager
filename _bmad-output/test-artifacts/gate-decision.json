@@ -1,0 +1,24 @@
+{
+  "schema_version": "0.1.0",
+  "evaluated_at": "2026-07-23T02:34:59.314Z",
+  "repo": "Pack-Manager",
+  "target": {
+    "type": "release",
+    "id": null,
+    "label": "Pack-Manager product and release requirements"
+  },
+  "collection_status": "COLLECTED",
+  "gate_basis": "priority_thresholds",
+  "gate_status": "FAIL",
+  "rationale": "P0 coverage is 19% (required: 100%). 5 critical requirements uncovered.",
+  "p0_status": "NOT_MET",
+  "p1_status": "NOT_MET",
+  "overall_status": "NOT_MET",
+  "critical_open": 5,
+  "links": {
+    "trace_report_path": "_bmad-output/test-artifacts/traceability-matrix.md",
+    "trace_report_url": "",
+    "artifact_url": "",
+    "journey_evidence_url": ""
+  }
+}

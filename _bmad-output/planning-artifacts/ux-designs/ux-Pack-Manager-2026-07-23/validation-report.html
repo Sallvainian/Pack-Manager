@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pack-Manager Focused UX Validation Report</title>
+    <style>
+      :root {
+        --bg: #fafaf9;
+        --surface: #ffffff;
+        --border: #e7e5e4;
+        --text: #1c1917;
+        --muted: #78716c;
+        --adequate: #65a30d;
+        --thin: #d97706;
+        --critical: #dc2626;
+        --high: #ea580c;
+        --medium: #ca8a04;
+        --low: #64748b;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui,
+          sans-serif;
+        font-size: 15px;
+        line-height: 1.6;
+      }
+      .container {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 32px 24px 64px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 0;
+        font-size: 17px;
+      }
+      .subtitle,
+      .source,
+      footer {
+        color: var(--muted);
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 12px;
+      }
+      .header {
+        padding-bottom: 18px;
+        border-bottom: 1px solid var(--border);
+      }
+      .synthesis,
+      details,
+      .scope {
+        margin-top: 18px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        background: var(--surface);
+      }
+      .synthesis,
+      .scope {
+        padding: 18px 22px;
+      }
+      .synthesis {
+        border-left: 4px solid var(--thin);
+      }
+      .synthesis p,
+      .scope p {
+        margin: 0 0 10px;
+      }
+      .synthesis p:last-child,
+      .scope p:last-child {
+        margin-bottom: 0;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 12px;
+        margin: 18px 0;
+      }
+      .card {
+        padding: 14px 16px;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        background: var(--surface);
+      }
+      .card strong {
+        display: block;
+        margin-top: 5px;
+      }
+      .counts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .badge,
+      .verdict {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 3px 9px;
+        color: white;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .badge.critical {
+        background: var(--critical);
+      }
+      .badge.high {
+        background: var(--high);
+      }
+      .badge.medium {
+        background: var(--medium);
+      }
+      .badge.low {
+        background: var(--low);
+      }
+      .verdict.thin {
+        background: var(--thin);
+      }
+      .verdict.adequate {
+        background: var(--adequate);
+      }
+      summary {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 15px 20px;
+        cursor: pointer;
+        list-style: none;
+      }
+      summary::-webkit-details-marker {
+        display: none;
+      }
+      summary::before {
+        content: "▸";
+        color: var(--muted);
+      }
+      details[open] summary::before {
+        transform: rotate(90deg);
+      }
+      summary h2 {
+        flex: 1;
+      }
+      .body {
+        padding: 0 20px 18px;
+      }
+      .finding {
+        padding: 14px 0;
+        border-top: 1px solid var(--border);
+      }
+      .finding:first-of-type {
+        border-top: 0;
+      }
+      .finding h3 {
+        display: inline;
+        margin: 0 0 0 8px;
+        font-size: 15px;
+      }
+      .finding p {
+        margin: 7px 0 0;
+      }
+      .fix {
+        color: #44403c;
+      }
+      ol {
+        margin-bottom: 0;
+      }
+      footer {
+        margin-top: 36px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          scroll-behavior: auto !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <header class="header">
+        <h1>Pack-Manager — Focused UX Validation Report</h1>
+        <div class="subtitle">
+          DESIGN.md + EXPERIENCE.md · 2026-07-24T02:30:58Z
+        </div>
+        <div class="subtitle">
+          Resolution: final spines and four promoted key-screen mockups ·
+          2026-07-24
+        </div>
+      </header>
+
+      <section class="synthesis" aria-labelledby="summary-title">
+        <h2 id="summary-title">Overall verdict</h2>
+        <p>
+          The contracts now provide a coherent implementation foundation: the
+          Upgrade Plan lifecycle is understandable, terminal evidence remains
+          secondary but available, failures are handled honestly, and
+          accessibility is treated as a product requirement.
+        </p>
+        <p>
+          No critical blocker was found. The reviewers reported 9 high, 7
+          medium, and 2 low findings; one high finding overlaps around
+          virtualized Package selection. Those findings are resolved in the
+          final spine pair and represented in the authoritative key-screen
+          mockups.
+        </p>
+        <p>
+          Resolution status: all findings below have been applied to DESIGN.md
+          and EXPERIENCE.md. Four key-screen mockups have also passed visual
+          validation at both target sizes and were promoted after mock coverage
+          was confirmed. This report preserves the original review record.
+        </p>
+        <div class="counts" aria-label="Finding counts">
+          <span class="badge critical">0 critical</span>
+          <span class="badge high">9 high</span>
+          <span class="badge medium">7 medium</span>
+          <span class="badge low">2 low</span>
+        </div>
+      </section>
+
+      <div class="cards" aria-label="Original review lens verdicts">
+        <div class="card">
+          <span>Usability</span>
+          <strong>Needs clarification</strong>
+          <span class="verdict thin">5 high · 5 medium · 2 low</span>
+        </div>
+        <div class="card">
+          <span>Accessibility</span>
+          <strong>Adequate foundation</strong>
+          <span class="verdict adequate">4 high · 2 medium</span>
+        </div>
+      </div>
+
+      <section class="scope">
+        <h2>Review scope</h2>
+        <p>
+          This was the selected focused usability and accessibility review. The
+          broader rubric and adversarial lenses were intentionally not run.
+        </p>
+      </section>
+
+      <details open>
+        <summary>
+          <h2>Usability review</h2>
+          <span class="source">review-usability.md</span>
+        </summary>
+        <div class="body">
+          <p>
+            The mental model is strong, but several consequential actions have
+            ambiguous scope or consequences.
+          </p>
+
+          <article class="finding">
+            <span class="badge high">High</span>
+            <h3>Plan items cannot be edited directly in the sidecar</h3>
+            <p>
+              Update Everything provides no defined way to remove one Package or
+              Manager self-update.
+            </p>
+            <p class="fix">
+              <strong>Fix:</strong> Make every staged item removable, define In
+              Plan as a reversible state, update counts immediately, and return
+              Change Plan focus to the editable plan.
+            </p>
+          </article>
+
+          <article class="finding">
+            <span class="badge high">High</span>
+            <h3>Header Checkbox scope is ambiguous</h3>
+            <p>
+              “Eligible visible rows” could mean rendered rows or the complete
+              active-filter result.
+            </p>
+            <p class="fix">
+              <strong>Fix:</strong> Apply it to every eligible Package matching
+              the active filter, including virtualized rows; show the exact
+              count and mixed state.
+            </p>
+          </article>
+
+          <article class="finding">
+            <span class="badge high">High</span>
+            <h3>Confirmation-disabled action is unclear</h3>
+            <p>
+              Confirm # Updates implies another confirmation even when the
+              action executes immediately.
+            </p>
+            <p class="fix">
+              <strong>Fix:</strong> Show Confirmation is off, link to Settings,
+              expand commands, and relabel the action Run # updates.
+            </p>
+          </article>
+
+          <article class="finding">
+            <span class="badge high">High</span>
+            <h3>Abnormal Activity controls are undefined</h3>
+            <p>
+              Cancel, skip, wait, timeout, and unexpected command interaction
+              have states but no complete control contract.
+            </p>
+            <p class="fix">
+              <strong>Fix:</strong> Define when each safe action appears, what
+              it affects, and an explicit Interaction required blocked state for
+              unexpected prompts.
+            </p>
+          </article>
+
+          <article class="finding">
+            <span class="badge high">High</span>
+            <h3>Retry conflicts with one-entry History semantics</h3>
+            <p class="fix">
+              <strong>Fix:</strong> Each confirmed attempt creates a new History
+              entry linked to its source retry; the original result remains
+              unchanged.
+            </p>
+          </article>
+
+          <article class="finding">
+            <span class="badge medium">Medium</span>
+            <h3>Activity presentations can conflict</h3>
+            <p>
+              Define one shared live model, replay behavior during active work,
+              and a Back to live activity path.
+            </p>
+          </article>
+          <article class="finding">
+            <span class="badge medium">Medium</span>
+            <h3>Retry may displace unread Results</h3>
+            <p>
+              Define the transition and preserve the completed diagnosis in
+              History with a return path.
+            </p>
+          </article>
+          <article class="finding">
+            <span class="badge medium">Medium</span>
+            <h3>Unavailable states lack standard explanations</h3>
+            <p>
+              Explain excluded/unavailable Packages and use plain language such
+              as Managed through mise.
+            </p>
+          </article>
+          <article class="finding">
+            <span class="badge medium">Medium</span>
+            <h3>Application update discovery lacks a canonical location</h3>
+            <p>
+              Use Settings → Pack-Manager updates plus one restrained
+              application-level notice.
+            </p>
+          </article>
+          <article class="finding">
+            <span class="badge medium">Medium</span>
+            <h3>Settings persistence is undefined</h3>
+            <p>
+              Choose immediate saving with rollback or one consistent
+              Apply/Cancel model.
+            </p>
+          </article>
+          <article class="finding">
+            <span class="badge low">Low</span>
+            <h3>Results dismissal has two names</h3>
+            <p>Choose Done consistently.</p>
+          </article>
+          <article class="finding">
+            <span class="badge low">Low</span>
+            <h3>History updated/total can overstate success</h3>
+            <p>Use verified wording such as 10 of 12 verified · 2 failed.</p>
+          </article>
+        </div>
+      </details>
+
+      <section class="scope">
+        <h2>Applied-resolution verification</h2>
+        <ul>
+          <li>
+            All reported usability and accessibility findings are represented in
+            DESIGN.md and EXPERIENCE.md.
+          </li>
+          <li>
+            Component tables match across the spine pair, and every referenced
+            color token resolves.
+          </li>
+          <li>
+            Focus-ring contrast, all six annotated user journeys, YAML
+            frontmatter, formatting, and whitespace checks pass.
+          </li>
+          <li>
+            Manager workspace, live Activity and Results, History replay, and
+            Settings/app-update mockups were validated at 1440 × 900 and 900 ×
+            600.
+          </li>
+          <li>
+            The validated pages have no document or app-window horizontal
+            overflow and produced no browser-console errors or warnings.
+          </li>
+          <li>
+            The completed Results canvas was inspected independently at both
+            validation sizes.
+          </li>
+          <li>
+            The required structure-and-prose review completed; all ten material
+            prose refinements were applied. Mandatory machine-readable
+            frontmatter, canonical section order, full journeys, and deliberate
+            cross-checks were preserved.
+          </li>
+        </ul>
+      </section>
+
+      <details open>
+        <summary>
+          <h2>Accessibility review</h2>
+          <span class="source">review-accessibility.md</span>
+        </summary>
+        <div class="body">
+          <p>
+            The accessibility direction is strong, but implementation could
+            still lose focus or expose incomplete virtualized content unless the
+            remaining details become normative.
+          </p>
+
+          <article class="finding">
+            <span class="badge high">High</span>
+            <h3>Focus boundary token is too weak</h3>
+            <p>
+              borderStrong measures only 2.33:1 against surface and no separate
+              focus token is defined.
+            </p>
+            <p class="fix">
+              <strong>Fix:</strong> Use accent or a dedicated token with a
+              separated minimum 2px ring and distinguish focus from selection.
+            </p>
+          </article>
+
+          <article class="finding">
+            <span class="badge high">High</span>
+            <h3>Virtualized Package-table operation is incomplete</h3>
+            <p>
+              Table semantics, bounded Tab behavior, arrow navigation, stable
+              focus, position metadata, and final-row reachability are not
+              defined.
+            </p>
+            <p class="fix">
+              <strong>Fix:</strong> Add one normative table interaction model
+              and verify the packaged app with VoiceOver and 101 rows.
+            </p>
+          </article>
+
+          <article class="finding">
+            <span class="badge high">High</span>
+            <h3>Lifecycle focus transitions are undefined</h3>
+            <p class="fix">
+              <strong>Fix:</strong> Define initial dialog focus, final-confirm
+              focus, stable Activity focus, Results announcement/focus, and
+              focus restoration after Results closes.
+            </p>
+          </article>
+
+          <article class="finding">
+            <span class="badge high">High</span>
+            <h3>Fixed panes conflict with 200% zoom</h3>
+            <p class="fix">
+              <strong>Fix:</strong> Add a high-zoom/narrow mode that collapses
+              navigation and makes Plan/Activity/Results a full-workspace or
+              stacked surface; test 100%, 150%, and 200%.
+            </p>
+          </article>
+
+          <article class="finding">
+            <span class="badge medium">Medium</span>
+            <h3>Live-announcement behavior is underspecified</h3>
+            <p>
+              Define one atomic channel for meaningful plan events, suppress
+              duplicate notification speech, and never announce output lines or
+              progress ticks.
+            </p>
+          </article>
+
+          <article class="finding">
+            <span class="badge medium">Medium</span>
+            <h3>Explanatory-disabled semantics are contradictory</h3>
+            <p>
+              A native disabled Checkbox cannot receive focus or activation. Use
+              an unavailable semantic state without native disabled, attach a
+              persistent accessible description, and keep activation inert.
+            </p>
+          </article>
+        </div>
+      </details>
+
+      <section class="scope">
+        <h2>Recommended resolution order</h2>
+        <ol>
+          <li>
+            Resolve the five high-impact workflow ambiguities and four
+            high-impact accessibility contracts.
+          </li>
+          <li>
+            Resolve coexistence, persistence, unavailable-state, announcement,
+            and explanatory-disabled details.
+          </li>
+          <li>Standardize Done and verified History wording.</li>
+          <li>
+            Render the remaining authoritative mockups only after the high
+            findings are committed.
+          </li>
+        </ol>
+        <p>Steps 1–4 and finalization are complete.</p>
+      </section>
+
+      <footer>
+        Reviewers: review-usability.md · review-accessibility.md<br />
+        Generated: 2026-07-24T02:30:58Z
+      </footer>
+    </main>
+  </body>
+</html>

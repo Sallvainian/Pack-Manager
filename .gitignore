@@ -42,3 +42,10 @@ src-tauri/target
 .agents/
 .claude/
 _bmad/
+
+# BMAD UX working scratch — screenshots, Playwright CLI logs, mockup
+# iterations, and memlogs. Regenerable exploration output, not deliverables;
+# the DESIGN.md/EXPERIENCE.md/mockups and reports under _bmad-output are tracked.
+**/.working/
+**/.playwright-cli/
+**/.memlog.md

@@ -1,0 +1,1580 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pack-Manager — Homebrew Manager workspace</title>
+    <style>
+      /*
+        Governing spine sections:
+        DESIGN.md — Brand & Style; Colors; Typography; Layout & Spacing;
+        Components: Sidebar Navigation, Manager Header, Package Filter,
+        Package Grid, Package Row, Checkbox, Status Chip, Upgrade Sidecar.
+        EXPERIENCE.md — Information Architecture: Manager workspace structure;
+        Component Patterns: Sidebar Navigation, Manager Header, Package Filter,
+        Package Grid, Package Row, Upgrade Sidecar; State Patterns: Draft Upgrade Plan;
+        Accessibility Floor; Responsive & Platform; Key Flow AJ-3.
+      */
+      * {
+        box-sizing: border-box;
+      }
+
+      :root {
+        color-scheme: dark;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+          system-ui, sans-serif;
+        color: #f4f7fb;
+        background: #090c13;
+      }
+
+      html {
+        min-width: 900px;
+        min-height: 600px;
+      }
+
+      body {
+        min-width: 900px;
+        min-height: 600px;
+        margin: 0;
+        background:
+          radial-gradient(circle at 76% 3%, #193b5e 0, transparent 36rem),
+          radial-gradient(circle at 8% 76%, #2b2248 0, transparent 32rem),
+          #090c13;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      button:focus-visible,
+      [tabindex]:focus-visible {
+        outline: 2px solid #f4f7fb;
+        outline-offset: 2px;
+        box-shadow: 0 0 0 5px #65a7ff66;
+      }
+
+      .screen-label {
+        width: min(1440px, calc(100vw - 32px));
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 14px auto 8px;
+        color: #aeb8c7;
+        font-size: 12px;
+      }
+
+      .screen-label strong {
+        color: #f4f7fb;
+        font-size: 13px;
+      }
+
+      .window {
+        width: min(1440px, calc(100vw - 32px));
+        height: clamp(600px, calc(100vh - 62px), 900px);
+        min-height: 600px;
+        margin: 0 auto 34px;
+        overflow: hidden;
+        border: 1px solid #2a3548;
+        border-radius: 18px;
+        background: #0f1420ee;
+        box-shadow:
+          0 34px 90px #0000007a,
+          inset 0 1px 0 #ffffff0f;
+        backdrop-filter: blur(28px) saturate(125%);
+      }
+
+      .titlebar {
+        height: 46px;
+        display: grid;
+        grid-template-columns: 190px 1fr 190px;
+        align-items: center;
+        border-bottom: 1px solid #2a3548;
+        background: #101622e8;
+      }
+
+      .traffic {
+        display: flex;
+        gap: 8px;
+        padding-left: 16px;
+      }
+
+      .traffic span {
+        width: 12px;
+        height: 12px;
+        border: 1px solid #00000033;
+        border-radius: 50%;
+      }
+
+      .traffic span:nth-child(1) {
+        background: #ff5f57;
+      }
+
+      .traffic span:nth-child(2) {
+        background: #febc2e;
+      }
+
+      .traffic span:nth-child(3) {
+        background: #28c840;
+      }
+
+      .window-title {
+        justify-self: center;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .window-state {
+        justify-self: end;
+        padding-right: 16px;
+        color: #8d99aa;
+        font-size: 11px;
+      }
+
+      .shell {
+        height: calc(100% - 46px);
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 190px minmax(0, 1fr);
+      }
+
+      .sidebar {
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        padding: 18px 14px 14px;
+        overflow: auto;
+        border-right: 1px solid #2a3548;
+        background: #0d121cdd;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 0 8px 4px;
+      }
+
+      .brand-mark {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        flex: 0 0 34px;
+        place-items: center;
+        border: 1px solid #65a7ff99;
+        border-radius: 11px;
+        background: linear-gradient(145deg, #65a7ff, #745ee7);
+        box-shadow: 0 8px 28px #4f77ff4d;
+        font-size: 17px;
+        font-weight: 900;
+      }
+
+      .brand strong,
+      .brand small {
+        display: block;
+      }
+
+      .brand strong {
+        font-size: 14px;
+      }
+
+      .brand small {
+        color: #8d99aa;
+        font-size: 10px;
+      }
+
+      .nav-label {
+        margin: 0 9px 6px;
+        color: #78869a;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+
+      .nav {
+        display: grid;
+        gap: 3px;
+      }
+
+      .nav-item {
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 10px;
+        border: 1px solid transparent;
+        border-radius: 9px;
+        color: #aeb8c7;
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .nav-item svg {
+        width: 17px;
+        height: 17px;
+        flex: 0 0 17px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+
+      .nav-item.disclosure {
+        color: #f4f7fb;
+      }
+
+      .chevron {
+        width: 12px;
+        margin-left: auto;
+        color: #8d99aa;
+        text-align: center;
+      }
+
+      .manager-links {
+        display: grid;
+        gap: 2px;
+        margin: 1px 0 4px 28px;
+        padding-left: 9px;
+        border-left: 1px solid #2a3548;
+      }
+
+      .manager-link {
+        min-height: 30px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 8px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        color: #8d99aa;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .manager-link.active {
+        border-color: #65a7ff4d;
+        background: linear-gradient(90deg, #65a7ff26, #65a7ff0a);
+        box-shadow: inset 3px 0 #65a7ff;
+        color: #f4f7fb;
+      }
+
+      .manager-dot {
+        width: 18px;
+        height: 18px;
+        display: grid;
+        place-items: center;
+        border-radius: 6px;
+        background: #202a3c;
+        color: #cbd5e2;
+        font-size: 8px;
+        font-weight: 800;
+      }
+
+      .sidebar-status {
+        margin-top: auto;
+        padding: 11px;
+        border: 1px solid #2a3548;
+        border-radius: 12px;
+        background: #151c2a;
+      }
+
+      .sidebar-status b {
+        display: block;
+        font-size: 11px;
+      }
+
+      .sidebar-status span {
+        display: block;
+        margin-top: 4px;
+        color: #8d99aa;
+        font-size: 9px;
+        line-height: 1.45;
+      }
+
+      .content-shell {
+        min-width: 0;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 370px;
+        gap: 14px;
+        padding: 16px;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 82% 0, #1c41634d, transparent 29rem),
+          linear-gradient(#101622e8, #0d121ceb);
+      }
+
+      .manager-workspace {
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 13px;
+        overflow: hidden;
+      }
+
+      .manager-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 18px;
+        padding: 16px;
+        border: 1px solid #2a3548;
+        border-radius: 13px;
+        background: linear-gradient(145deg, #1c2536d6, #141b28b8), #151c2a;
+        box-shadow: inset 0 1px #ffffff0d;
+      }
+
+      .manager-title {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+      }
+
+      .manager-icon {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        flex: 0 0 42px;
+        place-items: center;
+        border: 1px solid #ffffff17;
+        border-radius: 12px;
+        background: #212c40;
+        font-size: 15px;
+        font-weight: 850;
+      }
+
+      .manager-name-line {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 20px;
+        letter-spacing: -0.025em;
+      }
+
+      .installed-version {
+        color: #8d99aa;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .manager-role {
+        display: block;
+        margin-top: 3px;
+        color: #aeb8c7;
+        font-size: 11px;
+      }
+
+      .manager-path {
+        display: block;
+        margin-top: 4px;
+        color: #78869a;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 10px;
+      }
+
+      .manager-update {
+        display: flex;
+        align-items: flex-start;
+        gap: 11px;
+      }
+
+      .update-copy {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 7px;
+      }
+
+      .status-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 0 9px;
+        border: 1px solid #f1c87559;
+        border-radius: 999px;
+        background: #f1c87514;
+        color: #f1d994;
+        font-size: 9px;
+        font-weight: 850;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .status-chip.plan-state {
+        border-color: #65a7ff66;
+        background: #172a46;
+        color: #9bc7ff;
+      }
+
+      .status-chip.pinned {
+        border-color: #8d99aa55;
+        background: #8d99aa12;
+        color: #b7c0cc;
+      }
+
+      .status-chip.current {
+        border-color: #72e6a055;
+        background: #72e6a011;
+        color: #9af0b7;
+      }
+
+      .version-delta {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 11px;
+        font-weight: 650;
+        white-space: nowrap;
+      }
+
+      .old {
+        color: #f1c875;
+      }
+
+      .new {
+        color: #72e6a0;
+      }
+
+      .arrow {
+        padding: 0 4px;
+        color: #78869a;
+      }
+
+      .remove-button,
+      .text-button {
+        min-height: 28px;
+        padding: 0 8px;
+        border: 0;
+        background: transparent;
+        color: #dbe8fa;
+        font-size: 10px;
+        font-weight: 750;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+
+      .manager-controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .inventory-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .inventory-title h2 {
+        margin: 0;
+        font-size: 16px;
+      }
+
+      .inventory-title p {
+        margin: 3px 0 0;
+        color: #8d99aa;
+        font-size: 10px;
+      }
+
+      .filters {
+        display: inline-flex;
+        gap: 4px;
+        margin-left: auto;
+        padding: 3px;
+        border: 1px solid #2a3548;
+        border-radius: 10px;
+        background: #0b1019;
+      }
+
+      .filter {
+        min-height: 30px;
+        padding: 0 10px;
+        border: 1px solid transparent;
+        border-radius: 7px;
+        background: transparent;
+        color: #8d99aa;
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .filter.active {
+        border-color: #65a7ff4d;
+        background: #172a46;
+        color: #f4f7fb;
+      }
+
+      .package-grid {
+        min-height: 0;
+        flex: 1;
+        overflow: auto;
+        border: 1px solid #2a3548;
+        border-radius: 13px;
+        background: #151c2acc;
+      }
+
+      .grid-row {
+        min-width: 560px;
+        display: grid;
+        grid-template-columns:
+          44px minmax(150px, 1.4fr) minmax(120px, 1fr)
+          105px 105px;
+        align-items: center;
+        column-gap: 10px;
+        min-height: 53px;
+        padding: 0 13px;
+        border-bottom: 1px solid #263145;
+      }
+
+      .grid-row.header {
+        min-height: 46px;
+        position: sticky;
+        z-index: 2;
+        top: 0;
+        background: #111824f5;
+        color: #8d99aa;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .grid-row:last-child {
+        border-bottom: 0;
+      }
+
+      .grid-row.in-plan {
+        background: linear-gradient(90deg, #172a4680, transparent 65%);
+      }
+
+      .grid-row.pinned-row {
+        background: #0e141f80;
+        color: #9aa4b3;
+      }
+
+      .grid-row:focus-within {
+        box-shadow: inset 3px 0 #f4f7fb;
+      }
+
+      .check-control {
+        width: 30px;
+        height: 30px;
+        display: grid;
+        place-items: center;
+        border: 0;
+        background: transparent;
+        color: #aeb8c7;
+      }
+
+      .check-box {
+        width: 17px;
+        height: 17px;
+        display: grid;
+        place-items: center;
+        border: 1px solid #465773;
+        border-radius: 5px;
+        background: #090e17;
+        color: #07101d;
+        font-size: 13px;
+        font-weight: 900;
+        line-height: 1;
+      }
+
+      .check-control.checked .check-box,
+      .check-control.mixed .check-box {
+        border-color: #7db3ff;
+        background: #65a7ff;
+      }
+
+      .check-control.disabled {
+        color: #8d99aa;
+        cursor: help;
+      }
+
+      .check-control.disabled .check-box {
+        border-color: #5e6979;
+        background: #202632;
+        color: #8d99aa;
+      }
+
+      .bulk-label {
+        display: block;
+        margin-left: -4px;
+        color: #cbd5e2;
+        font-size: 9px;
+        font-weight: 650;
+        letter-spacing: 0;
+        text-transform: none;
+        white-space: nowrap;
+      }
+
+      .package-name strong {
+        display: block;
+        color: #f4f7fb;
+        font-size: 12px;
+      }
+
+      .package-name span,
+      .package-reason {
+        display: block;
+        margin-top: 3px;
+        color: #8d99aa;
+        font-size: 9px;
+        line-height: 1.35;
+      }
+
+      .package-reason {
+        color: #aeb8c7;
+      }
+
+      .version-cell {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 10px;
+      }
+
+      .source {
+        color: #8d99aa;
+        font-size: 9px;
+      }
+
+      .plan {
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid #52637d;
+        border-radius: 15px;
+        background: linear-gradient(160deg, #202c3bea, #111825f2), #151c2a;
+        box-shadow:
+          -18px 0 60px #00000054,
+          inset 0 1px #ffffff18;
+        backdrop-filter: blur(30px) saturate(130%);
+      }
+
+      .plan-head {
+        padding: 17px 17px 13px;
+        border-bottom: 1px solid #2f3a4e;
+      }
+
+      .eyebrow {
+        color: #65a7ff;
+        font-size: 9px;
+        font-weight: 850;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .plan h2 {
+        margin: 5px 0;
+        font-size: 17px;
+      }
+
+      .plan-head p {
+        margin: 0;
+        color: #aeb8c7;
+        font-size: 10px;
+        line-height: 1.45;
+      }
+
+      .plan-summary {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        margin-top: 12px;
+      }
+
+      .plan-summary span {
+        padding: 7px;
+        border: 1px solid #344157;
+        border-radius: 8px;
+        background: #11182799;
+        color: #8d99aa;
+        font-size: 8px;
+        text-align: center;
+      }
+
+      .plan-summary b {
+        display: block;
+        margin-bottom: 2px;
+        color: #f4f7fb;
+        font-size: 12px;
+      }
+
+      .plan-body {
+        min-height: 0;
+        flex: 1;
+        overflow: auto;
+        padding: 14px;
+      }
+
+      .plan-group-head {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 9px;
+      }
+
+      .plan-group-head h3 {
+        margin: 0;
+        font-size: 11px;
+      }
+
+      .plan-group-head small {
+        color: #8d99aa;
+        font-size: 9px;
+      }
+
+      .plan-change {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        align-items: center;
+        gap: 8px;
+        min-height: 38px;
+        padding: 6px 7px 6px 10px;
+        border: 1px solid #313e53;
+        border-radius: 8px;
+        background: #0c111bbb;
+      }
+
+      .plan-change + .plan-change {
+        margin-top: 5px;
+      }
+
+      .plan-change strong {
+        overflow: hidden;
+        font-size: 10px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .plan-change.manager-self {
+        margin-bottom: 9px;
+        border-color: #f1c87538;
+        background: #f1c8750a;
+      }
+
+      .plan-change .version-delta {
+        font-size: 9px;
+      }
+
+      .plan-change .remove-button {
+        color: #aeb8c7;
+        font-size: 9px;
+      }
+
+      .command-reveal {
+        min-height: 30px;
+        margin-top: 13px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #b9d6ff;
+        font-size: 10px;
+        font-weight: 800;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      .plan-foot {
+        padding: 13px 14px 14px;
+        border-top: 1px solid #2f3a4e;
+      }
+
+      .primary-button {
+        width: 100%;
+        min-height: 38px;
+        border: 1px solid #84b9ff;
+        border-radius: 9px;
+        background: linear-gradient(180deg, #76b4ff, #4f8fe8);
+        box-shadow: 0 7px 24px #529cff38;
+        color: #07101d;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .zoom-section {
+        padding: 0 16px 36px;
+      }
+
+      .zoom-label {
+        width: min(900px, calc(100vw - 32px));
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 0 auto 8px;
+        color: #aeb8c7;
+        font-size: 12px;
+      }
+
+      .zoom-label strong {
+        color: #f4f7fb;
+      }
+
+      .zoom-window {
+        width: min(900px, calc(100vw - 32px));
+        height: 600px;
+        display: grid;
+        grid-template-rows: 46px minmax(0, 1fr);
+        margin: 0 auto;
+        overflow: hidden;
+        border: 1px solid #2a3548;
+        border-radius: 18px;
+        background: #0f1420;
+        box-shadow: 0 28px 75px #00000070;
+      }
+
+      .zoom-titlebar {
+        display: grid;
+        grid-template-columns: 72px 1fr 72px;
+        align-items: center;
+        border-bottom: 1px solid #2a3548;
+        background: #101622;
+      }
+
+      .zoom-titlebar .traffic {
+        gap: 6px;
+        padding-left: 11px;
+      }
+
+      .zoom-titlebar .traffic span {
+        width: 10px;
+        height: 10px;
+      }
+
+      .zoom-content {
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 56px minmax(0, 1fr);
+      }
+
+      .nav-rail {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 7px;
+        border-right: 1px solid #2a3548;
+        background: #0d121c;
+      }
+
+      .rail-item {
+        width: 38px;
+        height: 38px;
+        display: grid;
+        place-items: center;
+        border: 1px solid transparent;
+        border-radius: 9px;
+        color: #aeb8c7;
+      }
+
+      .rail-item.active {
+        border-color: #65a7ff4d;
+        background: #172a46;
+        color: #f4f7fb;
+      }
+
+      .rail-item svg {
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+
+      .zoom-plan {
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        background:
+          radial-gradient(circle at 90% 0, #1c41634d, transparent 24rem),
+          #101622;
+      }
+
+      .zoom-plan-header {
+        padding: 14px 18px 12px;
+        border-bottom: 1px solid #2a3548;
+      }
+
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-bottom: 9px;
+        color: #b9d6ff;
+        font-size: 10px;
+        font-weight: 750;
+      }
+
+      .zoom-title-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .zoom-title-row h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .zoom-title-row p {
+        margin: 3px 0 0;
+        color: #aeb8c7;
+        font-size: 10px;
+      }
+
+      .zoom-summary {
+        display: flex;
+        gap: 6px;
+        margin-left: auto;
+      }
+
+      .zoom-summary span {
+        min-width: 66px;
+        padding: 6px 8px;
+        border: 1px solid #344157;
+        border-radius: 8px;
+        background: #11182799;
+        color: #8d99aa;
+        font-size: 8px;
+        text-align: center;
+      }
+
+      .zoom-summary b {
+        display: block;
+        color: #f4f7fb;
+        font-size: 11px;
+      }
+
+      .zoom-scroll {
+        min-height: 0;
+        flex: 1;
+        overflow: auto;
+        padding: 14px 18px;
+      }
+
+      .zoom-group {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 14px;
+        border: 1px solid #2a3548;
+        border-radius: 13px;
+        background: #151c2acc;
+      }
+
+      .zoom-foot {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 11px 18px;
+        border-top: 1px solid #2a3548;
+      }
+
+      .zoom-foot .primary-button {
+        width: auto;
+        min-width: 180px;
+        padding: 0 16px;
+      }
+
+      .zoom-foot .text-button {
+        min-width: 130px;
+      }
+
+      @media (max-width: 1080px) {
+        .shell {
+          grid-template-columns: 170px minmax(0, 1fr);
+        }
+
+        .titlebar {
+          grid-template-columns: 170px 1fr 170px;
+        }
+
+        .content-shell {
+          grid-template-columns: minmax(0, 1fr) 300px;
+          gap: 10px;
+          padding: 12px;
+        }
+
+        .manager-header {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 10px;
+          padding: 13px;
+        }
+
+        .manager-update {
+          align-items: center;
+          justify-content: space-between;
+          padding-top: 10px;
+          border-top: 1px solid #2a3548;
+        }
+
+        .update-copy {
+          align-items: flex-start;
+        }
+
+        .manager-path,
+        .source,
+        .grid-source,
+        .sidebar-status,
+        .manager-links .manager-link:nth-child(n + 5) {
+          display: none;
+        }
+
+        .grid-row {
+          min-width: 0;
+          grid-template-columns: 40px minmax(80px, 1fr) 102px 84px;
+          padding: 0 9px;
+        }
+
+        .grid-row > :nth-child(5) {
+          display: none;
+        }
+
+        .manager-controls {
+          flex-direction: row;
+          align-items: center;
+        }
+
+        .inventory-toolbar {
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .filters {
+          width: 100%;
+          margin-left: 0;
+        }
+
+        .filter {
+          min-width: 0;
+          flex: 1;
+        }
+
+        .filter {
+          padding: 0 7px;
+        }
+
+        .plan-head {
+          padding: 14px 13px 11px;
+        }
+
+        .plan-body {
+          padding: 11px;
+        }
+
+        .plan-change {
+          grid-template-columns: minmax(0, 1fr) auto;
+        }
+
+        .plan-change .version-delta {
+          grid-column: 1 / -1;
+          grid-row: 2;
+        }
+
+        .plan-change .remove-button {
+          grid-column: 2;
+          grid-row: 1;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition: none !important;
+          animation: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="screen-label">
+      <strong>Manager workspace · default desktop</strong>
+      <span>Homebrew selected · draft Upgrade Plan persists</span>
+    </div>
+
+    <section class="window" aria-label="Pack-Manager Homebrew workspace">
+      <header class="titlebar">
+        <div class="traffic" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="window-title">Pack-Manager</div>
+        <div class="window-state">Last refreshed 10:48 AM</div>
+      </header>
+
+      <div class="shell">
+        <aside class="sidebar" aria-label="Primary navigation">
+          <div class="brand">
+            <div class="brand-mark">P</div>
+            <div>
+              <strong>Pack-Manager</strong><small>Package control deck</small>
+            </div>
+          </div>
+
+          <div>
+            <p class="nav-label">Workspace</p>
+            <nav class="nav">
+              <div class="nav-item">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"
+                  ></path>
+                </svg>
+                Dashboard
+              </div>
+              <div class="nav-item disclosure" aria-expanded="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 7h16M4 12h16M4 17h16"></path>
+                </svg>
+                Managers <span class="chevron">⌄</span>
+              </div>
+              <div class="manager-links" aria-label="Detected Managers">
+                <div class="manager-link active">
+                  <span class="manager-dot">H</span>Homebrew
+                </div>
+                <div class="manager-link">
+                  <span class="manager-dot">mi</span>mise
+                </div>
+                <div class="manager-link">
+                  <span class="manager-dot">n</span>npm
+                </div>
+                <div class="manager-link">
+                  <span class="manager-dot">uv</span>uv
+                </div>
+                <div class="manager-link">
+                  <span class="manager-dot">R</span>rustup
+                </div>
+                <div class="manager-link">
+                  <span class="manager-dot">M</span>mas
+                </div>
+              </div>
+              <div class="nav-item">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 18V9M10 18V5M16 18v-7M22 18V7"></path>
+                </svg>
+                Activity
+              </div>
+              <div class="nav-item">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 12a9 9 0 1 0 3-6.7M3 3v5h5M12 7v5l3 2"></path>
+                </svg>
+                History
+              </div>
+            </nav>
+          </div>
+
+          <div class="sidebar-status">
+            <b>6 Managers detected</b>
+            <span
+              >Homebrew has one Manager update and eight Package updates.</span
+            >
+          </div>
+
+          <nav class="nav">
+            <div class="nav-item">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path
+                  d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34A1.7 1.7 0 0 0 14 20.93V21h-4v-.07a1.7 1.7 0 0 0-1.03-1.53 1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.53-1H3v-4h.07A1.7 1.7 0 0 0 4.6 8.97a1.7 1.7 0 0 0-.34-1.88l-.06-.06L7.03 4.2l.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 10 3.07V3h4v.07a1.7 1.7 0 0 0 1.03 1.53 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06a1.7 1.7 0 0 0-.34 1.88A1.7 1.7 0 0 0 20.93 10H21v4h-.07A1.7 1.7 0 0 0 19.4 15Z"
+                ></path>
+              </svg>
+              Settings
+            </div>
+          </nav>
+        </aside>
+
+        <main class="content-shell">
+          <section class="manager-workspace" aria-labelledby="homebrew-title">
+            <header class="manager-header">
+              <div class="manager-title">
+                <div class="manager-icon">H</div>
+                <div>
+                  <div class="manager-name-line">
+                    <h1 id="homebrew-title">Homebrew</h1>
+                    <span class="installed-version">4.3.12</span>
+                  </div>
+                  <span class="manager-role">macOS package manager</span>
+                  <code class="manager-path">/opt/homebrew/bin/brew</code>
+                </div>
+              </div>
+              <div class="manager-update">
+                <div class="update-copy">
+                  <span class="status-chip">Update available</span>
+                  <span class="version-delta"
+                    ><span class="old">4.3.12</span><span class="arrow">→</span
+                    ><span class="new">4.3.13</span></span
+                  >
+                </div>
+                <div class="manager-controls">
+                  <span class="status-chip plan-state">In plan</span>
+                  <button class="remove-button" type="button">Remove</button>
+                </div>
+              </div>
+            </header>
+
+            <div class="inventory-toolbar">
+              <div class="inventory-title">
+                <h2>Packages</h2>
+                <p>
+                  34 managed Packages · 8 updates · actionable updates first
+                </p>
+              </div>
+              <div class="filters" aria-label="Package filters">
+                <button class="filter active" type="button">
+                  All Packages&nbsp; 34
+                </button>
+                <button class="filter" type="button">Updates&nbsp; 8</button>
+                <button class="filter" type="button">Pinned&nbsp; 3</button>
+              </div>
+            </div>
+
+            <div
+              class="package-grid"
+              role="grid"
+              aria-label="Homebrew Packages"
+              aria-rowcount="34"
+            >
+              <div class="grid-row header" role="row">
+                <div>
+                  <button
+                    class="check-control mixed"
+                    type="button"
+                    aria-label="3 of 8 Package updates in the Upgrade Plan. Add all 8 updates."
+                  >
+                    <span class="check-box">−</span>
+                  </button>
+                </div>
+                <span class="bulk-label">3 of 8 in plan</span>
+                <span>Version</span>
+                <span>Status</span>
+                <span class="grid-source">Source</span>
+              </div>
+
+              <div class="grid-row in-plan" role="row" aria-rowindex="2">
+                <button
+                  class="check-control checked"
+                  type="button"
+                  aria-label="Remove ripgrep from Upgrade Plan"
+                >
+                  <span class="check-box">✓</span>
+                </button>
+                <div class="package-name">
+                  <strong>ripgrep</strong><span>Fast recursive search</span>
+                </div>
+                <div class="version-cell">
+                  <span class="old">14.1.0</span><span class="arrow">→</span
+                  ><span class="new">14.1.1</span>
+                </div>
+                <span class="status-chip plan-state">In plan</span>
+                <span class="source">formula</span>
+              </div>
+
+              <div class="grid-row in-plan" role="row" aria-rowindex="3">
+                <button
+                  class="check-control checked"
+                  type="button"
+                  aria-label="Remove gh from Upgrade Plan"
+                >
+                  <span class="check-box">✓</span>
+                </button>
+                <div class="package-name">
+                  <strong>gh</strong><span>GitHub command-line client</span>
+                </div>
+                <div class="version-cell">
+                  <span class="old">2.76.1</span><span class="arrow">→</span
+                  ><span class="new">2.77.0</span>
+                </div>
+                <span class="status-chip plan-state">In plan</span>
+                <span class="source">formula</span>
+              </div>
+
+              <div class="grid-row in-plan" role="row" aria-rowindex="4">
+                <button
+                  class="check-control checked"
+                  type="button"
+                  aria-label="Remove jq from Upgrade Plan"
+                >
+                  <span class="check-box">✓</span>
+                </button>
+                <div class="package-name">
+                  <strong>jq</strong><span>JSON command-line processor</span>
+                </div>
+                <div class="version-cell">
+                  <span class="old">1.7.1</span><span class="arrow">→</span
+                  ><span class="new">1.8.0</span>
+                </div>
+                <span class="status-chip plan-state">In plan</span>
+                <span class="source">formula</span>
+              </div>
+
+              <div class="grid-row" role="row" aria-rowindex="5">
+                <button
+                  class="check-control"
+                  type="button"
+                  aria-label="Add node 24 to Upgrade Plan"
+                >
+                  <span class="check-box"></span>
+                </button>
+                <div class="package-name">
+                  <strong>node@24</strong><span>JavaScript runtime</span>
+                </div>
+                <div class="version-cell">
+                  <span class="old">24.5.0</span><span class="arrow">→</span
+                  ><span class="new">24.5.1</span>
+                </div>
+                <span class="status-chip">Update</span>
+                <span class="source">formula</span>
+              </div>
+
+              <div class="grid-row" role="row" aria-rowindex="6">
+                <button
+                  class="check-control"
+                  type="button"
+                  aria-label="Add wget to Upgrade Plan"
+                >
+                  <span class="check-box"></span>
+                </button>
+                <div class="package-name">
+                  <strong>wget</strong><span>Internet file retriever</span>
+                </div>
+                <div class="version-cell">
+                  <span class="old">1.24.5</span><span class="arrow">→</span
+                  ><span class="new">1.25.0</span>
+                </div>
+                <span class="status-chip">Update</span>
+                <span class="source">formula</span>
+              </div>
+
+              <div class="grid-row pinned-row" role="row" aria-rowindex="7">
+                <button
+                  class="check-control disabled"
+                  type="button"
+                  aria-disabled="true"
+                  aria-describedby="ffmpeg-pinned-reason"
+                  aria-label="ffmpeg is pinned and cannot be added"
+                >
+                  <span class="check-box">—</span>
+                </button>
+                <div class="package-name">
+                  <strong>ffmpeg</strong>
+                  <span class="package-reason" id="ffmpeg-pinned-reason"
+                    >This Package is pinned and cannot be updated. Unpin it,
+                    then refresh Pack-Manager to make it selectable.</span
+                  >
+                </div>
+                <div class="version-cell">
+                  <span>7.1.1</span><span class="arrow">→</span
+                  ><span class="new">7.1.2</span>
+                </div>
+                <span class="status-chip pinned">Pinned</span>
+                <span class="source">formula</span>
+              </div>
+
+              <div class="grid-row" role="row" aria-rowindex="8">
+                <button
+                  class="check-control disabled"
+                  type="button"
+                  aria-disabled="true"
+                  aria-label="git is current and cannot be added"
+                >
+                  <span class="check-box">—</span>
+                </button>
+                <div class="package-name">
+                  <strong>git</strong><span>Distributed version control</span>
+                </div>
+                <div class="version-cell">2.50.2</div>
+                <span class="status-chip current">Current</span>
+                <span class="source">formula</span>
+              </div>
+            </div>
+          </section>
+
+          <aside class="plan" aria-label="Upgrade Plan">
+            <div class="plan-head">
+              <span class="eyebrow">Review before anything runs</span>
+              <h2>Upgrade Plan</h2>
+              <p>
+                Four staged changes. Remove any item or review the exact
+                commands before confirmation.
+              </p>
+              <div class="plan-summary">
+                <span><b>4</b>Updates</span>
+                <span><b>1</b>Manager</span>
+                <span><b>2</b>Commands</span>
+              </div>
+            </div>
+
+            <div class="plan-body">
+              <div class="plan-group-head">
+                <h3>Homebrew</h3>
+                <small>1 Manager · 3 Packages</small>
+              </div>
+
+              <div class="plan-change manager-self">
+                <strong>Homebrew</strong>
+                <span class="version-delta"
+                  ><span class="old">4.3.12</span><span class="arrow">→</span
+                  ><span class="new">4.3.13</span></span
+                >
+                <button class="remove-button" type="button">Remove</button>
+              </div>
+              <div class="plan-change">
+                <strong>ripgrep</strong>
+                <span class="version-delta"
+                  ><span class="old">14.1.0</span><span class="arrow">→</span
+                  ><span class="new">14.1.1</span></span
+                >
+                <button class="remove-button" type="button">Remove</button>
+              </div>
+              <div class="plan-change">
+                <strong>gh</strong>
+                <span class="version-delta"
+                  ><span class="old">2.76.1</span><span class="arrow">→</span
+                  ><span class="new">2.77.0</span></span
+                >
+                <button class="remove-button" type="button">Remove</button>
+              </div>
+              <div class="plan-change">
+                <strong>jq</strong>
+                <span class="version-delta"
+                  ><span class="old">1.7.1</span><span class="arrow">→</span
+                  ><span class="new">1.8.0</span></span
+                >
+                <button class="remove-button" type="button">Remove</button>
+              </div>
+
+              <button class="command-reveal" type="button">
+                Show 2 update commands
+              </button>
+            </div>
+
+            <div class="plan-foot">
+              <button class="primary-button" type="button">
+                Confirm 4 updates
+              </button>
+            </div>
+          </aside>
+        </main>
+      </div>
+    </section>
+
+    <section class="zoom-section" aria-label="High zoom Manager workspace">
+      <div class="zoom-label">
+        <strong>High zoom / narrow effective width</strong>
+        <span>150–200% at 900 × 600 · Plan becomes the full workspace</span>
+      </div>
+
+      <div class="zoom-window">
+        <header class="zoom-titlebar">
+          <div class="traffic" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="window-title">Pack-Manager</div>
+          <div></div>
+        </header>
+
+        <div class="zoom-content">
+          <nav class="nav-rail" aria-label="Collapsed primary navigation">
+            <div class="rail-item">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"
+                ></path>
+              </svg>
+            </div>
+            <div class="rail-item active">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 7h16M4 12h16M4 17h16"></path>
+              </svg>
+            </div>
+            <div class="rail-item">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 18V9M10 18V5M16 18v-7M22 18V7"></path>
+              </svg>
+            </div>
+          </nav>
+
+          <main class="zoom-plan">
+            <div class="zoom-plan-header">
+              <span class="back-link">← Back to Homebrew</span>
+              <div class="zoom-title-row">
+                <div>
+                  <span class="eyebrow">Full-workspace plan</span>
+                  <h2>Upgrade Plan</h2>
+                  <p>All four staged changes remain editable at high zoom.</p>
+                </div>
+                <div class="zoom-summary">
+                  <span><b>4</b>Updates</span>
+                  <span><b>1</b>Manager</span>
+                  <span><b>2</b>Commands</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="zoom-scroll">
+              <section class="zoom-group">
+                <div class="plan-group-head">
+                  <h3>Homebrew</h3>
+                  <small>1 Manager · 3 Packages</small>
+                </div>
+                <div class="plan-change manager-self">
+                  <strong>Homebrew</strong>
+                  <span class="version-delta"
+                    ><span class="old">4.3.12</span><span class="arrow">→</span
+                    ><span class="new">4.3.13</span></span
+                  >
+                  <button class="remove-button" type="button">Remove</button>
+                </div>
+                <div class="plan-change">
+                  <strong>ripgrep</strong>
+                  <span class="version-delta"
+                    ><span class="old">14.1.0</span><span class="arrow">→</span
+                    ><span class="new">14.1.1</span></span
+                  >
+                  <button class="remove-button" type="button">Remove</button>
+                </div>
+                <div class="plan-change">
+                  <strong>gh</strong>
+                  <span class="version-delta"
+                    ><span class="old">2.76.1</span><span class="arrow">→</span
+                    ><span class="new">2.77.0</span></span
+                  >
+                  <button class="remove-button" type="button">Remove</button>
+                </div>
+                <div class="plan-change">
+                  <strong>jq</strong>
+                  <span class="version-delta"
+                    ><span class="old">1.7.1</span><span class="arrow">→</span
+                    ><span class="new">1.8.0</span></span
+                  >
+                  <button class="remove-button" type="button">Remove</button>
+                </div>
+                <button class="command-reveal" type="button">
+                  Show 2 update commands
+                </button>
+              </section>
+            </div>
+
+            <footer class="zoom-foot">
+              <button class="text-button" type="button">
+                Back to Homebrew
+              </button>
+              <button class="primary-button" type="button">
+                Confirm 4 updates
+              </button>
+            </footer>
+          </main>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

@@ -1,0 +1,985 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pack-Manager — Settings and application update</title>
+    <style>
+      /*
+        Governing contracts:
+        DESIGN.md — Colors, Typography, Layout & Spacing, Components
+        EXPERIENCE.md — Information Architecture, Settings and application
+        updates, Settings Section, Application Update Status, Accessibility
+        Floor, Responsive & Platform, AJ-6
+      */
+      * {
+        box-sizing: border-box;
+      }
+
+      :root {
+        color-scheme: dark;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+          system-ui, sans-serif;
+        background: #090c13;
+        color: #f4f7fb;
+      }
+
+      html,
+      body {
+        min-width: 900px;
+        min-height: 600px;
+        margin: 0;
+      }
+
+      body {
+        background:
+          radial-gradient(circle at 78% 4%, #193b5e 0, transparent 34rem),
+          radial-gradient(circle at 10% 94%, #2b2248 0, transparent 28rem),
+          #090c13;
+      }
+
+      button,
+      input,
+      select,
+      summary {
+        font: inherit;
+      }
+
+      button,
+      summary,
+      a,
+      label {
+        cursor: pointer;
+      }
+
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible,
+      summary:focus-visible,
+      a:focus-visible {
+        outline: 2px solid #f4f7fb;
+        outline-offset: 3px;
+        box-shadow: 0 0 0 6px #65a7ff66;
+      }
+
+      .window {
+        width: min(1440px, calc(100vw - 32px));
+        height: min(900px, calc(100vh - 32px));
+        min-height: 600px;
+        margin: 16px auto;
+        overflow: hidden;
+        border: 1px solid #2a3548;
+        border-radius: 18px;
+        background: #0f1420ee;
+        box-shadow:
+          0 34px 90px #0000007a,
+          inset 0 1px #ffffff0f;
+        backdrop-filter: blur(28px) saturate(125%);
+      }
+
+      .titlebar {
+        height: 46px;
+        display: grid;
+        grid-template-columns: 190px 1fr 260px;
+        align-items: center;
+        border-bottom: 1px solid #2a3548;
+        background: #101622e8;
+      }
+
+      .traffic {
+        display: flex;
+        gap: 8px;
+        padding-left: 16px;
+      }
+
+      .traffic i {
+        width: 12px;
+        height: 12px;
+        border: 1px solid #00000033;
+        border-radius: 50%;
+      }
+
+      .traffic i:nth-child(1) {
+        background: #ff5f57;
+      }
+
+      .traffic i:nth-child(2) {
+        background: #febc2e;
+      }
+
+      .traffic i:nth-child(3) {
+        background: #28c840;
+      }
+
+      .title {
+        justify-self: center;
+        font-size: 13px;
+        font-weight: 750;
+      }
+
+      .app-update-link {
+        justify-self: end;
+        margin-right: 14px;
+        padding: 6px 10px;
+        border: 1px solid #65a7ff55;
+        border-radius: 999px;
+        background: #65a7ff14;
+        color: #9bc6ff;
+        font-size: 11px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .app-update-link::before {
+        content: "";
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        margin-right: 7px;
+        border-radius: 50%;
+        background: #65a7ff;
+        box-shadow: 0 0 10px #65a7ffaa;
+      }
+
+      .shell {
+        height: calc(100% - 46px);
+        display: grid;
+        grid-template-columns: 190px minmax(0, 1fr);
+        min-height: 0;
+      }
+
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        padding: 20px 14px 14px;
+        border-right: 1px solid #2a3548;
+        background: #0d121cdd;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 0 8px 22px;
+      }
+
+      .brand-mark {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        flex: 0 0 34px;
+        place-items: center;
+        border: 1px solid #65a7ff99;
+        border-radius: 11px;
+        background: linear-gradient(145deg, #65a7ff, #745ee7);
+        box-shadow: 0 8px 28px #4f77ff4d;
+        font-size: 17px;
+        font-weight: 900;
+      }
+
+      .brand strong,
+      .brand small {
+        display: block;
+      }
+
+      .brand strong {
+        font-size: 14px;
+      }
+
+      .brand small {
+        color: #8d99aa;
+        font-size: 10px;
+      }
+
+      .nav-label {
+        margin: 0 9px 7px;
+        color: #8d99aa;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+
+      .nav {
+        display: grid;
+        gap: 4px;
+      }
+
+      .nav a {
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 10px;
+        border: 1px solid transparent;
+        border-radius: 9px;
+        color: #aeb8c7;
+        font-size: 12px;
+        font-weight: 650;
+        text-decoration: none;
+      }
+
+      .nav a.active {
+        border-color: #65a7ff55;
+        background: linear-gradient(90deg, #65a7ff26, #65a7ff08);
+        box-shadow: inset 3px 0 #65a7ff;
+        color: #f4f7fb;
+      }
+
+      .nav svg {
+        width: 17px;
+        height: 17px;
+        fill: none;
+        stroke: currentcolor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+
+      .sidebar-foot {
+        margin-top: auto;
+        padding: 12px 9px 2px;
+        color: #8d99aa;
+        font-size: 10px;
+      }
+
+      .main {
+        min-width: 0;
+        min-height: 0;
+        overflow: auto;
+        scrollbar-color: #465773 transparent;
+      }
+
+      .content {
+        width: min(920px, calc(100% - 48px));
+        margin: 0 auto;
+        padding: 28px 0 52px;
+      }
+
+      .page-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 24px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 24px;
+        letter-spacing: -0.025em;
+      }
+
+      .page-head p {
+        margin-top: 6px;
+        color: #8d99aa;
+        font-size: 12px;
+      }
+
+      .save-state {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        color: #9debb8;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .save-state::before {
+        content: "✓";
+        width: 18px;
+        height: 18px;
+        display: grid;
+        place-items: center;
+        border: 1px solid #72e6a055;
+        border-radius: 50%;
+        background: #72e6a014;
+      }
+
+      .section {
+        margin-top: 18px;
+        overflow: hidden;
+        border: 1px solid #2a3548;
+        border-radius: 13px;
+        background: linear-gradient(145deg, #1b2434b8, #151c2a9c);
+        box-shadow: inset 0 1px #ffffff0a;
+      }
+
+      .section-head {
+        padding: 17px 18px 14px;
+        border-bottom: 1px solid #2a3548;
+      }
+
+      .section-head h2 {
+        font-size: 14px;
+      }
+
+      .section-head p {
+        margin-top: 4px;
+        color: #8d99aa;
+        font-size: 11px;
+      }
+
+      .setting-row {
+        min-height: 68px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 18px;
+        padding: 13px 18px;
+        border-top: 1px solid #2a3548;
+      }
+
+      .section-head + .setting-row {
+        border-top: 0;
+      }
+
+      .setting-copy strong,
+      .setting-copy span {
+        display: block;
+      }
+
+      .setting-copy strong {
+        font-size: 12px;
+      }
+
+      .setting-copy span {
+        max-width: 620px;
+        margin-top: 4px;
+        color: #8d99aa;
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
+      .setting-control {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .editable-control {
+        gap: 6px;
+      }
+
+      .numeric-input,
+      .select-control {
+        min-height: 32px;
+        border: 1px solid #465773;
+        border-radius: 7px;
+        background: #0f1420;
+        color: #f4f7fb;
+      }
+
+      .numeric-input {
+        width: 72px;
+        padding: 0 9px;
+        text-align: right;
+      }
+
+      .select-control {
+        min-width: 106px;
+        padding: 0 28px 0 9px;
+      }
+
+      .field-unit {
+        color: #aeb8c7;
+        font-size: 10px;
+      }
+
+      .saved {
+        color: #72e6a0;
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .switch {
+        position: relative;
+        width: 40px;
+        height: 23px;
+        display: inline-block;
+      }
+
+      .switch input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+      }
+
+      .switch span {
+        position: absolute;
+        inset: 0;
+        border: 1px solid #465773;
+        border-radius: 999px;
+        background: #202a3c;
+        transition: background 160ms ease;
+      }
+
+      .switch span::after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        background: #aeb8c7;
+        box-shadow: 0 2px 6px #00000066;
+        transition: transform 160ms ease;
+      }
+
+      .switch input:checked + span {
+        border-color: #65a7ff;
+        background: #65a7ff;
+      }
+
+      .switch input:checked + span::after {
+        transform: translateX(17px);
+        background: #07101d;
+      }
+
+      .switch input:focus-visible + span {
+        outline: 2px solid #f4f7fb;
+        outline-offset: 3px;
+        box-shadow: 0 0 0 6px #65a7ff66;
+      }
+
+      .update-card {
+        display: grid;
+        grid-template-columns: 58px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 16px;
+        margin: 16px 18px 18px;
+        padding: 16px;
+        border: 1px solid #65a7ff55;
+        border-radius: 11px;
+        background:
+          radial-gradient(circle at 100% 0, #65a7ff1f, transparent 18rem),
+          #11182799;
+      }
+
+      .app-icon {
+        width: 52px;
+        height: 52px;
+        display: grid;
+        place-items: center;
+        border: 1px solid #65a7ff88;
+        border-radius: 14px;
+        background: linear-gradient(145deg, #65a7ff, #745ee7);
+        box-shadow: 0 10px 28px #4f77ff3d;
+        font-size: 22px;
+        font-weight: 900;
+      }
+
+      .update-copy > strong,
+      .update-copy > span {
+        display: block;
+      }
+
+      .update-copy strong {
+        font-size: 14px;
+      }
+
+      .update-copy > span {
+        margin-top: 4px;
+        color: #aeb8c7;
+        font-size: 11px;
+      }
+
+      .update-copy > .version {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        white-space: nowrap;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      }
+
+      .old {
+        color: #f1c875;
+      }
+
+      .new {
+        color: #72e6a0;
+      }
+
+      .button {
+        min-height: 34px;
+        padding: 0 14px;
+        border: 1px solid #84b9ff;
+        border-radius: 9px;
+        background: linear-gradient(180deg, #76b4ff, #4f8fe8);
+        box-shadow: 0 7px 24px #529cff38;
+        color: #07101d;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .verified {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 7px;
+        color: #72e6a0;
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .verified::before {
+        content: "✓";
+      }
+
+      details.advanced {
+        margin-top: 18px;
+        border: 1px solid #2a3548;
+        border-radius: 13px;
+        background: #151c2acc;
+      }
+
+      details.advanced summary {
+        min-height: 58px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 18px;
+        border-radius: inherit;
+        color: #dfe7f3;
+        font-size: 13px;
+        font-weight: 750;
+        list-style: none;
+      }
+
+      details.advanced summary::-webkit-details-marker {
+        display: none;
+      }
+
+      details.advanced summary::before {
+        content: "›";
+        color: #8d99aa;
+        font-size: 20px;
+        transition: transform 160ms ease;
+      }
+
+      details[open].advanced summary::before {
+        transform: rotate(90deg);
+      }
+
+      details.advanced summary small {
+        margin-left: auto;
+        color: #8d99aa;
+        font-size: 10px;
+        font-weight: 550;
+      }
+
+      .advanced-body {
+        border-top: 1px solid #2a3548;
+      }
+
+      .advanced-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 14px 18px 18px;
+        border-top: 1px solid #2a3548;
+      }
+
+      .quiet-button {
+        min-height: 30px;
+        padding: 0 11px;
+        border: 1px solid #465773;
+        border-radius: 8px;
+        background: #202a3c;
+        color: #dbe3ee;
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      @media (max-width: 1100px) {
+        .content {
+          width: calc(100% - 30px);
+          padding-top: 20px;
+        }
+
+        .update-card {
+          grid-template-columns: 48px minmax(0, 1fr);
+        }
+
+        .app-icon {
+          width: 44px;
+          height: 44px;
+        }
+
+        .update-card .button {
+          grid-column: 2;
+          justify-self: start;
+        }
+      }
+
+      @media (max-width: 720px) {
+        html,
+        body {
+          min-width: 0;
+        }
+
+        .window {
+          width: 100vw;
+          height: 100vh;
+          min-height: 0;
+          margin: 0;
+          border: 0;
+          border-radius: 0;
+        }
+
+        .titlebar {
+          grid-template-columns: 58px 1fr 58px;
+        }
+
+        .traffic,
+        .app-update-link {
+          display: none;
+        }
+
+        .shell {
+          grid-template-columns: 58px minmax(0, 1fr);
+        }
+
+        .sidebar {
+          padding: 16px 8px;
+        }
+
+        .brand {
+          padding: 0 4px 18px;
+        }
+
+        .brand > div:last-child,
+        .nav-label,
+        .nav span,
+        .sidebar-foot {
+          display: none;
+        }
+
+        .nav a {
+          justify-content: center;
+          padding: 0;
+        }
+
+        .page-head,
+        .setting-row {
+          align-items: flex-start;
+        }
+
+        .setting-row {
+          grid-template-columns: 1fr;
+        }
+
+        .setting-control {
+          justify-content: space-between;
+        }
+
+        .update-card {
+          grid-template-columns: 1fr;
+        }
+
+        .update-card .button {
+          grid-column: 1;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition: none !important;
+          animation: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="window">
+      <header class="titlebar">
+        <div class="traffic" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="title">Pack-Manager</div>
+        <a class="app-update-link" href="#app-update"
+          >Pack-Manager Update Ready!</a
+        >
+      </header>
+
+      <div class="shell">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">P</div>
+            <div><strong>Pack-Manager</strong><small>Control deck</small></div>
+          </div>
+
+          <div class="nav-label">Workspace</div>
+          <nav class="nav" aria-label="Primary">
+            <a href="#">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />
+              </svg>
+              <span>Dashboard</span>
+            </a>
+            <a href="#">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 5h14v4H5zM5 11h14v4H5zM5 17h14v2H5z" />
+              </svg>
+              <span>Managers</span>
+            </a>
+            <a href="#">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 17V9m5 8V5m5 12v-6m4 6H3" />
+              </svg>
+              <span>Activity</span>
+            </a>
+            <a href="#">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 7v5l3 2M4.6 7A8 8 0 1 1 4 15M4 4v4h4" />
+              </svg>
+              <span>History</span>
+            </a>
+            <a class="active" href="#" aria-current="page">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a8 8 0 0 0-1.7-1L14.5 3h-5l-.4 3.1a8 8 0 0 0-1.7 1l-2.4-1-2 3.4L5.1 11a7 7 0 0 0 0 2L3 14.5l2 3.4 2.4-1a8 8 0 0 0 1.7 1l.4 3.1h5l.4-3.1a8 8 0 0 0 1.7-1l2.4 1 2-3.4-2.1-1.5a7 7 0 0 0 .1-1Z"
+                />
+              </svg>
+              <span>Settings</span>
+            </a>
+          </nav>
+
+          <div class="sidebar-foot">Pack-Manager 0.2.7</div>
+        </aside>
+
+        <main class="main">
+          <div class="content">
+            <header class="page-head">
+              <div>
+                <h1>Settings</h1>
+                <p>Preferences save immediately after they are persisted.</p>
+              </div>
+              <div class="save-state" role="status">All changes saved</div>
+            </header>
+
+            <section class="section" aria-labelledby="safety-title">
+              <header class="section-head">
+                <h2 id="safety-title">Upgrade safety</h2>
+                <p>Control review behavior before Pack-Manager runs changes.</p>
+              </header>
+
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <strong>Confirm commands before every Upgrade Plan</strong>
+                  <span
+                    >Shows the exact command in a final confirmation window.
+                    Recommended.</span
+                  >
+                </div>
+                <div class="setting-control">
+                  <span class="saved">Saved</span>
+                  <label class="switch">
+                    <input
+                      type="checkbox"
+                      checked
+                      aria-label="Confirm commands before every Upgrade Plan"
+                    />
+                    <span aria-hidden="true"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <strong>Include greedy Homebrew casks</strong>
+                  <span
+                    >May update casks that manage their own updates. Off by
+                    default.</span
+                  >
+                </div>
+                <div class="setting-control">
+                  <label class="switch">
+                    <input
+                      type="checkbox"
+                      aria-label="Include greedy Homebrew casks"
+                    />
+                    <span aria-hidden="true"></span>
+                  </label>
+                </div>
+              </div>
+            </section>
+
+            <section class="section" aria-labelledby="refresh-title">
+              <header class="section-head">
+                <h2 id="refresh-title">Refresh behavior</h2>
+                <p>Choose when Pack-Manager checks installed state.</p>
+              </header>
+
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <strong>Refresh Managers at launch</strong>
+                  <span
+                    >Keeps the Dashboard current without blocking the app
+                    shell.</span
+                  >
+                </div>
+                <div class="setting-control">
+                  <label class="switch">
+                    <input
+                      type="checkbox"
+                      checked
+                      aria-label="Refresh Managers at launch"
+                    />
+                    <span aria-hidden="true"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <strong>Refresh Homebrew metadata</strong>
+                  <span
+                    >Runs the explicit metadata refresh before inventory.</span
+                  >
+                </div>
+                <div class="setting-control">
+                  <label class="switch">
+                    <input
+                      type="checkbox"
+                      checked
+                      aria-label="Refresh Homebrew metadata"
+                    />
+                    <span aria-hidden="true"></span>
+                  </label>
+                </div>
+              </div>
+            </section>
+
+            <section
+              class="section"
+              id="app-update"
+              aria-labelledby="update-title"
+            >
+              <header class="section-head">
+                <h2 id="update-title">Pack-Manager updates</h2>
+                <p>
+                  Application updates stay separate from Package Upgrade Plans
+                  and History.
+                </p>
+              </header>
+
+              <div class="update-card">
+                <div class="app-icon">P</div>
+                <div class="update-copy">
+                  <strong>Pack-Manager</strong>
+                  <span
+                    class="version"
+                    aria-label="Current version 0.2.7, update to version 0.2.8"
+                  >
+                    <span class="old">0.2.7</span>
+                    <span aria-hidden="true">→</span>
+                    <span class="new">0.2.8</span>
+                  </span>
+                  <div class="verified">Downloaded and verified</div>
+                </div>
+                <button class="button" type="button">Restart to Update</button>
+              </div>
+            </section>
+
+            <details class="advanced">
+              <summary>
+                Advanced
+                <small>Operation limits and diagnostics</small>
+              </summary>
+              <div class="advanced-body">
+                <div class="setting-row">
+                  <div class="setting-copy">
+                    <strong>Stall threshold</strong>
+                    <span
+                      >Show Keep waiting, Copy command, and Cancel after 120
+                      seconds without output.</span
+                    >
+                  </div>
+                  <div class="setting-control editable-control">
+                    <input
+                      class="numeric-input version"
+                      type="number"
+                      aria-label="Stall threshold in seconds"
+                      min="30"
+                      max="600"
+                      step="30"
+                      value="120"
+                    />
+                    <span class="field-unit">seconds</span>
+                  </div>
+                </div>
+                <div class="setting-row">
+                  <div class="setting-copy">
+                    <strong>Operation hard cap</strong>
+                    <span
+                      >End an overlong Operation honestly as timed out.</span
+                    >
+                  </div>
+                  <div class="setting-control editable-control">
+                    <input
+                      class="numeric-input version"
+                      type="number"
+                      aria-label="Operation hard cap"
+                      min="1"
+                      max="120"
+                      value="30"
+                    />
+                    <select
+                      class="select-control"
+                      aria-label="Operation hard cap unit"
+                    >
+                      <option selected>minutes</option>
+                      <option>hours</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="setting-row">
+                  <div class="setting-copy">
+                    <strong>Application log level</strong>
+                    <span>Controls Pack-Manager’s own diagnostic detail.</span>
+                  </div>
+                  <div class="setting-control editable-control">
+                    <select
+                      class="select-control"
+                      aria-label="Application log level"
+                    >
+                      <option>Error</option>
+                      <option>Warn</option>
+                      <option>Info</option>
+                      <option selected>Debug</option>
+                      <option>Trace</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="advanced-actions">
+                  <button class="quiet-button" type="button">
+                    Environment Report
+                  </button>
+                  <button class="quiet-button" type="button">Copy</button>
+                  <button class="quiet-button" type="button">Re-detect</button>
+                  <button class="quiet-button" type="button">Open Logs</button>
+                  <button class="quiet-button" type="button">
+                    Export diagnostics
+                  </button>
+                </div>
+              </div>
+            </details>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

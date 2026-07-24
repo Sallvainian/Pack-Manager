@@ -1,0 +1,18 @@
+# Editorial Structure Review
+
+This document exists to help the Product Owner, QA Lead, engineering, and release owners decide whether one specific Pack-Manager release candidate satisfies the complete P0 product-and-release readiness gate.
+
+**Structure model:** Strategic/Context (Pyramid)  
+**Reader:** Humans  
+**Style guide:** Microsoft Writing Style Guide  
+**Measured length:** 7,573 words; no length target was provided.
+
+| Pass | Original Text | Revised Text | Changes |
+| --- | --- | --- | --- |
+| structure | §0–§1 — The current **FAIL** result and 14-of-72 planning baseline appear only after roughly 330 words of purpose, authority, and product framing. | **MOVE** §1 Executive summary directly under the title and lead with the current gate result and its planning-only provenance; place §0 Document purpose and authority immediately after it. | Restores the Pyramid's conclusion-first order so a decision-maker sees status before setup. Relocation only; saves 0 words. |
+| structure | §10 Scope and non-goals (183 words) appears after the product, infrastructure, evidence, and governance requirements it is meant to bound. | **MOVE** §10 immediately after §2 Product vision, user, and form factor, before the readiness model and detailed requirements. | Lets readers establish the product boundary before interpreting 72-row gate coverage, Release Prerequisites, and evidence obligations. Relocation only; saves 0 words. |
+| structure | §9 Gate governance (~588 words) and §13 Decision register (178 words) are separated and both appear after the detailed requirements, even though their entry blockers and unresolved approvals control whether work may begin. | **MOVE** Gate governance immediately after §3 Readiness model and vocabulary; **MERGE** §13 into it as an “Open gate decisions” subsection, preserving every owner, status, deadline, and blocked dependency. Surface the four decision statuses in the executive summary. | Groups decision rules, blockers, and open approvals into one early control layer. This makes the document actionable without changing any requirement. Relocation/merge only; saves approximately 0–10 words. |
+| structure | §0's three-lane explanation and §3.1 Three independent lanes repeat the same taxonomy across 234 measured words. | **CONDENSE** §0 to a one-sentence signpost naming the three lanes and pointing to §3.1; keep §3.1 as the single complete definition. | Preserves early orientation and the detailed mental model while removing true taxonomy duplication; saves approximately 50–60 words. |
+| structure | §1.1 Gate thesis, §9.5 Exit criteria, and §11 Success metrics total 537 measured words and repeatedly state the same 72/72, immutable-candidate, no-waiver, evidence-completeness decision outcome. | **MERGE/CONDENSE** these into one authoritative gate-decision contract: keep the formal exit checklist intact in the early Gate governance section, reduce §1.1 to a compact headline and pointer, and retain in §11 only the uniquely measurable metrics and counter-metrics. | Preserves every gate condition and metric while removing repeated explanation from three decision surfaces; saves approximately 120–140 words. |
+
+**Summary:** 5 structural recommendations. If all are accepted, the estimated reduction is **170–200 words (2.2%–2.6%)**, from 7,573 words to approximately 7,373–7,403 words. No supplied length target can be assessed. The reductions preserve the formal exit checklist and detailed lane definitions, so no material comprehension trade-off is expected; the acceptance journeys and requirement-level Consequences should remain intact as useful human scaffolding and traceability.

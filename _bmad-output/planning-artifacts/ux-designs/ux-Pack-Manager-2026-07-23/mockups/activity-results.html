@@ -1,0 +1,2169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pack-Manager — Upgrade Activity and Results</title>
+    <link rel="icon" href="data:," />
+    <style>
+      /*
+        Governing spine sections:
+        DESIGN.md — Brand & Style; Colors; Typography; Layout & Spacing;
+        Elevation & Depth; Shapes; Components (Button, Sidebar Navigation,
+        Status Chip, Upgrade Sidecar, Activity Operation Row, Results Summary,
+        Command Output Disclosure).
+        EXPERIENCE.md — Information Architecture; Component Patterns; State
+        Patterns / Live Activity; State Patterns / Results and recovery;
+        Interaction Primitives / Focus transitions; Motion and feedback;
+        Accessibility Floor; Responsive & Platform; AJ-4.
+
+        The two frames below are alternate canonical states. Each frame has one
+        atomic visual status-announcement region, representing the app's single
+        throttled Activity/Results announcement channel.
+      */
+
+      * {
+        box-sizing: border-box;
+      }
+
+      :root {
+        color-scheme: dark;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+          system-ui, sans-serif;
+        color: #f4f7fb;
+        background: #090c13;
+      }
+
+      html {
+        min-height: 100%;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        overflow-x: hidden;
+        background:
+          radial-gradient(circle at 78% 0%, #193b5e 0, transparent 34rem),
+          radial-gradient(circle at 12% 98%, #2b2248 0, transparent 31rem),
+          #090c13;
+      }
+
+      button,
+      summary {
+        font: inherit;
+      }
+
+      button,
+      summary,
+      a {
+        color: inherit;
+      }
+
+      button:focus-visible,
+      summary:focus-visible,
+      a:focus-visible,
+      [tabindex]:focus-visible {
+        outline: 2px solid #f4f7fb;
+        outline-offset: 3px;
+        box-shadow: 0 0 0 6px #65a7ff55;
+      }
+
+      .page {
+        display: grid;
+        justify-items: center;
+        gap: 40px;
+        padding: 24px 0 56px;
+      }
+
+      .scene {
+        width: min(1440px, 100vw);
+      }
+
+      .scene-label {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 24px;
+        min-height: 58px;
+        padding: 0 20px 12px;
+      }
+
+      .scene-kicker {
+        margin: 0 0 4px;
+        color: #65a7ff;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .scene-label h1 {
+        margin: 0;
+        font-size: 20px;
+        line-height: 1.25;
+      }
+
+      .scene-label p {
+        max-width: 560px;
+        margin: 0;
+        color: #aeb8c7;
+        font-size: 12px;
+        line-height: 1.45;
+        text-align: right;
+      }
+
+      .window {
+        width: 100%;
+        height: 900px;
+        overflow: hidden;
+        border: 1px solid #2a3548;
+        border-radius: 18px;
+        background: #0f1420f2;
+        box-shadow:
+          0 34px 90px #0000007a,
+          inset 0 1px 0 #ffffff0f;
+        backdrop-filter: blur(28px) saturate(125%);
+      }
+
+      .titlebar {
+        height: 46px;
+        display: grid;
+        grid-template-columns: 190px 1fr 190px;
+        align-items: center;
+        border-bottom: 1px solid #2a3548;
+        background: #101622e8;
+      }
+
+      .traffic {
+        display: flex;
+        gap: 8px;
+        padding-left: 16px;
+      }
+
+      .traffic span {
+        width: 12px;
+        height: 12px;
+        border: 1px solid #00000033;
+        border-radius: 50%;
+      }
+
+      .traffic span:nth-child(1) {
+        background: #ff5f57;
+      }
+
+      .traffic span:nth-child(2) {
+        background: #febc2e;
+      }
+
+      .traffic span:nth-child(3) {
+        background: #28c840;
+      }
+
+      .window-title {
+        justify-self: center;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+
+      .window-status {
+        justify-self: end;
+        padding-right: 16px;
+        color: #8d99aa;
+        font-size: 11px;
+      }
+
+      .workspace {
+        height: calc(100% - 46px);
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 190px minmax(0, 1fr) 370px;
+        overflow: hidden;
+      }
+
+      .sidebar {
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        padding: 20px 14px 14px;
+        overflow: auto;
+        border-right: 1px solid #2a3548;
+        background: #0d121ce8;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 0 8px 5px;
+      }
+
+      .brand-mark {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        flex: 0 0 34px;
+        place-items: center;
+        border: 1px solid #65a7ff99;
+        border-radius: 11px;
+        background: linear-gradient(145deg, #65a7ff, #745ee7);
+        box-shadow: 0 8px 28px #4f77ff4d;
+        font-size: 17px;
+        font-weight: 900;
+      }
+
+      .brand-copy strong,
+      .brand-copy small {
+        display: block;
+      }
+
+      .brand-copy strong {
+        font-size: 14px;
+      }
+
+      .brand-copy small {
+        color: #8d99aa;
+        font-size: 10px;
+      }
+
+      .nav-label {
+        margin: 0 9px 6px;
+        color: #8d99aa;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+
+      .nav {
+        display: grid;
+        gap: 4px;
+      }
+
+      .nav-item {
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 10px;
+        border: 1px solid transparent;
+        border-radius: 9px;
+        color: #aeb8c7;
+        font-size: 12px;
+        font-weight: 650;
+        text-decoration: none;
+      }
+
+      .nav-item.active {
+        border-color: #65a7ff4d;
+        background: linear-gradient(90deg, #65a7ff26, #65a7ff0a);
+        box-shadow: inset 3px 0 #65a7ff;
+        color: #f4f7fb;
+      }
+
+      .nav-item:hover {
+        background-color: #ffffff08;
+      }
+
+      .nav-icon {
+        width: 17px;
+        height: 17px;
+        flex: 0 0 17px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+
+      .nav-badge {
+        min-width: 20px;
+        margin-left: auto;
+        padding: 2px 6px;
+        border: 1px solid #65a7ff4d;
+        border-radius: 999px;
+        background: #172a46;
+        color: #7db3ff;
+        font-size: 10px;
+        text-align: center;
+      }
+
+      .sidebar-foot {
+        margin-top: auto;
+        padding: 12px 9px 2px;
+        border-top: 1px solid #2a3548;
+        color: #8d99aa;
+        font-size: 10px;
+        line-height: 1.45;
+      }
+
+      .main {
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 88% 2%, #193b5e33, transparent 26rem),
+          #0f1420;
+      }
+
+      .main-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 24px 24px 16px;
+        border-bottom: 1px solid #2a3548;
+      }
+
+      .eyebrow {
+        margin: 0 0 5px;
+        color: #65a7ff;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .main-header h2,
+      .sidecar h2 {
+        margin: 0;
+        font-size: 20px;
+        line-height: 1.3;
+      }
+
+      .main-header p,
+      .sidecar-head p {
+        margin: 4px 0 0;
+        color: #aeb8c7;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .button {
+        min-height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        padding: 6px 12px;
+        border: 1px solid #465773;
+        border-radius: 7px;
+        background: #1b2434;
+        color: #f4f7fb;
+        font-size: 12px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .button:hover {
+        border-color: #65a7ff;
+        background: #202a3c;
+      }
+
+      .button.primary {
+        border-color: #7db3ff;
+        background: #65a7ff;
+        color: #07101d;
+      }
+
+      .button.primary:hover {
+        background: #7db3ff;
+      }
+
+      .button.text {
+        min-height: 28px;
+        padding-inline: 6px;
+        border-color: transparent;
+        background: transparent;
+        color: #aeb8c7;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      .button.danger {
+        border-color: #ff87935c;
+        background: #ff879312;
+        color: #ffadb6;
+      }
+
+      .main-scroll {
+        min-height: 0;
+        padding: 18px 24px 28px;
+        overflow: auto;
+      }
+
+      .announcement {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 10px;
+        align-items: flex-start;
+        margin-bottom: 16px;
+        padding: 11px 13px;
+        border: 1px solid #465773;
+        border-radius: 9px;
+        background: #151c2a;
+        color: #dce4ef;
+      }
+
+      .announcement-icon {
+        width: 19px;
+        height: 19px;
+        display: grid;
+        place-items: center;
+        margin-top: 1px;
+        border: 1px solid #62e7d88c;
+        border-radius: 50%;
+        color: #62e7d8;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .announcement strong {
+        display: block;
+        margin-bottom: 2px;
+        font-size: 11px;
+      }
+
+      .announcement span {
+        color: #aeb8c7;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .manager-block {
+        overflow: hidden;
+        margin-top: 14px;
+        border: 1px solid #2a3548;
+        border-radius: 13px;
+        background: #151c2ae6;
+        box-shadow: inset 0 1px 0 #ffffff0a;
+      }
+
+      .manager-block:first-of-type {
+        margin-top: 0;
+      }
+
+      .manager-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 13px 15px;
+        border-bottom: 1px solid #2a3548;
+        background: #1b243499;
+      }
+
+      .manager-heading h3 {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .manager-heading h3 span {
+        color: #8d99aa;
+        font-size: 11px;
+        font-weight: 550;
+      }
+
+      .manager-count {
+        color: #aeb8c7;
+        font-size: 11px;
+        font-weight: 650;
+      }
+
+      .operation-list {
+        display: grid;
+      }
+
+      .operation {
+        display: grid;
+        grid-template-columns: minmax(150px, 1fr) minmax(140px, 0.8fr) 104px;
+        gap: 14px;
+        align-items: center;
+        min-height: 58px;
+        padding: 10px 15px;
+        border-top: 1px solid #2a3548;
+      }
+
+      .operation:first-child {
+        border-top: 0;
+      }
+
+      .operation.attention {
+        align-items: flex-start;
+        border-left: 3px solid #f1c875;
+        background: #f1c8750a;
+      }
+
+      .package-name {
+        min-width: 0;
+      }
+
+      .package-name strong {
+        display: block;
+        overflow: hidden;
+        font-size: 13px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .package-name small {
+        display: block;
+        margin-top: 3px;
+        color: #8d99aa;
+        font-size: 10px;
+      }
+
+      .version {
+        color: #aeb8c7;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 11px;
+      }
+
+      .version .old {
+        color: #f1c875;
+      }
+
+      .version .new {
+        color: #72e6a0;
+      }
+
+      .status {
+        justify-self: end;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 24px;
+        padding: 3px 8px;
+        border: 1px solid currentColor;
+        border-radius: 999px;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        line-height: 1.2;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .status::before {
+        width: 6px;
+        height: 6px;
+        flex: 0 0 6px;
+        border-radius: 50%;
+        background: currentColor;
+        content: "";
+      }
+
+      .status.success {
+        background: #72e6a010;
+        color: #72e6a0;
+      }
+
+      .status.running {
+        background: #65a7ff12;
+        color: #7db3ff;
+      }
+
+      .status.warning {
+        background: #f1c87510;
+        color: #f1c875;
+      }
+
+      .status.danger {
+        background: #ff879310;
+        color: #ff9fa9;
+      }
+
+      .status.neutral {
+        background: #8d99aa12;
+        color: #aeb8c7;
+      }
+
+      .progress-wrap {
+        grid-column: 1 / -1;
+        margin-top: -2px;
+      }
+
+      .progress-track {
+        height: 5px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #070b12;
+      }
+
+      .progress-track.indeterminate > span {
+        width: 34%;
+        height: 100%;
+        display: block;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #65a7ff, #62e7d8);
+        animation: indeterminate 1.45s ease-in-out infinite;
+      }
+
+      .progress-track.verified > span {
+        width: 100%;
+        height: 100%;
+        display: block;
+        border-radius: inherit;
+        background: #72e6a0;
+      }
+
+      @keyframes indeterminate {
+        0% {
+          transform: translateX(-110%);
+        }
+        50% {
+          transform: translateX(95%);
+        }
+        100% {
+          transform: translateX(300%);
+        }
+      }
+
+      .attention-detail {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        margin-top: -2px;
+        padding-top: 9px;
+        border-top: 1px solid #f1c8752e;
+      }
+
+      .attention-detail p {
+        margin: 0;
+        color: #d6bf86;
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
+      .attention-actions {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .micro-button {
+        min-height: 28px;
+        padding: 4px 9px;
+        border: 1px solid #465773;
+        border-radius: 7px;
+        background: #1b2434;
+        color: #f4f7fb;
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .micro-button:hover {
+        border-color: #65a7ff;
+      }
+
+      .micro-button.danger {
+        border-color: #ff87934d;
+        color: #ffadb6;
+      }
+
+      .command-disclosure {
+        border-top: 1px solid #2a3548;
+        background: #0f142099;
+      }
+
+      .command-disclosure summary {
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+        padding: 8px 15px;
+        color: #aeb8c7;
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 750;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      .command-disclosure summary::marker {
+        color: #65a7ff;
+      }
+
+      .command-well {
+        margin: 0 15px 13px;
+        padding: 10px 12px;
+        overflow: auto;
+        border: 1px solid #465773;
+        border-radius: 7px;
+        background: #070b12;
+        color: #c8f3ec;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 10px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+      }
+
+      .compact-packages {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 12px 15px 14px;
+      }
+
+      .package-pill {
+        padding: 4px 7px;
+        border: 1px solid #2a3548;
+        border-radius: 7px;
+        background: #0f1420;
+        color: #aeb8c7;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 10px;
+      }
+
+      .sidecar {
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border-left: 1px solid #465773;
+        background:
+          radial-gradient(circle at 80% 0%, #193b5e3d, transparent 19rem),
+          #101723;
+        box-shadow: -14px 0 32px #00000024;
+      }
+
+      .sidecar-head {
+        padding: 20px 18px 14px;
+        border-bottom: 1px solid #2a3548;
+      }
+
+      .sidecar-headline {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .sidecar-scroll {
+        min-height: 0;
+        padding: 14px 14px 18px;
+        overflow: auto;
+      }
+
+      .side-summary {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+
+      .side-stat {
+        min-width: 0;
+        padding: 9px 7px;
+        border: 1px solid #2a3548;
+        border-radius: 9px;
+        background: #151c2a;
+      }
+
+      .side-stat strong,
+      .side-stat small {
+        display: block;
+      }
+
+      .side-stat strong {
+        margin-bottom: 2px;
+        font-size: 15px;
+      }
+
+      .side-stat small {
+        overflow: hidden;
+        color: #8d99aa;
+        font-size: 9px;
+        text-overflow: ellipsis;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .side-progress {
+        margin-bottom: 14px;
+      }
+
+      .side-progress-copy {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 7px;
+        color: #aeb8c7;
+        font-size: 10px;
+      }
+
+      .side-manager {
+        margin-top: 9px;
+        overflow: hidden;
+        border: 1px solid #2a3548;
+        border-radius: 9px;
+        background: #151c2a;
+      }
+
+      .side-manager:first-of-type {
+        margin-top: 0;
+      }
+
+      .side-manager-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 9px 10px;
+        border-bottom: 1px solid #2a3548;
+        font-size: 11px;
+        font-weight: 750;
+      }
+
+      .side-manager-head span {
+        color: #aeb8c7;
+        font-size: 9px;
+        font-weight: 650;
+      }
+
+      .side-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: center;
+        min-height: 37px;
+        padding: 7px 10px;
+        border-top: 1px solid #2a3548;
+      }
+
+      .side-manager-head + .side-row {
+        border-top: 0;
+      }
+
+      .side-row strong {
+        overflow: hidden;
+        font-size: 10px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .side-row span {
+        color: #aeb8c7;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 9px;
+      }
+
+      .side-row .side-state {
+        font-family: inherit;
+        font-weight: 750;
+      }
+
+      .side-state.success {
+        color: #72e6a0;
+      }
+
+      .side-state.warning {
+        color: #f1c875;
+      }
+
+      .side-state.running {
+        color: #7db3ff;
+      }
+
+      .side-state.neutral {
+        color: #aeb8c7;
+      }
+
+      .side-action-note {
+        margin: 12px 0 0;
+        padding: 10px 11px;
+        border: 1px solid #f1c8754d;
+        border-radius: 9px;
+        background: #f1c8750a;
+        color: #d6bf86;
+        font-size: 10px;
+        line-height: 1.45;
+      }
+
+      .sidecar-foot {
+        margin-top: auto;
+        padding: 12px 14px 14px;
+        border-top: 1px solid #2a3548;
+        background: #0f1420e8;
+      }
+
+      .sidecar-foot .button {
+        width: 100%;
+      }
+
+      .result-hero {
+        margin-bottom: 13px;
+        padding: 13px;
+        border: 1px solid #f1c87566;
+        border-radius: 13px;
+        background: linear-gradient(145deg, #f1c87512, #151c2a);
+      }
+
+      .result-hero strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 17px;
+      }
+
+      .result-hero p {
+        margin: 0;
+        color: #aeb8c7;
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
+      .result-group {
+        margin-top: 9px;
+        overflow: hidden;
+        border: 1px solid #2a3548;
+        border-radius: 9px;
+        background: #151c2a;
+      }
+
+      .result-group:first-of-type {
+        margin-top: 0;
+      }
+
+      .result-group-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: 38px;
+        padding: 8px 10px;
+        background: #1b243480;
+        font-size: 11px;
+        font-weight: 750;
+      }
+
+      .result-group-head span {
+        font-size: 9px;
+      }
+
+      .result-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: center;
+        min-height: 36px;
+        padding: 7px 10px;
+        border-top: 1px solid #2a3548;
+      }
+
+      .result-row strong {
+        overflow: hidden;
+        font-size: 10px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .result-row .verified-version {
+        color: #72e6a0;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 9px;
+      }
+
+      .failure {
+        border-top: 1px solid #ff87934d;
+        background: #ff879308;
+      }
+
+      .failure-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px;
+      }
+
+      .failure-head strong {
+        font-size: 11px;
+      }
+
+      .failure-head span {
+        color: #ffadb6;
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .failure-body {
+        display: grid;
+        gap: 10px;
+        padding: 0 10px 11px;
+      }
+
+      .failure-section h4 {
+        margin: 0 0 3px;
+        color: #f4f7fb;
+        font-size: 10px;
+      }
+
+      .failure-section p {
+        margin: 0;
+        color: #aeb8c7;
+        font-size: 10px;
+        line-height: 1.45;
+      }
+
+      .retry-scope {
+        margin-top: 12px;
+        padding: 11px;
+        border: 1px solid #465773;
+        border-radius: 9px;
+        background: #1b2434;
+      }
+
+      .retry-scope h3 {
+        margin: 0 0 3px;
+        font-size: 12px;
+      }
+
+      .retry-scope > p {
+        margin: 0 0 9px;
+        color: #aeb8c7;
+        font-size: 10px;
+        line-height: 1.45;
+      }
+
+      .retry-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 10px;
+        padding: 8px;
+        border: 1px solid #2a3548;
+        border-radius: 7px;
+        background: #0f1420;
+        font-size: 10px;
+      }
+
+      .retry-item code {
+        color: #aeb8c7;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 9px;
+      }
+
+      .retry-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .result-foot-links {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .result-foot-links a {
+        color: #aeb8c7;
+        font-size: 10px;
+        font-weight: 700;
+        text-underline-offset: 3px;
+      }
+
+      .timeline-summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .timeline-stat {
+        padding: 11px;
+        border: 1px solid #2a3548;
+        border-radius: 9px;
+        background: #151c2a;
+      }
+
+      .timeline-stat strong,
+      .timeline-stat span {
+        display: block;
+      }
+
+      .timeline-stat strong {
+        margin-bottom: 3px;
+        font-size: 14px;
+      }
+
+      .timeline-stat span {
+        color: #8d99aa;
+        font-size: 9px;
+        text-transform: uppercase;
+      }
+
+      .timeline {
+        overflow: hidden;
+        border: 1px solid #2a3548;
+        border-radius: 13px;
+        background: #151c2a;
+      }
+
+      .timeline-row {
+        display: grid;
+        grid-template-columns: 66px 100px minmax(0, 1fr) 92px;
+        gap: 12px;
+        align-items: center;
+        min-height: 54px;
+        padding: 9px 14px;
+        border-top: 1px solid #2a3548;
+      }
+
+      .timeline-row:first-child {
+        border-top: 0;
+      }
+
+      .timeline-row time {
+        color: #8d99aa;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 9px;
+      }
+
+      .timeline-manager {
+        font-size: 10px;
+        font-weight: 750;
+      }
+
+      .timeline-copy strong,
+      .timeline-copy small {
+        display: block;
+      }
+
+      .timeline-copy strong {
+        font-size: 11px;
+      }
+
+      .timeline-copy small {
+        margin-top: 2px;
+        color: #8d99aa;
+        font-size: 9px;
+      }
+
+      @media (max-width: 1040px), (max-height: 700px) {
+        .page {
+          gap: 24px;
+          padding-top: 12px;
+        }
+
+        .scene-label {
+          min-height: 46px;
+          padding-bottom: 8px;
+        }
+
+        .scene-label p {
+          display: none;
+        }
+
+        .window {
+          height: 600px;
+          border-radius: 14px;
+        }
+
+        .titlebar {
+          grid-template-columns: 160px 1fr 160px;
+        }
+
+        .workspace {
+          grid-template-columns: 160px minmax(0, 1fr) 306px;
+        }
+
+        .sidebar {
+          gap: 12px;
+          padding: 12px 9px 9px;
+        }
+
+        .brand {
+          padding-inline: 5px;
+        }
+
+        .nav-item {
+          min-height: 34px;
+          padding-inline: 7px;
+        }
+
+        .main-header {
+          padding: 15px 16px 11px;
+        }
+
+        .main-scroll {
+          padding: 12px 16px 18px;
+        }
+
+        .announcement {
+          margin-bottom: 10px;
+          padding: 8px 10px;
+        }
+
+        .manager-block {
+          margin-top: 9px;
+        }
+
+        .manager-heading {
+          padding: 9px 11px;
+        }
+
+        .operation {
+          grid-template-columns: minmax(100px, 1fr) minmax(92px, 0.75fr) 88px;
+          min-height: 44px;
+          padding: 7px 11px;
+        }
+
+        .attention-detail {
+          grid-template-columns: 1fr;
+        }
+
+        .attention-actions {
+          justify-content: flex-start;
+        }
+
+        .sidecar-head {
+          padding: 14px 12px 10px;
+        }
+
+        .sidecar-scroll {
+          padding: 10px;
+        }
+
+        .sidecar-foot {
+          padding: 9px 10px 10px;
+        }
+
+        .timeline-summary {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .timeline-row {
+          grid-template-columns: 54px 72px minmax(0, 1fr);
+          min-height: 46px;
+          padding: 7px 10px;
+        }
+
+        .timeline-row .status {
+          display: none;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .page {
+          padding-top: 8px;
+        }
+
+        .scene-label {
+          padding-inline: 12px;
+        }
+
+        .window {
+          height: 600px;
+          border-radius: 0;
+        }
+
+        .titlebar {
+          grid-template-columns: 72px 1fr 72px;
+        }
+
+        .window-status {
+          display: none;
+        }
+
+        .workspace {
+          grid-template-columns: 54px minmax(0, 1fr);
+          grid-template-rows: minmax(360px, auto) auto;
+          overflow: auto;
+        }
+
+        .sidebar {
+          grid-row: 1 / -1;
+          gap: 10px;
+          padding: 10px 7px;
+        }
+
+        .brand {
+          justify-content: center;
+          padding: 0;
+        }
+
+        .brand-mark {
+          width: 32px;
+          height: 32px;
+          flex-basis: 32px;
+        }
+
+        .brand-copy,
+        .nav-label,
+        .nav-item span:not(.nav-badge),
+        .nav-badge,
+        .sidebar-foot {
+          display: none;
+        }
+
+        .nav-item {
+          justify-content: center;
+          padding: 0;
+        }
+
+        .main {
+          min-height: 360px;
+          overflow: visible;
+        }
+
+        .sidecar {
+          grid-column: 2;
+          min-height: 520px;
+          border-top: 1px solid #465773;
+          border-left: 0;
+        }
+
+        .main-header {
+          flex-direction: column;
+        }
+
+        .operation {
+          grid-template-columns: minmax(0, 1fr) auto;
+        }
+
+        .operation .version {
+          grid-column: 1;
+        }
+
+        .operation .status {
+          grid-column: 2;
+          grid-row: 1 / span 2;
+        }
+
+        .timeline-row {
+          grid-template-columns: 52px minmax(0, 1fr);
+        }
+
+        .timeline-manager {
+          display: none;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+        }
+
+        .progress-track.indeterminate > span {
+          width: 42%;
+          transform: translateX(68%);
+          background: #65a7ff;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="scene" aria-labelledby="scene-live-title">
+        <header class="scene-label">
+          <div>
+            <p class="scene-kicker">Canonical canvas A</p>
+            <h1 id="scene-live-title">Live Upgrade Activity</h1>
+          </div>
+          <p>
+            Full Activity workspace and compact sidecar present the same
+            confirmed plan state; commands remain secondary evidence.
+          </p>
+        </header>
+
+        <div class="window">
+          <header class="titlebar">
+            <div class="traffic" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="window-title">Pack-Manager</div>
+            <div class="window-status">Upgrade in progress</div>
+          </header>
+
+          <div class="workspace">
+            <aside class="sidebar" aria-label="Primary navigation">
+              <div class="brand">
+                <div class="brand-mark" aria-hidden="true">P</div>
+                <div class="brand-copy">
+                  <strong>Pack-Manager</strong>
+                  <small>Workspace</small>
+                </div>
+              </div>
+
+              <div>
+                <p class="nav-label">Workspace</p>
+                <nav class="nav">
+                  <a class="nav-item" href="#dashboard">
+                    <svg
+                      class="nav-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                      <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                      <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                      <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+                    </svg>
+                    <span>Dashboard</span>
+                  </a>
+                  <a class="nav-item" href="#managers">
+                    <svg
+                      class="nav-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path d="M7 7h10M7 12h10M7 17h10"></path>
+                      <circle cx="4" cy="7" r="1"></circle>
+                      <circle cx="4" cy="12" r="1"></circle>
+                      <circle cx="4" cy="17" r="1"></circle>
+                    </svg>
+                    <span>Managers</span>
+                  </a>
+                  <a
+                    class="nav-item active"
+                    href="#activity"
+                    aria-current="page"
+                  >
+                    <svg
+                      class="nav-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path d="M4 12h3l2-6 4 12 2-6h5"></path>
+                    </svg>
+                    <span>Activity</span>
+                    <span class="nav-badge">Live</span>
+                  </a>
+                  <a class="nav-item" href="#history">
+                    <svg
+                      class="nav-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path>
+                      <path d="M3 3v5h5M12 7v5l3 2"></path>
+                    </svg>
+                    <span>History</span>
+                  </a>
+                </nav>
+              </div>
+
+              <div class="sidebar-foot">
+                Plan started today at 10:42 AM<br />
+                3 Managers · 12 updates
+              </div>
+            </aside>
+
+            <section class="main" aria-labelledby="activity-heading">
+              <header class="main-header">
+                <div>
+                  <p class="eyebrow">Live plan · Today at 10:42 AM</p>
+                  <h2 id="activity-heading" tabindex="-1">Upgrade Activity</h2>
+                  <p>2 of 12 updates verified · 3 Managers</p>
+                </div>
+                <div class="header-actions">
+                  <span class="status neutral">Non-interactive</span>
+                </div>
+              </header>
+
+              <div class="main-scroll">
+                <div
+                  class="announcement"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  <span class="announcement-icon" aria-hidden="true">i</span>
+                  <div>
+                    <strong>Status update</strong>
+                    <span>
+                      Homebrew verified 2 of 4 updates. node@24 has stalled
+                      without output; the remaining work is waiting safely.
+                    </span>
+                  </div>
+                </div>
+
+                <article class="manager-block">
+                  <header class="manager-heading">
+                    <h3>Homebrew <span>/opt/homebrew/bin/brew</span></h3>
+                    <span class="manager-count">2 of 4 verified</span>
+                  </header>
+                  <div class="operation-list">
+                    <div class="operation">
+                      <div class="package-name">
+                        <strong>ripgrep</strong>
+                        <small>Package update</small>
+                      </div>
+                      <div class="version">
+                        <span class="new">14.1.1</span>
+                      </div>
+                      <span class="status success">Verified</span>
+                      <div class="progress-wrap">
+                        <div
+                          class="progress-track verified"
+                          role="progressbar"
+                          aria-label="ripgrep verified"
+                          aria-valuemin="0"
+                          aria-valuemax="100"
+                          aria-valuenow="100"
+                        >
+                          <span></span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="operation">
+                      <div class="package-name">
+                        <strong>gh</strong>
+                        <small>Package update</small>
+                      </div>
+                      <div class="version">
+                        <span class="new">2.76.2</span>
+                      </div>
+                      <span class="status success">Verified</span>
+                      <div class="progress-wrap">
+                        <div
+                          class="progress-track verified"
+                          role="progressbar"
+                          aria-label="gh verified"
+                          aria-valuemin="0"
+                          aria-valuemax="100"
+                          aria-valuenow="100"
+                        >
+                          <span></span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="operation attention">
+                      <div class="package-name">
+                        <strong>node@24</strong>
+                        <small>No output for 2 minutes 4 seconds</small>
+                      </div>
+                      <div class="version">
+                        <span class="old">24.7.0</span> →
+                        <span class="new">24.8.0</span>
+                      </div>
+                      <span class="status warning">Stalled</span>
+                      <div class="attention-detail">
+                        <p>
+                          Pack-Manager is still monitoring this non-interactive
+                          command. It does not provide an input field or answer
+                          prompts on your behalf.
+                        </p>
+                        <div class="attention-actions">
+                          <button class="micro-button" type="button">
+                            Keep waiting
+                          </button>
+                          <button class="micro-button" type="button">
+                            Copy command
+                          </button>
+                          <button class="micro-button danger" type="button">
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="operation">
+                      <div class="package-name">
+                        <strong>Homebrew</strong>
+                        <small>Manager update · waits for node@24</small>
+                      </div>
+                      <div class="version">
+                        <span class="old">4.3.12</span> →
+                        <span class="new">4.3.13</span>
+                      </div>
+                      <span class="status neutral">Waiting</span>
+                    </div>
+                  </div>
+                  <details class="command-disclosure">
+                    <summary>Show command output</summary>
+                    <pre class="command-well">
+/opt/homebrew/bin/brew upgrade ripgrep gh node@24
+==&gt; Upgrading 3 outdated packages
+==&gt; Upgrading ripgrep
+==&gt; Pouring ripgrep--14.1.1.arm64_sequoia.bottle.tar.gz
+==&gt; Upgrading gh
+==&gt; Pouring gh--2.76.2.arm64_sequoia.bottle.tar.gz</pre>
+                  </details>
+                </article>
+
+                <article class="manager-block">
+                  <header class="manager-heading">
+                    <h3>mise <span>/opt/homebrew/bin/mise</span></h3>
+                    <span class="manager-count">0 of 3 verified</span>
+                  </header>
+                  <div class="operation-list">
+                    <div class="operation">
+                      <div class="package-name">
+                        <strong>python@3.13</strong>
+                        <small>Runtime update</small>
+                      </div>
+                      <div class="version">
+                        <span class="old">3.13.4</span> →
+                        <span class="new">3.13.5</span>
+                      </div>
+                      <span class="status running">Running</span>
+                      <div class="progress-wrap">
+                        <div
+                          class="progress-track indeterminate"
+                          role="progressbar"
+                          aria-label="python 3.13 update running; percentage unavailable"
+                        >
+                          <span></span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="operation">
+                      <div class="package-name">
+                        <strong>node@22</strong>
+                        <small>Runtime update</small>
+                      </div>
+                      <div class="version">
+                        <span class="old">22.16.0</span> →
+                        <span class="new">22.17.1</span>
+                      </div>
+                      <span class="status neutral">Queued</span>
+                    </div>
+                    <div class="operation">
+                      <div class="package-name">
+                        <strong>ruby@3.4</strong>
+                        <small>Runtime update</small>
+                      </div>
+                      <div class="version">
+                        <span class="old">3.4.4</span> →
+                        <span class="new">3.4.5</span>
+                      </div>
+                      <span class="status neutral">Queued</span>
+                    </div>
+                  </div>
+                  <details class="command-disclosure">
+                    <summary>Show command output</summary>
+                    <pre class="command-well">
+/opt/homebrew/bin/mise upgrade python@3.13 node@22 ruby@3.4
+[mise] installing python@3.13.5</pre>
+                  </details>
+                </article>
+
+                <article class="manager-block">
+                  <header class="manager-heading">
+                    <h3>npm <span>Managed through mise</span></h3>
+                    <span class="manager-count">5 queued</span>
+                  </header>
+                  <div
+                    class="compact-packages"
+                    aria-label="Queued npm Packages"
+                  >
+                    <span class="package-pill">@openai/codex</span>
+                    <span class="package-pill">vite</span>
+                    <span class="package-pill">typescript</span>
+                    <span class="package-pill">eslint</span>
+                    <span class="package-pill">npm-check-updates</span>
+                  </div>
+                </article>
+              </div>
+            </section>
+
+            <aside class="sidecar" aria-labelledby="live-sidecar-heading">
+              <header class="sidecar-head">
+                <div class="sidecar-headline">
+                  <div>
+                    <p class="eyebrow">Live · 3 Managers</p>
+                    <h2 id="live-sidecar-heading" tabindex="-1">
+                      Upgrade Activity
+                    </h2>
+                    <p>2 of 12 updates verified</p>
+                  </div>
+                  <span class="status running">Running</span>
+                </div>
+              </header>
+
+              <div class="sidecar-scroll">
+                <div class="side-summary">
+                  <div class="side-stat">
+                    <strong>2</strong>
+                    <small>Verified</small>
+                  </div>
+                  <div class="side-stat">
+                    <strong>1</strong>
+                    <small>Stalled</small>
+                  </div>
+                  <div class="side-stat">
+                    <strong>9</strong>
+                    <small>Remaining</small>
+                  </div>
+                </div>
+
+                <div class="side-progress">
+                  <div class="side-progress-copy">
+                    <span>Overall plan</span>
+                    <span>2 of 12 verified</span>
+                  </div>
+                  <div
+                    class="progress-track indeterminate"
+                    role="progressbar"
+                    aria-label="Overall plan running; 2 of 12 updates verified; percentage unavailable"
+                  >
+                    <span></span>
+                  </div>
+                </div>
+
+                <section class="side-manager">
+                  <header class="side-manager-head">
+                    Homebrew <span>2 of 4</span>
+                  </header>
+                  <div class="side-row">
+                    <strong>ripgrep</strong>
+                    <span class="side-state success">14.1.1 · verified</span>
+                  </div>
+                  <div class="side-row">
+                    <strong>gh</strong>
+                    <span class="side-state success">2.76.2 · verified</span>
+                  </div>
+                  <div class="side-row">
+                    <strong>node@24</strong>
+                    <span class="side-state warning">stalled</span>
+                  </div>
+                  <div class="side-row">
+                    <strong>Homebrew</strong>
+                    <span class="side-state neutral">waiting</span>
+                  </div>
+                </section>
+
+                <section class="side-manager">
+                  <header class="side-manager-head">
+                    mise <span>0 of 3</span>
+                  </header>
+                  <div class="side-row">
+                    <strong>python@3.13</strong>
+                    <span class="side-state running">running</span>
+                  </div>
+                  <div class="side-row">
+                    <strong>node@22</strong>
+                    <span class="side-state neutral">queued</span>
+                  </div>
+                  <div class="side-row">
+                    <strong>ruby@3.4</strong>
+                    <span class="side-state neutral">queued</span>
+                  </div>
+                </section>
+
+                <section class="side-manager">
+                  <header class="side-manager-head">
+                    npm <span>0 of 5</span>
+                  </header>
+                  <div class="side-row">
+                    <strong>5 Package updates</strong>
+                    <span class="side-state neutral">queued</span>
+                  </div>
+                </section>
+
+                <p class="side-action-note">
+                  node@24 needs a decision. Use the full Activity workspace for
+                  safe actions and command evidence.
+                </p>
+              </div>
+
+              <footer class="sidecar-foot">
+                <a class="button primary" href="#activity-heading">
+                  View full Activity
+                </a>
+              </footer>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="scene" aria-labelledby="scene-results-title">
+        <header class="scene-label">
+          <div>
+            <p class="scene-kicker">Canonical canvas B</p>
+            <h1 id="scene-results-title">Partial Results Summary</h1>
+          </div>
+          <p>
+            Verified Packages settle to one current version; the failed item
+            stays explained, recoverable, and linked to immutable History.
+          </p>
+        </header>
+
+        <div class="window">
+          <header class="titlebar">
+            <div class="traffic" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="window-title">Pack-Manager</div>
+            <div class="window-status">Completed with issues</div>
+          </header>
+
+          <div class="workspace">
+            <aside class="sidebar" aria-label="Primary navigation">
+              <div class="brand">
+                <div class="brand-mark" aria-hidden="true">P</div>
+                <div class="brand-copy">
+                  <strong>Pack-Manager</strong>
+                  <small>Workspace</small>
+                </div>
+              </div>
+
+              <div>
+                <p class="nav-label">Workspace</p>
+                <nav class="nav">
+                  <a class="nav-item" href="#dashboard-results">
+                    <svg
+                      class="nav-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                      <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                      <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                      <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+                    </svg>
+                    <span>Dashboard</span>
+                  </a>
+                  <a class="nav-item" href="#managers-results">
+                    <svg
+                      class="nav-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path d="M7 7h10M7 12h10M7 17h10"></path>
+                      <circle cx="4" cy="7" r="1"></circle>
+                      <circle cx="4" cy="12" r="1"></circle>
+                      <circle cx="4" cy="17" r="1"></circle>
+                    </svg>
+                    <span>Managers</span>
+                  </a>
+                  <a
+                    class="nav-item active"
+                    href="#results-activity"
+                    aria-current="page"
+                  >
+                    <svg
+                      class="nav-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path d="M4 12h3l2-6 4 12 2-6h5"></path>
+                    </svg>
+                    <span>Activity</span>
+                  </a>
+                  <a class="nav-item" href="#history-results">
+                    <svg
+                      class="nav-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path>
+                      <path d="M3 3v5h5M12 7v5l3 2"></path>
+                    </svg>
+                    <span>History</span>
+                    <span class="nav-badge">1</span>
+                  </a>
+                </nav>
+              </div>
+
+              <div class="sidebar-foot">
+                Result saved to History<br />
+                Today at 10:49 AM
+              </div>
+            </aside>
+
+            <section class="main" aria-labelledby="results-activity-heading">
+              <header class="main-header">
+                <div>
+                  <p class="eyebrow">Finished · Today at 10:49 AM</p>
+                  <h2 id="results-activity-heading" tabindex="-1">
+                    Upgrade Activity
+                  </h2>
+                  <p>10 verified · 1 failed · 1 skipped · 6m 48s</p>
+                </div>
+                <div class="header-actions">
+                  <button class="button text" type="button">
+                    Show all command output
+                  </button>
+                </div>
+              </header>
+
+              <div class="main-scroll">
+                <div
+                  class="announcement"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  <span class="announcement-icon" aria-hidden="true">i</span>
+                  <div>
+                    <strong>Final result</strong>
+                    <span>
+                      Upgrade Plan finished with issues. 10 of 12 updates were
+                      verified, @openai/codex failed, and npm-check-updates was
+                      skipped.
+                    </span>
+                  </div>
+                </div>
+
+                <div class="timeline-summary">
+                  <div class="timeline-stat">
+                    <strong>10</strong>
+                    <span>Verified</span>
+                  </div>
+                  <div class="timeline-stat">
+                    <strong>1</strong>
+                    <span>Failed</span>
+                  </div>
+                  <div class="timeline-stat">
+                    <strong>1</strong>
+                    <span>Skipped</span>
+                  </div>
+                  <div class="timeline-stat">
+                    <strong>6m 48s</strong>
+                    <span>Duration</span>
+                  </div>
+                </div>
+
+                <section
+                  class="timeline"
+                  aria-label="Completed command timeline"
+                >
+                  <div class="timeline-row">
+                    <time datetime="10:42:14">10:42:14</time>
+                    <span class="timeline-manager">Homebrew</span>
+                    <div class="timeline-copy">
+                      <strong>Updated and verified 4 items</strong>
+                      <small>ripgrep, gh, node@24, Homebrew</small>
+                    </div>
+                    <span class="status success">Verified</span>
+                  </div>
+                  <div class="timeline-row">
+                    <time datetime="10:45:09">10:45:09</time>
+                    <span class="timeline-manager">mise</span>
+                    <div class="timeline-copy">
+                      <strong>Updated and verified 3 runtimes</strong>
+                      <small>python@3.13, node@22, ruby@3.4</small>
+                    </div>
+                    <span class="status success">Verified</span>
+                  </div>
+                  <div class="timeline-row">
+                    <time datetime="10:47:31">10:47:31</time>
+                    <span class="timeline-manager">npm</span>
+                    <div class="timeline-copy">
+                      <strong>Updated and verified 3 Packages</strong>
+                      <small>vite, typescript, eslint</small>
+                    </div>
+                    <span class="status success">Verified</span>
+                  </div>
+                  <div class="timeline-row">
+                    <time datetime="10:48:42">10:48:42</time>
+                    <span class="timeline-manager">npm</span>
+                    <div class="timeline-copy">
+                      <strong>@openai/codex could not be updated</strong>
+                      <small
+                        >Package directory was locked by another npm
+                        process</small
+                      >
+                    </div>
+                    <span class="status danger">Failed</span>
+                  </div>
+                  <div class="timeline-row">
+                    <time datetime="10:48:43">10:48:43</time>
+                    <span class="timeline-manager">npm</span>
+                    <div class="timeline-copy">
+                      <strong>npm-check-updates was not started</strong>
+                      <small>Skipped after the Manager command failed</small>
+                    </div>
+                    <span class="status neutral">Skipped</span>
+                  </div>
+                  <div class="timeline-row">
+                    <time datetime="10:49:02">10:49:02</time>
+                    <span class="timeline-manager">Refresh</span>
+                    <div class="timeline-copy">
+                      <strong>Verified current state</strong>
+                      <small
+                        >10 updated Packages now report their target
+                        versions</small
+                      >
+                    </div>
+                    <span class="status success">Verified</span>
+                  </div>
+                </section>
+
+                <article class="manager-block">
+                  <header class="manager-heading">
+                    <h3>
+                      Technical evidence <span>npm · retained output</span>
+                    </h3>
+                    <span class="manager-count">Secondary</span>
+                  </header>
+                  <details class="command-disclosure">
+                    <summary>Show command output</summary>
+                    <pre class="command-well">
+/Users/sallvain/.local/share/mise/installs/node/24/bin/npm update -g @openai/codex vite typescript eslint npm-check-updates
+npm error code EBUSY
+npm error resource busy or locked
+npm error package @openai/codex
+npm error A complete log is retained for this plan.</pre>
+                  </details>
+                </article>
+              </div>
+            </section>
+
+            <aside class="sidecar" aria-labelledby="results-heading">
+              <header class="sidecar-head">
+                <div class="sidecar-headline">
+                  <div>
+                    <p class="eyebrow">Saved to History</p>
+                    <h2 id="results-heading" tabindex="-1">Results</h2>
+                    <p>Retry of plan from 9:18 AM</p>
+                  </div>
+                  <span class="status warning">Partial</span>
+                </div>
+              </header>
+
+              <div class="sidecar-scroll">
+                <div class="result-hero">
+                  <strong>Completed with issues</strong>
+                  <p>10 of 12 updates verified · 1 failed · 1 skipped</p>
+                </div>
+
+                <section class="result-group">
+                  <header class="result-group-head">
+                    Homebrew <span class="side-state success">4 verified</span>
+                  </header>
+                  <div class="result-row">
+                    <strong>ripgrep</strong>
+                    <span class="verified-version">14.1.1</span>
+                  </div>
+                  <div class="result-row">
+                    <strong>gh</strong>
+                    <span class="verified-version">2.76.2</span>
+                  </div>
+                  <div class="result-row">
+                    <strong>node@24 · Homebrew</strong>
+                    <span class="verified-version">24.8.0</span>
+                  </div>
+                  <div class="result-row">
+                    <strong>Homebrew</strong>
+                    <span class="verified-version">4.3.13</span>
+                  </div>
+                </section>
+
+                <section class="result-group">
+                  <header class="result-group-head">
+                    mise <span class="side-state success">3 verified</span>
+                  </header>
+                  <div class="result-row">
+                    <strong>python@3.13</strong>
+                    <span class="verified-version">3.13.5</span>
+                  </div>
+                  <div class="result-row">
+                    <strong>node@22</strong>
+                    <span class="verified-version">22.17.1</span>
+                  </div>
+                  <div class="result-row">
+                    <strong>ruby@3.4</strong>
+                    <span class="verified-version">3.4.5</span>
+                  </div>
+                </section>
+
+                <section class="result-group">
+                  <header class="result-group-head">
+                    npm <span class="side-state warning">3 of 5 verified</span>
+                  </header>
+                  <div class="result-row">
+                    <strong>vite · typescript · eslint</strong>
+                    <span class="verified-version">verified</span>
+                  </div>
+                  <div class="failure">
+                    <div class="failure-head">
+                      <strong>@openai/codex</strong>
+                      <span>Failed</span>
+                    </div>
+                    <div class="failure-body">
+                      <section class="failure-section">
+                        <h4>What happened</h4>
+                        <p>
+                          Another npm process locked the Package directory, so
+                          this update could not start safely.
+                        </p>
+                      </section>
+                      <section class="failure-section">
+                        <h4>What to do next</h4>
+                        <p>
+                          Finish or close the other npm process, then create a
+                          new plan containing this failed update.
+                        </p>
+                      </section>
+                      <details class="command-disclosure">
+                        <summary>Show command output</summary>
+                        <pre class="command-well">
+npm error code EBUSY
+npm error resource busy or locked
+npm error package @openai/codex</pre>
+                      </details>
+                    </div>
+                  </div>
+                  <div class="result-row">
+                    <strong>npm-check-updates</strong>
+                    <span class="side-state neutral">skipped</span>
+                  </div>
+                </section>
+
+                <section
+                  class="retry-scope"
+                  aria-labelledby="retry-scope-heading"
+                >
+                  <h3 id="retry-scope-heading" tabindex="-1">
+                    Retry 1 failed update
+                  </h3>
+                  <p>
+                    Review this scope before creating a separate Upgrade Plan.
+                    Nothing runs from Results.
+                  </p>
+                  <div class="retry-item">
+                    <strong>@openai/codex</strong>
+                    <code>0.60.0 → 0.61.0</code>
+                  </div>
+                  <div class="retry-actions">
+                    <button class="button" type="button">Cancel</button>
+                    <button class="button primary" type="button">
+                      Create new plan
+                    </button>
+                  </div>
+                </section>
+              </div>
+
+              <footer class="sidecar-foot">
+                <div class="result-foot-links">
+                  <a href="#previous-result">View previous result</a>
+                  <a href="#history-results">View in History</a>
+                </div>
+                <button class="button" type="button">Done</button>
+              </footer>
+            </aside>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
