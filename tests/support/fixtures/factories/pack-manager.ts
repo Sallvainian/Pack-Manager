@@ -111,7 +111,9 @@ export function createPackManagerFactories(
       kind,
       installed,
       latest,
-      outdated: overrides.outdated ?? installed !== latest,
+      // The package manager's verdict is authoritative. Version strings are
+      // display data and may not be semver-comparable, so never infer this.
+      outdated: overrides.outdated ?? false,
       pinned: false,
       ...overrides,
     });
