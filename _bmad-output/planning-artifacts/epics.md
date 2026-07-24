@@ -286,7 +286,7 @@ FR-6: Epic 3 — Preserve exact eligible Package selection.
 
 FR-7: Epic 3 — Preview every bulk command and exclusion before authorization.
 
-FR-8: Epic 3 — Reject stale, altered, replayed, or otherwise invalid plans.
+FR-8: Epic 3 — Reject stale, altered, replayed, or otherwise invalid plans. Epic 3 covers the stale-plan replacement/reconfirmation dimension (Stories 3.3, 3.6); the altered/replayed/evicted/conflicting-plan rejection is realized cross-cuttingly by Story 5.8 (byte-identical preview-to-spawn revalidation — "stale, altered, replayed, evicted, or conflicting plans enqueue nothing") and UX-PB.2a's one-use `planId` capability, which expires on mutation, staleness, execution attempt, or eviction. Epic 3 remains primary; these are cross-cutting acceptance constraints per this map's convention.
 
 FR-9: Epic 5 — Admit multi-group work atomically and preserve scheduler protections.
 
@@ -630,7 +630,7 @@ As a Pack-Manager user, I want the sidecar I confirmed to become the one live su
 **Assignee:** Unassigned  
 **Calendar date:** Unassigned
 
-As a user, I want full Activity to be a deeper view of the very same attempt shown in the sidecar so that the compact summary and the detailed evidence are never two different executions.
+As a Pack-Manager user, I want full Activity to be a deeper view of the very same attempt shown in the sidecar so that the compact summary and the detailed evidence are never two different executions.
 
 **Acceptance Criteria:**
 
@@ -642,8 +642,6 @@ As a user, I want full Activity to be a deeper view of the very same attempt sho
 **When** the condition is summarized there
 **Then** the sidecar offers `View full Activity` and defers `Keep waiting`, `Copy command`, `Cancel plan`, and expanded command evidence to full Activity rather than crowding the summary.
 
-**And** if a History replay opens during the live plan, the sidecar remains visibly live, full Activity is labeled `Viewing past activity`, and `Back to live activity` returns the workspace to the active attempt.
-
 #### Story UX-PB.3c: Per-item live progress states
 
 **Primary concern:** Product Behavior  
@@ -652,7 +650,7 @@ As a user, I want full Activity to be a deeper view of the very same attempt sho
 **Assignee:** Unassigned  
 **Calendar date:** Unassigned
 
-As a user, I want each Package and Manager item to show its own honest live state so that I can see what is running, what is waiting, and what has verified without reading a terminal.
+As a Pack-Manager user, I want each Package and Manager item to show its own honest live state so that I can see what is running, what is waiting, and what has verified without reading a terminal.
 
 **Acceptance Criteria:**
 
@@ -676,7 +674,7 @@ As a user, I want each Package and Manager item to show its own honest live stat
 **Assignee:** Unassigned  
 **Calendar date:** Unassigned
 
-As a user, I want the plan to become Results only after affected state is verified so that success is earned, not assumed from a process exit.
+As a Pack-Manager user, I want the plan to become Results only after affected state is verified so that success is earned, not assumed from a process exit.
 
 **Acceptance Criteria:**
 
@@ -704,7 +702,7 @@ As a user, I want the plan to become Results only after affected state is verifi
 **Assignee:** Unassigned  
 **Calendar date:** Unassigned
 
-As a user, I want a failed item to explain what happened and what to do next before I see Retry so that I fix the real cause instead of repeating a doomed attempt.
+As a Pack-Manager user, I want a failed item to explain what happened and what to do next before I see Retry so that I fix the real cause instead of repeating a doomed attempt.
 
 **Acceptance Criteria:**
 
@@ -724,7 +722,7 @@ As a user, I want a failed item to explain what happened and what to do next bef
 **Assignee:** Unassigned  
 **Calendar date:** Unassigned
 
-As a user, I want `Interaction required` to appear only when a trusted classifier recognizes a real prompt so that Pack-Manager never invents prompt meaning from arbitrary output.
+As a Pack-Manager user, I want `Interaction required` to appear only when a trusted classifier recognizes a real prompt so that Pack-Manager never invents prompt meaning from arbitrary output.
 
 **Acceptance Criteria:**
 
@@ -748,7 +746,7 @@ As a user, I want `Interaction required` to appear only when a trusted classifie
 **Assignee:** Unassigned  
 **Calendar date:** Unassigned
 
-As a user, I want the primary cancel action to clearly stop the whole plan, with an Operation-only cancel reserved for a deliberate diagnostic, so that I always know the scope of what I am stopping.
+As a Pack-Manager user, I want the primary cancel action to clearly stop the whole plan, with an Operation-only cancel reserved for a deliberate diagnostic, so that I always know the scope of what I am stopping.
 
 **Acceptance Criteria:**
 
@@ -915,7 +913,7 @@ As a Pack-Manager user, I want the persistent Upgrade Plan to present one delibe
 **Assignee:** Unassigned  
 **Calendar date:** Unassigned
 
-As a user, I want to deliberately disable the final confirmation from the dialog and restore it from Settings so that I can remove friction without ever losing a safe default.
+As a Pack-Manager user, I want to deliberately disable the final confirmation from the dialog and restore it from Settings so that I can remove friction without ever losing a safe default.
 
 **Acceptance Criteria:**
 
@@ -999,7 +997,7 @@ As a keyboard and VoiceOver user at high zoom, I want every safety action reacha
 **Assignee:** Unassigned  
 **Calendar date:** Unassigned
 
-As a user, I want the application's own update to appear only as a restrained `Pack-Manager Update Ready!` badge that links into Settings so that it never mixes with Package Upgrade Plans, Activity, Results, or History.
+As a Pack-Manager user, I want the application's own update to appear only as a restrained `Pack-Manager Update Ready!` badge that links into Settings so that it never mixes with Package Upgrade Plans, Activity, Results, or History.
 
 **Acceptance Criteria:**
 
@@ -1403,7 +1401,7 @@ So that I can understand my Manager topology without false errors or missing evi
 
 **Given** present and absent entries for all six Managers
 **When** the user opens Environment Report
-**Then** ToolEnv source/path and each Manager's path, version when available, managed-by state, evidence, and install hint are represented coherently
+**Then** ToolEnv source/path and each Manager's path, version when available, managed-by state, evidence, and install hint are each rendered with their specified value
 **And** Copy reports both success and actionable failure.
 
 **Given** either behavior-present check fails
@@ -1750,7 +1748,7 @@ So that I can act efficiently without adding excluded or unrelated Packages to t
 **When** the single-row plan action is invoked
 **Then** exactly one eligible Package's canonical identity is added to (or removed from) the persistent draft Upgrade Plan, nothing is built, submitted, enqueued, or executed, and the sidecar reflects the membership change
 **And** ineligible, pinned, or current rows add nothing, stay inert with an explained reason, and never expand the selection
-**And** the resulting one-Package plan flows through the same review, separate confirmation, execution, verification, Results, and History lifecycle as a multi-Package plan.
+**And** the resulting one-Package plan enters the same review and separate-confirmation path as a multi-Package plan, with its execution, verification, Results, and History lifecycle proven by the later-wave stories that own those stages.
 
 **Given** all required interactions execute and pass
 **When** the result is admitted
@@ -2149,7 +2147,7 @@ So that I understand what will run, through which executor, and why.
 
 **Given** production status/snapshot events
 **When** the Manager Header/Card renders
-**Then** its Route, unavailable-executor, queued, npm-reset, and `IN PLAN`/`Remove` draft-membership states are understandable, and its `Update Manager` action stages an independent, removable Manager self-update into the one persistent Upgrade Plan and never executes directly
+**Then** its Route, unavailable-executor, queued, npm-reset, and `IN PLAN`/`Remove` draft-membership states render their specified labels and actions, and its `Update Manager` action stages an independent, removable Manager self-update into the one persistent Upgrade Plan and never executes directly
 **And** all three criteria become only **eligible for later FULL reassessment** after valid admission.
 
 ### Story 5.3: Reject Unsafe Spawns and Hold Complete Locks
@@ -2231,7 +2229,10 @@ So that I can follow work without losing durable context.
 **Given** a confirmed plan attempt with more than 5,000 live lines and production Operation events correlated by its `planAttemptId`
 **When** the one shared confirmed-plan model renders in the contextual right sidecar and the full Activity destination
 **Then** both surfaces render that single plan model identically, presenting human-readable Package/Manager progress first and exact command/output as secondary evidence, and they append, repaint, pin/unpin, bound memory over the 5,000+ lines, and preserve Operation evidence and the complete durable transcript.
-**And** the sidecar is absent when empty and otherwise persists as a draft across Manager navigation, transforming into a persistent Results Summary only once all plan Operations and required verification refreshes reach terminal state.
+
+**Given** the same shared confirmed-plan model across Manager navigation and at terminal state
+**When** the draft sidecar lifecycle is exercised
+**Then** the sidecar is absent when empty and otherwise persists as a draft across Manager navigation, transforming into a persistent Results Summary only once all plan Operations and required verification refreshes reach terminal state.
 
 **Given** human and machine outputs agree on the first attempt
 **When** admission evaluates them
@@ -3313,7 +3314,7 @@ So that a universal header cannot substitute for the experience users actually r
 
 **Given** the installed candidate
 **When** it launches through Finder and then the Dock
-**Then** both hosts prove intended version, packaged resources/entitlements, GUI ToolEnv discovery, production WKWebView, and usable startup state.
+**Then** both hosts prove intended version, packaged resources/entitlements, GUI ToolEnv discovery, production WKWebView, and reach an interactive first paint.
 
 **Given** both first-attempt host records match the profile and manifest
 **When** they are admitted
