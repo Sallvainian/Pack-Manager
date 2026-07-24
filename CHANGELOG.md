@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.9](https://github.com/Sallvainian/Pack-Manager/compare/v0.2.8...v0.2.9) (2026-07-24)
+
+
+### Bug Fixes
+
+* **ui:** keep the package-row checkbox in sync with the store ([40c1798](https://github.com/Sallvainian/Pack-Manager/commit/40c17986470fe29478319fcdc6618730a9078890))
+
 ## [0.2.8](https://github.com/Sallvainian/Pack-Manager/compare/v0.2.7...v0.2.8) (2026-07-24)
 
 
