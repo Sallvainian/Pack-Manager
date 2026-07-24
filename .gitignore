@@ -49,3 +49,19 @@ _bmad/
 **/.working/
 **/.playwright-cli/
 **/.memlog.md
+.bmad-loop/runs/
+.bmad-loop/cache/
+.bmad-loop/policy.toml
+
+# Kanban Pro overlay — auto-generated when this repo is opened in Kanban Pro
+# (a separate app), not part of the Pack-Manager codebase. Kanban Pro also
+# overwrites README.md / CLAUDE.md / AGENTS.md on project load; restore those
+# from git if it does.
+.kanban/
+/MAPPING.md
+/ORGANOGRAM.md
+.github/copilot-instructions.md
+
+# Local agent tooling — machine-specific paths and working data.
+.bmad-loop/
+.codex/
