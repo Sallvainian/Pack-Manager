@@ -9,43 +9,64 @@ Pack-Manager has 37 production TSX component modules organized by user-facing ar
 
 The frontend does not call package-manager processes directly. All native work crosses the typed Tauri IPC boundary in `src/lib/ipc/`, and backend events update the frontend stores.
 
+## Approved target course correction — not yet implemented
+
+This inventory describes the current brownfield component tree. The finalized
+UX does not treat `SelfUpdateCard`, `UpgradePlanSheet`, `ActivityDrawer`, or
+Operation-row `HistoryView` as the target experience.
+
+Product Behavior Prerequisite UX-PB.1..UX-PB.5 will replace or reshape those
+responsibilities around:
+
+- a persistent Upgrade Sidecar that appears only when non-empty and survives
+  Manager navigation;
+- Manager and Package add-to-plan actions with no immediate execution;
+- a separate final Confirmation Dialog;
+- shared plan-level Activity and Results plus a first-class Activity view;
+- one History row per durable Plan Attempt with replay and Retry lineage; and
+- revised Settings with `skipUpgradePlanConfirmation` and no active
+  `autoOpenDrawer`.
+
+Until that work exists, the component and store descriptions below are current
+mechanics only. Do not report the approved target as implemented.
+
 ## Application Shell
 
-| Component | Location | Responsibility |
-| --- | --- | --- |
-| `App` | `src/App.tsx` | Subscribes to native events before hydrating state, restores update state, and schedules launch refresh. |
-| `AppLayout` | `src/components/shell/AppLayout.tsx` | Root shell and store-driven view switcher; mounts global overlays and status UI. |
-| `Sidebar` | `src/components/shell/Sidebar.tsx` | Primary navigation for dashboard, managers, history, and settings. |
-| `SidebarManagerItem` | `src/components/shell/SidebarManagerItem.tsx` | Manager navigation item with derived status. |
-| `StatusBar` | `src/components/shell/StatusBar.tsx` | Global operation and application status. |
-| `UpdateStatusItem` | `src/components/shell/UpdateStatusItem.tsx` | Pack-Manager update availability/download/install affordance. |
-| `ToastHost` | `src/components/shell/ToastHost.tsx` | Global transient notifications. |
+| Component            | Location                                      | Responsibility                                                                                           |
+| -------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `App`                | `src/App.tsx`                                 | Subscribes to native events before hydrating state, restores update state, and schedules launch refresh. |
+| `AppLayout`          | `src/components/shell/AppLayout.tsx`          | Root shell and store-driven view switcher; mounts global overlays and status UI.                         |
+| `Sidebar`            | `src/components/shell/Sidebar.tsx`            | Primary navigation for dashboard, managers, history, and settings.                                       |
+| `SidebarManagerItem` | `src/components/shell/SidebarManagerItem.tsx` | Manager navigation item with derived status.                                                             |
+| `StatusBar`          | `src/components/shell/StatusBar.tsx`          | Global operation and application status.                                                                 |
+| `UpdateStatusItem`   | `src/components/shell/UpdateStatusItem.tsx`   | Pack-Manager update availability/download/install affordance.                                            |
+| `ToastHost`          | `src/components/shell/ToastHost.tsx`          | Global transient notifications.                                                                          |
 
 ## Feature Components
 
 ### Dashboard
 
-| Component | Responsibility |
-| --- | --- |
-| `DashboardView` | Displays the manager-card overview. |
-| `ManagerCard` | Isolates each manager's present, absent, stale, error, busy, and package states. |
-| `ManagedByChip` | Explains dynamically detected manager ownership and self-update routing. |
+| Component       | Responsibility                                                                   |
+| --------------- | -------------------------------------------------------------------------------- |
+| `DashboardView` | Displays the manager-card overview.                                              |
+| `ManagerCard`   | Isolates each manager's present, absent, stale, error, busy, and package states. |
+| `ManagedByChip` | Explains dynamically detected manager ownership and self-update routing.         |
 
 Location: `src/components/dashboard/`
 
 ### Package Manager View
 
-| Component | Responsibility |
-| --- | --- |
-| `ManagerPane` | Composes manager health, self-update, filtering, package table, and selection actions. |
-| `SelfUpdateCard` | Shows and starts the manager's derived self-update route. |
-| `HealthBanner` | Presents manager health issues and supported fixes. |
-| `PackageToolbar` | Search, outdated-only filtering, refresh, and bulk actions. |
-| `PackageTable` | Package table with virtualization above 100 rows. |
-| `PackageRow` | Selection, installed/latest versions, status, and row upgrade action. |
-| `VersionDelta` | Display-only segmented version highlighting; never determines outdatedness. |
-| `StatusBadge` | Maps package and active-operation state to visual status. |
-| `SelectionToolbar` | Bulk-upgrade and clear-selection actions. |
+| Component          | Responsibility                                                                         |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| `ManagerPane`      | Composes manager health, self-update, filtering, package table, and selection actions. |
+| `SelfUpdateCard`   | Shows and starts the manager's derived self-update route.                              |
+| `HealthBanner`     | Presents manager health issues and supported fixes.                                    |
+| `PackageToolbar`   | Search, outdated-only filtering, refresh, and bulk actions.                            |
+| `PackageTable`     | Package table with virtualization above 100 rows.                                      |
+| `PackageRow`       | Selection, installed/latest versions, status, and row upgrade action.                  |
+| `VersionDelta`     | Display-only segmented version highlighting; never determines outdatedness.            |
+| `StatusBadge`      | Maps package and active-operation state to visual status.                              |
+| `SelectionToolbar` | Bulk-upgrade and clear-selection actions.                                              |
 
 Location: `src/components/manager/`
 
@@ -53,26 +74,26 @@ Selection is filter-aware and supports shift ranges. Pinned packages and greedy 
 
 ### Activity and Operation History
 
-| Component/helper | Responsibility |
-| --- | --- |
-| `ActivityDrawer` | Persistent operation drawer with adjustable height and focus management. |
-| `OperationList` | Lists current and recent operations. |
-| `OperationRow` | Displays operation identity, state, duration, and cancellation action. |
-| `LiveLogView` | Streams output, virtualizes above 200 lines, follows the tail, and reports ring-buffer overflow. |
-| `useOperationEffects` | Converts operation transitions into drawer and toast behavior. |
-| `opDisplay.ts` | Pure operation titles, status metadata, duration, and carriage-return formatting. |
-| `HistoryView` | Filters past operations and lazily loads transcript tails. |
+| Component/helper      | Responsibility                                                                                   |
+| --------------------- | ------------------------------------------------------------------------------------------------ |
+| `ActivityDrawer`      | Persistent operation drawer with adjustable height and focus management.                         |
+| `OperationList`       | Lists current and recent operations.                                                             |
+| `OperationRow`        | Displays operation identity, state, duration, and cancellation action.                           |
+| `LiveLogView`         | Streams output, virtualizes above 200 lines, follows the tail, and reports ring-buffer overflow. |
+| `useOperationEffects` | Converts operation transitions into drawer and toast behavior.                                   |
+| `opDisplay.ts`        | Pure operation titles, status metadata, duration, and carriage-return formatting.                |
+| `HistoryView`         | Filters past operations and lazily loads transcript tails.                                       |
 
 Locations: `src/components/activity/` and `src/components/history/`
 
 ### Dialogs
 
-| Component | Responsibility |
-| --- | --- |
-| `DialogHost` | Renders the active discriminated dialog from UI state. |
-| `UpgradePlanSheet` | Trust checkpoint showing exact commands, exclusions, locks, notes, and staleness warnings before execution. |
-| `StalledOperationDialog` | Offers cancellation or a copy-to-terminal handoff for silent work. |
-| `QuitGuardDialog` | Prevents accidental exit or updater restart while operations are active. |
+| Component                | Responsibility                                                                                              |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `DialogHost`             | Renders the active discriminated dialog from UI state.                                                      |
+| `UpgradePlanSheet`       | Trust checkpoint showing exact commands, exclusions, locks, notes, and staleness warnings before execution. |
+| `StalledOperationDialog` | Offers cancellation or a copy-to-terminal handoff for silent work.                                          |
+| `QuitGuardDialog`        | Prevents accidental exit or updater restart while operations are active.                                    |
 
 Location: `src/components/dialogs/`
 
@@ -98,13 +119,13 @@ Use these primitives before introducing feature-local equivalents so new UI rema
 
 Five independent Zustand stores live under `src/store/`:
 
-| Store | Owns | Persistence |
-| --- | --- | --- |
-| `managers.ts` | Detection report, detection activity, and manager-specific errors. | Rehydrated from native state/events. |
-| `packages.ts` | Snapshots, stale flags, selection anchors, search, and outdated-only filters. | Session only. |
-| `operations.ts` | Normalized operation records and per-operation output capped at 5,000 lines. | Current session plus native journal rehydration. |
-| `ui.ts` | Active view, drawer, dialog, toasts, settings working copy, and row highlighting. | Settings are saved natively; other UI state is session only. |
-| `appUpdate.ts` | Native app-update status. | Rehydrated from the native updater state. |
+| Store           | Owns                                                                              | Persistence                                                  |
+| --------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `managers.ts`   | Detection report, detection activity, and manager-specific errors.                | Rehydrated from native state/events.                         |
+| `packages.ts`   | Snapshots, stale flags, selection anchors, search, and outdated-only filters.     | Session only.                                                |
+| `operations.ts` | Normalized operation records and per-operation output capped at 5,000 lines.      | Current session plus native journal rehydration.             |
+| `ui.ts`         | Active view, drawer, dialog, toasts, settings working copy, and row highlighting. | Settings are saved natively; other UI state is session only. |
+| `appUpdate.ts`  | Native app-update status.                                                         | Rehydrated from the native updater state.                    |
 
 `src/store/index.ts` provides cross-store derived selectors such as manager phase and total actionable outdated packages. Manager phase is derived from operation records and errors rather than duplicated as mutable state.
 
