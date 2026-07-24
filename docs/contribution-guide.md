@@ -1,6 +1,6 @@
 # Pack-Manager Contribution Guide
 
-**Date:** 2026-07-22
+**Date:** 2026-07-24
 
 Pack-Manager does not currently have a standalone `CONTRIBUTING.md`. This guide consolidates the active repository rules, architectural constraints, verification gates, and release conventions.
 

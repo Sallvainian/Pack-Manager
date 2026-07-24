@@ -1,6 +1,6 @@
 # Pack-Manager Development Guide
 
-**Date:** 2026-07-22
+**Date:** 2026-07-24
 
 ## Prerequisites
 
@@ -219,6 +219,6 @@ Diagnostics export creates a timestamped ZIP on the Desktop containing a report,
 ## Known Development Caveats
 
 - The project has no configured frontend lint or formatting script. Match the existing TypeScript/TSX style and rely on typecheck, tests, and production build gates.
-- Node and Rust versions are standardized in CI but not pinned for local development.
+- Node 24 is pinned for local development and CI through `.nvmrc`; the Rust toolchain is standardized in CI but not repository-pinned (no `rust-toolchain.toml`).
 - `tauri.conf.json` currently sets the content security policy to `null`; changes affecting loaded content should account for that existing security posture.
 - The source currently registers 20 native commands and six events. A few older comments/tests still refer to 17 commands or five events; treat the registered production surface as authoritative.

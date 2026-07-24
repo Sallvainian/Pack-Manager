@@ -12,8 +12,10 @@ sections_completed:
   - critical_dont_miss_rules
 existing_patterns_found: 7
 status: "complete"
-rule_count: 58
+rule_count: 55
 optimized_for_llm: true
+last_verified_against_code: "2026-07-24"
+contains_target_state: true # D27–D30 upgrade-experience rules split into Current vs Target
 ---
 
 # Project Context for AI Agents
@@ -29,7 +31,8 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - Tauri JavaScript API 2.11.1 and CLI 2.11.4.
 - React and React DOM 19.2.8, TypeScript 5.8.3, and Vite 7.3.6.
 - Tailwind CSS 4.3.3, Zustand 5.0.14, and TanStack React Virtual 3.14.7.
-- Vitest 4.1.10, React Testing Library 16.3.2, jsdom 29.1.1, and Cargo tests.
+- Vitest 4.1.10, React Testing Library 16.3.2, jsdom 29.1.1, and Cargo tests for unit/integration.
+- Playwright 1.61.1 (Chromium + WebKit) with `@faker-js/faker` 10.5.0 for browser end-to-end tests, run separately from the Vitest suite.
 - CI uses Node 24 and stable Rust; local toolchain versions are not pinned.
 
 ## Critical Implementation Rules
@@ -61,7 +64,8 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - For intentional IPC changes, regenerate fixtures with `PM_UPDATE_CONTRACT=1 cargo test ipc_contract`, then run both language suites.
 - Focused tests may be colocated; cross-feature frontend tests belong in `src/__tests__/`. DOM tests import `src/test/setup.ts` explicitly.
 - Cover relevant success, failure, cancellation/concurrency, stale-state, and contract edge cases. A manager refresh failure must retain its prior snapshot.
-- Frontend gates: `npm test`, `npx tsc --noEmit`, and `npm run build`.
+- Frontend gates: `npm test`, `npx tsc --noEmit`, and `npm run build`. Browser end-to-end tests are a separate required CI gate: `npm run test:e2e` (Chromium + WebKit) and `npm run test:e2e:typecheck`.
+- End-to-end tests live under `tests/e2e/*.spec.ts` with helpers in `tests/support/`; they stay offline and deterministic. `tests/support/fixtures` installs an in-browser Tauri IPC double (mocked commands/events via a page init script) and blocks cross-origin requests; seed data comes from `@faker-js/faker` factories. `playwright.config.ts` auto-starts the Vite dev server on a loopback URL and rejects a non-loopback `BASE_URL` unless `ALLOW_REMOTE_E2E=1`. The Playwright workflow (`.github/workflows/test.yml`) runs validation, sharded Chromium/WebKit, and a weekly burn-in; any failure blocks. This e2e Tauri double is distinct from the Vitest `bridge.ts`/`fakeIpc` seam.
 - Rust gates from `src-tauri/`: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, and `cargo test --locked`.
 - Run `cargo test -- --ignored` only when live detection, command compatibility, routing, or packaging behavior needs real-machine verification.
 
@@ -87,54 +91,23 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 - The package manager's `outdated` verdict is authoritative. Version-delta logic is display-only and must never decide whether an update exists.
 - Derive manager ownership and self-update routing from detected paths. Classify the raw path before canonicalizing it; mise shims are symlinks and canonicalizing first misroutes npm/uv.
-- Every Package and Manager update enters one persistent Upgrade Plan; no row,
-  Manager header, selection, or Update Everything action executes immediately.
-  Store canonical `PlanIntent`, not executable display strings. Canonicalize
-  explicit Package identities before preview issuance: preserve `null`, enforce
-  the 2,048-entry/512-byte-ID bounds, and remove exact Manager/Package
-  duplicates first-seen-order. Each Manager update is independent removable
-  membership; do not restore the old global `includeSelfUpdates` toggle.
-- Keep the one-use preview `planId` separate from the durable
-  `planAttemptId`. Execution must exactly match the issued preview and a fresh
-  coherent rebuild, reject active refresh/revision drift or an already-active
-  confirmed attempt, and submit only re-derived groups through atomic all-or-none
-  admission. Events, Operations, transcripts, journal records, verification,
-  Results, History, diagnostics, and Retry lineage carry `planAttemptId` when
-  applicable. Never fabricate plan grouping for legacy Operation records.
-- By default `Confirm # updates` opens the separate final confirmation dialog.
-  The skip-future checkbox exists only there. Persist
-  `skipUpgradePlanConfirmation` with default `false`; treat `autoOpenDrawer` as
-  inactive legacy input. Skipping the dialog never skips draft review, Rust
-  rebuild, stale-plan validation, or explicit user action.
+- Every Package and Manager update enters one persistent Upgrade Plan; no row, Manager header, selection, or Update Everything action executes immediately. Store the canonical `PlanRequest`/`PlanIntent`, not executable display strings. Before preview issuance, canonicalize explicit Package identities (`queue.rs` `canonicalize_plan_request`): preserve `null`, enforce the 2,048-entry / 512-byte-ID bounds, and remove exact Manager/Package duplicates first-seen-order. **Current:** manager self-updates are a single global all-or-nothing `include_self_updates` toggle (`ipc.rs` `PlanRequest`; one checkbox in the sheet). **Target (D27–D30, not yet implemented):** each Manager update becomes independent removable membership and the global toggle is removed — do not re-entrench a global self-updates toggle when implementing this.
+- Keep the one-use preview `planId` separate from the durable coherence token. Execution must exactly match the issued preview and a fresh coherent rebuild, reject active refresh/revision drift or an already-active confirmed attempt, and submit only re-derived groups through atomic all-or-none admission (`commands.rs` `execute_issued_plan`, `queue.rs` `submit_plan_batch`). **Current:** the durable token is a monotonic `revision`/epoch in `PlanCoordinator`; `OperationRecord` carries no plan-attempt id. **Target (D27–D30, not yet implemented):** a durable `planAttemptId` that Events, Operations, transcripts, journal records, verification, Results, History, diagnostics, and Retry lineage all carry. Never fabricate plan grouping for legacy Operation records.
+- **Current:** confirming the plan calls `executePlan(plan)` directly from the Upgrade Plan sheet — there is no separate final-confirmation dialog and no `skipUpgradePlanConfirmation` setting, and `autoOpenDrawer` is an **active** setting (default `true`, consumed in `useOperationEffects.ts`). **Target (D27–D30, not yet implemented):** `Confirm # updates` opens a separate final confirmation dialog whose skip-future checkbox persists `skipUpgradePlanConfirmation` (default `false`), and `autoOpenDrawer` becomes inactive legacy input. Skipping the dialog must never skip draft review, Rust rebuild, or stale-plan validation.
 - The single scheduler atomically checks and acquires each operation's complete lock set before start. All Homebrew work takes the Brew lock; routed operations lock executor and subject; mise-managed npm/uv work also protects Mise. Preserve global concurrency, fairness, and refresh coalescing.
 - Never run shell command strings. Spawn resolved absolute executables with structured argv, `env_clear`, an explicit environment, null stdin, and a new process group. Self-update and health-fix argv stays backend-only; derive previews from argv and never split display text back into arguments. No sudo or password prompt path is allowed.
 - Add `HOMEBREW_NO_AUTO_UPDATE=1` to every Brew command except the explicit `brew update` operation. Do not automatically retry external Homebrew lock contention.
 - One manager failure must not blank other managers or overwrite its previous successful snapshot. Parser recovery must merge a complete inventory, not replace it with an outdated-only overlay.
 - A manager-declared expected nonzero exit is not an operation failure; notably, usable npm outdated JSON may exit 1 and must reach the parser before error classification.
-- Keep confirmed attempts reconstructible: plan status/Results and nested
-  Operation status/output events, transcripts, structured logs, crash journal,
-  and verification share `planAttemptId` and `opId`. One confirmed attempt may
-  run at a time; concurrency happens inside it. Primary cancellation targets
-  the attempt, skips unstarted work, and preserves every terminal outcome.
-  Preserve the process reader's literal unterminated-notice handling and
-  bounded post-exit EOF grace. On shutdown, cancel and reap process groups;
-  never signal journaled PIDs after restart because PID reuse is unsafe.
-- Do not declare success at process exit. Enter `Verifying`, refresh every
-  affected subject/executor Manager, and distinguish mutation failure from
-  verification failure in Results. History has one immutable row per confirmed
-  attempt; Retry creates a new linked attempt and never overwrites the first
-  failure.
-- Show `Interaction required` only when a closed Manager-specific classifier
-  or explicit native signal recognizes a trusted prompt. Unknown null-stdin
-  silence follows the ordinary stall path. The primary label is `Cancel plan`
-  when the remaining attempt is affected; reserve `Cancel operation` for
-  explicitly Operation-scoped diagnostics.
+- Process-level durability holds today: preserve the process reader's literal unterminated-notice handling and bounded post-exit EOF grace (`runner.rs`); on shutdown, cancel and reap process groups; never signal journaled PIDs after restart because PID reuse is unsafe (`journal.rs`). **Current:** correlation across Operation status/output events, transcripts, structured logs, and the crash journal is by `opId`, and History is the Operation-level `operations.jsonl`. **Target (D27–D30, not yet implemented):** plan status/Results and nested Operation records share a `planAttemptId`; one confirmed attempt runs at a time with concurrency inside it, and primary cancellation targets the attempt, skips unstarted work, and preserves every terminal outcome.
+- **Current:** an operation is marked `Succeeded` at process exit (`classify_exit`), and a successful upgrade auto-enqueues a refresh of the affected subject/executor as a **separate** operation (`queue.rs`); there is no `Verifying` status and no per-attempt History/Retry lineage. **Target (D27–D30, not yet implemented):** do not declare success at process exit — enter `Verifying`, refresh every affected subject/executor Manager, and distinguish mutation failure from verification failure in Results; History keeps one immutable row per confirmed attempt and Retry creates a new linked attempt rather than overwriting the first failure.
+- **Current:** unknown null-stdin silence follows the ordinary stall path (`op:stalled` / `StallNotify`, `runner.rs`), and the UI exposes only `Cancel operation`. **Target (D27–D30, not yet implemented):** show `Interaction required` only when a closed Manager-specific classifier or explicit native signal recognizes a trusted prompt, and make the primary label `Cancel plan` when the remaining attempt is affected, reserving `Cancel operation` for explicitly Operation-scoped diagnostics.
 - Settings and journal rewrites remain atomic. Persist a settings patch before publishing it in memory or advancing the canonical revision; a failed save changes neither. Journal-append and structured app-log write failures are nonfatal to package operations; transcript creation failure blocks spawn, while later transcript-write failures are best-effort. Diagnostics must reject symlinks both when selecting and when streaming files.
 - Application-update checks/downloads may run in the background, but installation requires an explicit user Restart action. If the bundle parent is not writable, require manual installation rather than triggering an administrator prompt.
 - Selection must always exclude pinned packages and exclude greedy casks unless the user explicitly opts in. Unknown latest versions remain `null`; never fabricate a version delta.
 - Re-check self-update routes after every freshly parsed refresh snapshot; a manager's own outdated row can override delegated routing, especially npm inside mise.
 - Only the exact recognized uv reinstall suggestion may expose `fixCommand` and trusted fix argv. Altered, missing, or malformed suggestions remain visible in the warning detail but are neither copyable nor runnable.
-- Derive current command/event counts from production registration rather than treating old prose counts as invariants; the present surface is 20 commands and six events. Coordinate Plan Intent/Attempt IPC changes across Rust models, TypeScript types/guards, registration, wrappers, fixtures, subscriptions, persistence schemas, and boundary tests. `DECISIONS.md` D23a supersedes D23, D25 supersedes D20, and D27-D30 govern the finalized update experience.
+- Derive current command/event counts from production registration rather than treating old prose counts as invariants; the present surface is 20 commands and six events. Coordinate Plan Intent/Attempt IPC changes across Rust models, TypeScript types/guards, registration, wrappers, fixtures, subscriptions, persistence schemas, and boundary tests. `DECISIONS.md` D23a supersedes D23, D25 supersedes D20, and D27-D30 govern the finalized update experience. D27–D30 are decided but not yet fully implemented; the Upgrade-experience rules above are split into Current vs Target so agents don't hunt for symbols (`planAttemptId`, `Verifying`, `InteractionRequired`) the code does not yet define.
 - Tauri CSP is currently `null` and main-window capabilities are deliberately narrow. Treat any external-content, capability, or permission change as security-sensitive.
 
 ---
@@ -152,4 +125,4 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - Keep this file focused on project-specific rules that agents could otherwise miss.
 - Review it after major architecture, tooling, testing, security, or release changes and remove obsolete guidance.
 
-Last Updated: 2026-07-24
+Last Updated: 2026-07-24 — re-verified against the codebase: 51/58 rules confirmed unchanged with `file:line` evidence; the Testing section now covers the Playwright e2e gate, and the six D27–D30 upgrade-experience rules are split into Current vs Target because that model (`planAttemptId`, `Verifying`, `InteractionRequired`, the separate confirmation dialog, per-manager removable self-updates) is decided but not yet implemented.

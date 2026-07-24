@@ -1,6 +1,6 @@
 # Pack-Manager Architecture
 
-- **Date:** 2026-07-22
+- **Date:** 2026-07-24
 - **Project type:** Single-part macOS desktop application
 - **Primary pattern:** React component/store interface over a command- and event-driven Rust/Tauri core
 

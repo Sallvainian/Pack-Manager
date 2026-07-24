@@ -1,6 +1,6 @@
 # Pack-Manager Project Overview
 
-- **Date:** 2026-07-22
+- **Date:** 2026-07-24
 - **Type:** macOS desktop application
 - **Architecture:** Single Tauri bundle with a React interface and Rust native core
 
@@ -132,8 +132,8 @@ Existing authoritative/historical sources:
 
 ## Current Constraints
 
-- Local Node/Rust toolchains are not repository-pinned.
-- No frontend lint/format command or browser end-to-end test suite is configured.
+- Node 24 is pinned through `.nvmrc` for local development and CI; the Rust toolchain runs from stable in CI without a repository `rust-toolchain.toml` pin.
+- No frontend lint/format command is configured; a Playwright browser end-to-end suite (Chromium/WebKit) is now configured.
 - The interface is English-only.
 - Tauri CSP is currently `null`.
 - Some older comments/spec text still reflect the pre-updater count of 17 commands/five events and conflicting historical mas status; use production registration and current fixtures as current implementation evidence.

@@ -1,6 +1,6 @@
 # Pack-Manager Deployment Guide
 
-- **Date:** 2026-07-22
+- **Date:** 2026-07-24
 - **Target:** Universal macOS application (`arm64` + `x86_64`)
 
 ## Release Model

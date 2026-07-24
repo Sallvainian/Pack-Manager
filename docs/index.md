@@ -3,7 +3,7 @@
 - **Type:** Single-part macOS desktop application
 - **Primary languages:** Rust and TypeScript
 - **Architecture:** React component/store interface over a command- and event-driven Tauri core
-- **Last updated:** 2026-07-22
+- **Last updated:** 2026-07-24
 
 ## Project Overview
 
