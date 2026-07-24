@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.8](https://github.com/Sallvainian/Pack-Manager/compare/v0.2.7...v0.2.8) (2026-07-24)
+
+
+### Bug Fixes
+
+* **uv:** parse populated outdated output ([3a4b8b4](https://github.com/Sallvainian/Pack-Manager/commit/3a4b8b4a2dec280f617b35af2d0b3fe95fd93fd8))
+
 ## [0.2.7](https://github.com/Sallvainian/Pack-Manager/compare/v0.2.6...v0.2.7) (2026-07-22)
 
 
