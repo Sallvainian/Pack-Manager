@@ -45,7 +45,7 @@ export function SidebarManagerItem({ info }: SidebarManagerItemProps) {
       onClick={() => navigate({ kind: "manager", managerId: info.id })}
       className={[
         "group relative flex w-full items-center gap-2.5 rounded-control px-2.5 py-1.5 text-left text-[13px]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring",
         selected
           ? "bg-bg-raised text-text-primary before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full before:bg-accent"
           : "text-text-secondary hover:bg-bg-raised hover:text-text-primary",

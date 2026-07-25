@@ -63,12 +63,13 @@ test.describe("browser-rendered style contract", () => {
       });
 
       expect(bodyTokens).toEqual({
-        backgroundColor: "rgb(11, 14, 20)",
-        color: "rgb(230, 233, 239)",
+        // --color-bg-base #090C13 and --color-text-primary #F4F7FB.
+        backgroundColor: "rgb(9, 12, 19)",
+        color: "rgb(244, 247, 251)",
       });
     });
 
-    await test.step("And keyboard focus receives the accent ring treatment", async () => {
+    await test.step("And keyboard focus receives the dedicated focus-ring treatment", async () => {
       const refreshAll = page.getByRole("button", {
         name: "Refresh All",
         exact: true,
@@ -87,7 +88,11 @@ test.describe("browser-rendered style contract", () => {
 
       expect(focusTreatment.focusVisible).toBe(true);
       expect(focusTreatment.boxShadow).not.toBe("none");
-      expect(focusTreatment.boxShadow).toContain("rgb(79, 140, 255)");
+      // --color-focus-ring #F4F7FB, a dedicated indicator rather than the
+      // accent. The negative guard is the point of the token: focus must stay
+      // distinguishable from accent-coloured selection (--color-accent #65A7FF).
+      expect(focusTreatment.boxShadow).toContain("rgb(244, 247, 251)");
+      expect(focusTreatment.boxShadow).not.toContain("rgb(101, 167, 255)");
     });
 
     await test.step("And reduced motion removes CSS transitions and animations", async () => {

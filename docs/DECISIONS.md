@@ -388,3 +388,53 @@ question was about no longer exists.
 move the signing and notarization environment without a commit — the opposite of
 what D20 wants. Also rejected: waiting until closer to 2026-11-02, since the
 brownout failures are live now and would be diagnosed as flaky tests.
+
+## D35. The approved design palette is adopted and focus gets its own ring
+
+`src/styles/theme.css` was created on 2026-07-22 by `69f37b0` ("U1: IPC
+contract, foundation stubs, theme tokens, app icon"), and its colours were
+explicitly foundation stubs. The UX design ran the next day and produced
+`DESIGN.md`, `status: final`, carrying a different and approved palette. Then
+on 2026-07-24 `a13738d` added `tests/e2e/browser-style-contract.spec.ts`, which
+pinned the stub values in CI. So the shipping palette was never a decision
+anyone made: it was placeholder that predated the design and was afterwards
+held in place by a test.
+
+This adopts the `DESIGN.md` `colors:` block into the existing `--color-*`
+names. The variable names do not change — consumers across `src/` use them and
+renaming them is a separate concern from choosing values. Five tokens
+`DESIGN.md` defines had no equivalent in the theme and are added rather than
+dropped: `focusRing`, `shell`, `onAccent`, `onSuccess`, and `violet`. Stories
+UX-PB.1e and UX-PB.5d build from `DESIGN.md`, so omitting them would only force
+a second token change later. The three `--color-sev-*` tokens have no
+`DESIGN.md` counterpart, but their previous values were byte-identical to the
+danger/warning/success stubs; that mirror relationship is preserved under the
+new values so one table row cannot render two palettes.
+
+The focus mechanism is decided in the same change, because the two are
+entangled: `theme.css` previously commented accent as "primary actions, focus,
+running" and all 22 `focus-visible` sites drew focus in accent blue.
+`EXPERIENCE.md` is normative and requires the opposite — "Every interactive
+element uses a separate `{colors.focusRing}` indicator that is at least 2px
+wide and visible against every surface. `{colors.borderStrong}` may indicate
+selection but never substitutes for focus; selected and focused states remain
+distinguishable." Focus now resolves `--color-focus-ring` (`#F4F7FB`), and the
+CI assertion moved with it, including a negative guard that the focus ring is
+not the accent.
+
+Exactly one `ring-accent` use deliberately survives, at
+`src/components/manager/PackageRow.tsx:85`. It is a cross-manager navigation
+highlight (`src/store/ui.ts:45`), not a focus state, and it has no
+`focus-visible:` prefix. Repointing it would have made a navigated-to row
+indistinguishable from a focused control, which is the exact confusion the
+accessibility floor forbids.
+
+**Rejected:** keeping the stub palette, which would leave the approved design
+unimplemented and both UX-PB stories blocked on an OPEN spine row. Rejected:
+drawing focus in accent, which `EXPERIENCE.md` forbids and which cannot be
+distinguished from accent-coloured selection. Rejected: changing the token
+values without moving the CI assertion in the same commit, which would simply
+turn the style-contract lane red — that lane is also what AD-11 relies on for
+reduced-motion coverage, so it must stay green on every push. Rejected:
+renaming the CSS variables to `DESIGN.md`'s names, which would touch every
+consumer in `src/` for no behavioural gain.

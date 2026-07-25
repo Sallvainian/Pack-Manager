@@ -252,7 +252,7 @@ export function ManagerPane({ managerId }: ManagerPaneProps) {
                     <button
                       type="button"
                       onClick={() => setOutdatedOnly(managerId, false)}
-                      className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                     >
                       Show all packages
                     </button>

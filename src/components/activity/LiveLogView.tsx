@@ -73,7 +73,7 @@ export function LiveLogView({ opId }: LiveLogViewProps) {
             title="Copy command"
             aria-label="Copy command"
             onClick={() => void navigator.clipboard?.writeText(commandLine)}
-            className="shrink-0 text-[11px] text-text-muted hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="shrink-0 text-[11px] text-text-muted hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           >
             Copy
           </button>
@@ -81,7 +81,7 @@ export function LiveLogView({ opId }: LiveLogViewProps) {
         <button
           type="button"
           onClick={() => void revealOperationLog(opId)}
-          className="shrink-0 text-[11px] text-text-muted hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="shrink-0 text-[11px] text-text-muted hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
         >
           Reveal log file
         </button>
@@ -116,7 +116,7 @@ export function LiveLogView({ opId }: LiveLogViewProps) {
         <button
           type="button"
           onClick={jumpToLatest}
-          className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-border-strong bg-bg-overlay px-3 py-1 text-[11px] text-text-primary shadow-lg hover:brightness-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-border-strong bg-bg-overlay px-3 py-1 text-[11px] text-text-primary shadow-lg hover:brightness-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
         >
           Jump to latest ↓
         </button>

@@ -59,7 +59,7 @@ export function PackageToolbar({
         aria-label="Search packages"
         className={[
           "h-8 w-[240px] rounded-control border border-border bg-bg-raised px-2.5 text-[13px] text-text-primary",
-          "placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+          "placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring",
         ].join(" ")}
       />
 

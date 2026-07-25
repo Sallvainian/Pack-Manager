@@ -1,36 +1,46 @@
 @import "tailwindcss";
 
 /* Design tokens (SPEC §4.1). Dark-only in MVP; tokens live in this one file so
-   a light theme is a value swap. */
+   a light theme is a value swap. Values are the approved "Aurora Control Deck"
+   palette from the 2026-07-23 UX design (DESIGN.md `colors:`), adopted in D35. */
 @theme {
   /* Surfaces — dark blue-graphite ramp */
-  --color-bg-base:       #0B0E14;   /* window background */
-  --color-bg-surface:    #11151D;   /* sidebar, cards, table header */
-  --color-bg-raised:     #171C26;   /* hover rows, drawer, inputs */
-  --color-bg-overlay:    #1D2330;   /* dialogs, sheets, popovers */
-  --color-bg-inset:      #07090D;   /* log viewer background */
-  --color-border:        #232A36;
-  --color-border-strong: #303948;
+  --color-bg-base:       #090C13;   /* window background */
+  --color-bg-shell:      #0F1420;   /* window chrome, stable navigation surfaces */
+  --color-bg-surface:    #151C2A;   /* sidebar, cards, table header */
+  --color-bg-raised:     #1B2434;   /* hover rows, drawer, inputs */
+  --color-bg-overlay:    #202A3C;   /* dialogs, sheets, popovers */
+  --color-bg-inset:      #070B12;   /* log viewer background */
+  --color-border:        #2A3548;
+  --color-border-strong: #465773;   /* selected/emphasized boundaries — never focus */
+
+  /* Keyboard focus — a dedicated indicator, deliberately not the accent, so
+     focused and selected states stay distinguishable. */
+  --color-focus-ring:    #F4F7FB;
 
   /* Text */
-  --color-text-primary:   #E6E9EF;
-  --color-text-secondary: #9AA3B2;
-  --color-text-muted:     #5C6675;
+  --color-text-primary:   #F4F7FB;
+  --color-text-secondary: #AEB8C7;
+  --color-text-muted:     #8D99AA;
 
   /* Accent + status */
-  --color-accent:        #4F8CFF;   /* primary actions, focus, running */
-  --color-accent-hover:  #6BA0FF;
-  --color-accent-subtle: #4F8CFF1F; /* 12% — selected-row wash */
-  --color-success:       #3FB96B;
-  --color-warning:       #E5A53A;
-  --color-danger:        #E5564F;
-  --color-info:          #38BDF8;
+  --color-accent:        #65A7FF;   /* primary actions, active navigation, running */
+  --color-accent-hover:  #7DB3FF;
+  --color-accent-subtle: #172A46;   /* selected-row / active-destination wash */
+  --color-on-accent:     #07101D;   /* text/icons on bright blue fills */
+  --color-success:       #72E6A0;
+  --color-on-success:    #07140D;   /* text/icons on bright green fills */
+  --color-warning:       #F1C875;
+  --color-danger:        #FF8793;
+  --color-info:          #62E7D8;
+  --color-violet:        #B59CFF;   /* rare secondary accent; never a core status */
   /* Badges/banners use the status color at 12% alpha backgrounds. */
 
-  /* Version-delta severity (DISPLAY ONLY — never decides outdatedness) */
-  --color-sev-major: #E5564F;
-  --color-sev-minor: #E5A53A;
-  --color-sev-patch: #3FB96B;
+  /* Version-delta severity (DISPLAY ONLY — never decides outdatedness).
+     Deliberately mirrors danger/warning/success. */
+  --color-sev-major: #FF8793;
+  --color-sev-minor: #F1C875;
+  --color-sev-patch: #72E6A0;
 
   /* Shape */
   --radius-card: 10px; --radius-control: 6px;

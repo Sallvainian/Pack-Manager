@@ -61,7 +61,7 @@ function NumberRow({
           const n = Number(e.target.value);
           if (Number.isFinite(n) && n !== value) onCommit(n);
         }}
-        className="h-8 w-24 rounded-control border border-border-strong bg-bg-raised px-2 text-right font-mono text-[13px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="h-8 w-24 rounded-control border border-border-strong bg-bg-raised px-2 text-right font-mono text-[13px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
       />
     </label>
   );
@@ -163,7 +163,7 @@ export function SettingsView() {
                     aria-label="Log level"
                     value={settings.logLevel}
                     onChange={(e) => void patch({ logLevel: e.target.value as LogLevel })}
-                    className="h-8 rounded-control border border-border-strong bg-bg-raised px-2 text-[13px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="h-8 rounded-control border border-border-strong bg-bg-raised px-2 text-[13px] text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                   >
                     {LOG_LEVELS.map((lvl) => (
                       <option key={lvl} value={lvl}>
