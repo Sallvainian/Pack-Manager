@@ -1,5 +1,5 @@
 # generated: 2026-07-24T16:47:19
-# last_updated: 2026-07-25T00:04:01
+# last_updated: 2026-07-25T12:00:00
 # project: Pack-Manager
 # project_key: NOKEY
 # tracking_system: file-system
@@ -60,7 +60,7 @@
 # and not an evidence lane. See `docs/RELEASE-CHECKLIST.md`."
 
 generated: 2026-07-24T16:47:19
-last_updated: 2026-07-25T00:04:01
+last_updated: 2026-07-25T12:00:00
 project: Pack-Manager
 project_key: NOKEY
 tracking_system: file-system
@@ -72,7 +72,7 @@ development_status:
   ux-pb-1a-persistent-draft-domain-with-single-entry-membership-and-rust-rebuild: backlog
   ux-pb-1b-sidecar-lifecycle-and-navigation-persistent-visibility: backlog
   ux-pb-1c-remaining-draft-entry-points-as-independent-removable-items: backlog
-  ux-pb-1d-ineligible-control-inertness-with-keyboard-pointer-and-voiceover-explanation: backlog
+  ux-pb-1d-ineligible-control-inertness-with-a-pointer-reachable-explanation: backlog
   ux-pb-1e-standardized-manager-workspace-presentation: backlog
   ux-pb-2a-distinct-one-use-preview-planid-and-durable-planattemptid-identity-types: backlog
   ux-pb-2b-atomic-admission-mints-one-planattemptid-and-fails-a-second-attempt-closed: backlog
@@ -95,7 +95,7 @@ development_status:
   ux-pb-5a-separate-final-confirmation-gate-with-the-confirm-n-updates-action-and-proceed-with-upgrade-plan-dialog: backlog
   ux-pb-5b-dialog-only-disable-control-with-atomic-skipupgradeplanconfirmation-persistence-and-settings-migration: backlog
   ux-pb-5c-confirmation-disabled-bypass-with-expanded-commands-and-native-rebuild-stale-validation-gated-run: backlog
-  ux-pb-5d-accessibility-and-responsiveness-of-the-confirmation-and-safety-surfaces: backlog
+  ux-pb-5d-responsiveness-of-the-confirmation-and-safety-surfaces-at-the-size-and-zoom-floors: backlog
   ux-pb-5e-application-update-presentation-kept-separate-from-package-plans-and-history: backlog
   epic-ux-pb-retrospective: optional
 
@@ -109,7 +109,7 @@ development_status:
   3-1-present-complete-package-state-and-manager-detail: backlog
   3-2-enforce-pinned-and-greedy-eligibility: backlog
   3-4-validate-every-settings-control-and-environment-report: backlog
-  3-5-preserve-exact-keyboard-selection-and-row-plan-actions: backlog
+  3-5-preserve-exact-batched-plan-membership-and-row-plan-actions: backlog
   epic-3-retrospective: optional
 
   # epic-6: Preserve State, Evidence, and Privacy Across Failure and Relaunch

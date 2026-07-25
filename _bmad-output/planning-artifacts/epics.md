@@ -6,12 +6,17 @@ stepsCompleted:
   - step-04-final-validation
 # Live, authoritative inputs.
 inputDocuments:
+  # Requirements authority. Read the addendum with it.
+  - _bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md
+  - _bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/addendum.md
+  # Architecture authority (revision 10).
   - _bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md
   - _bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/DESIGN.md
   - _bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/EXPERIENCE.md
   - _bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/validation-report.md
   - _bmad-output/planning-artifacts/story-triage-2026-07-24.md
   - _bmad-output/planning-artifacts/sprint-change-proposal-2026-07-25.md
+  - _bmad-output/planning-artifacts/sprint-change-proposal-2026-07-25-spine-rev10-residuals.md
   - _bmad-output/project-context.md
   - docs/SPEC.md
   - docs/DECISIONS.md
@@ -46,7 +51,51 @@ register this document previously carried at `#### Additional Requirements`. Whe
 this document and the spine disagree, **the spine is upstream and wins.** Record:
 `_bmad-output/planning-artifacts/sprint-change-proposal-2026-07-25.md`.
 
+Later the same day it was reconciled again, against **`ARCHITECTURE-SPINE.md`
+revision 10**, the **finalized PRD**
+(`prds/prd-Pack-Manager-2026-07-25/prd.md`, with its `addendum.md`), and
+`docs/DECISIONS.md` **D36, D37, and D38**. That run applied the spine's
+`epics.md` residuals row. Record:
+`_bmad-output/planning-artifacts/sprint-change-proposal-2026-07-25-spine-rev10-residuals.md`.
+Two authorities now sit above this document and they do not overlap: **the PRD
+wins on requirements** and **the spine wins on architecture invariants**. This
+document restates neither and cites both.
+
 ## Requirements Inventory
+
+**Requirements authority is
+`_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md`**
+(status `final`), read together with its `addendum.md`. The FR/NFR entries below
+are a Phase 3 convenience index into that PRD, **not a second statement of the
+requirements**: where this document and the PRD disagree, **the PRD wins**,
+exactly as the spine wins on architecture invariants. Four consequences a reader
+needs before reading a single entry:
+
+- **FR-19 and NFR-6 below are restated per `docs/DECISIONS.md` D37.** Keyboard
+  operability of primary actions, VoiceOver operability, live-region
+  announcement of plan progress / verification / cancellation / failure /
+  completion, and deterministic dialog and sidecar focus restoration are
+  **removed as criteria** (`prd.md` FR-19 Notes). What stays, and stays for
+  reasons that are not accessibility obligations: the focus indicator (D35,
+  `ARCHITECTURE-SPINE.md` AD-27), `⌘X`/`⌘C`/`⌘V`/`⌘A` and RP-2's accelerator
+  map, the 4.5:1 contrast floor (D36), and **pointer-facing** explanations of
+  why a Package is ineligible.
+- **Scope any D37 application by named section, never by a mention count.**
+  Applying D37 means *recording* what was retired, and recording it uses the
+  same words — the spine's own keyword count rose while it applied D37
+  correctly. `docs/DECISIONS.md` D37 and `addendum.md` §3 carry the named
+  sections; the counts D37 quotes were copied rather than measured and are
+  wrong.
+- **`Cancelling` is not a state, durable or otherwise.** `prd.md` FR-13 and
+  `ARCHITECTURE-SPINE.md` AD-16 both refuse it by name: cancellation moves an
+  Operation straight to its terminal state, and the 5-second SIGTERM grace
+  window is never surfaced as its own status. No story below may add the
+  variant.
+- **FR-23 post-dates this document's inventory.** `prd.md` §4.3 carries it and
+  this document did not, so it is listed below and in the FR Coverage Map, where
+  it is owned by **Epic UX-PB** with no new story: its safety property ships and
+  its unbuilt limb joins the 2026-07-24 amendment's supersession umbrella
+  (owner decision, 2026-07-25).
 
 ### Functional Requirements
 
@@ -74,7 +123,7 @@ FR-11: Give every Manager a standardized title area with short description, path
 
 FR-12: Execute only product-defined structured Operations; expose no general shell, `sudo`, password, or administrator-prompt path; never treat display text as executable input; use null stdin; keep copy-to-terminal user-controlled; and convert an elevated app-update requirement into manual-install-required.
 
-FR-13: Expose queued, running, verifying, stalled, cancelling, and terminal plan state with exact nested Operation commands/live output correlated by `planAttemptId` and `opId`; use the sidecar as live progress and Results; make Activity a first-class destination; bound live output; and preserve complete retained transcript output.
+FR-13: Expose queued, running, verifying, stalled, and terminal plan state with exact nested Operation commands/live output correlated by `planAttemptId` and `opId`; use the sidecar as live progress and Results; make Activity a first-class destination; bound live output; and preserve complete retained transcript output. **There is no distinct `cancelling` state** — cancellation moves an Operation to its terminal state and the 5-second SIGTERM grace window is not surfaced as its own status (`prd.md` FR-13, `ARCHITECTURE-SPINE.md` AD-16).
 
 FR-14: Turn silence and excessive duration into honest actionable states using the 120-second default stall threshold, Keep waiting/Copy command/Cancel plan choices, trusted-only interaction classification, the 30-minute default hard cap, attempt-wide cancellation with process-group escalation, explicit terminal outcomes, and an explicit quit choice without promising rollback.
 
@@ -82,17 +131,21 @@ FR-15: Durably correlate each confirmed Plan Attempt's reviewed intent, command 
 
 FR-16: Refresh affected state after successful work, retain prior useful Manager state on failure, provide actionable error feedback, and expose View log only when a corresponding log exists.
 
-FR-17: Persist Settings before changing active values or the canonical revision; leave both unchanged on save failure; default upgrade confirmation on through `skipUpgradePlanConfirmation: false`; treat `autoOpenDrawer` as inactive legacy input; support editable thresholds/live log level; and provide Environment Report, Copy, Open Logs Folder, diagnostics export, and Re-detect.
+FR-17: Persist Settings before changing active values or the canonical revision; leave both unchanged on save failure; default upgrade confirmation on through `skipUpgradePlanConfirmation: false` (**Planned — D28**; the field does not ship today); retire `autoOpenDrawer` from the Settings view and the target field set along with the `ActivityDrawer` surface it controls (**Planned — D27–D30**, `prd.md` FR-17, `ARCHITECTURE-SPINE.md` AD-17) while an old persisted value stays tolerated on read and inert (AD-19); support editable thresholds/live log level; and provide Environment Report, Copy, Open Logs Folder, diagnostics export, and Re-detect.
 
 FR-18: Export one timestamped diagnostics ZIP to the documented Desktop path containing `report.json`, the newest three application logs, newest 25 transcripts, and `operations.jsonl`; include app/OS/architecture, constructed ToolEnv and detection evidence, Settings, and log filter; exclude inherited environment values; and reject symlink substitution during selection and streaming.
 
-FR-19: Preserve one coherent dark-only macOS interface across Dashboard, expandable Manager navigation, Manager workspaces, persistent Upgrade Plan, separate Confirmation Dialog, Activity, Results, one-plan-per-row History, Settings, status, and app menus; keep primary actions keyboard/VoiceOver operable with deterministic focus and non-color cues; preserve VersionDelta as display-only; honor reduced motion; meet contrast; and remain usable at 900 × 600, 150–200% zoom, more than 100 Packages, and long output.
+FR-19: Preserve one coherent dark-only macOS interface across Dashboard, expandable Manager navigation, Manager workspaces, persistent Upgrade Plan, separate Confirmation Dialog, Activity, Results, one-plan-per-row History, Settings, status, and app menus; carry a text or icon equivalent for every color state; draw a visible focus indicator on every interactive element as a real `outline`, never a `ring-*` and never `outline-none` (D35, AD-27); preserve VersionDelta as display-only; honor reduced motion; meet at least 4.5:1 text contrast with the floor CI-asserted (D36); and remain usable at 900 × 600, 150–200% zoom, more than 100 Packages, and long output.
+
+**Restated per `docs/DECISIONS.md` D37.** The prior wording required primary actions be "keyboard/VoiceOver operable with deterministic focus". Removed as criteria: keyboard operability of primary actions, VoiceOver operability, and live-region announcement of plan progress, verification, cancellation, failure, and completion. The focus **indicator** above is kept by D37 by name — it is a rendering mechanism governed by AD-27, not a keyboard-navigation obligation, and a pass scoping D37 by searching for the word *keyboard* will hit AD-27 and must not delete it.
 
 FR-20: Check for application updates and automatically download a newer authorized release in the background while keeping install/restart under user control, Package work understandable, and checking/available/downloading/ready/failure states visible.
 
 FR-21: Install a downloaded application update only after the user chooses Restart to update; never silently install or restart; refuse install/relaunch while a Package Operation is queued or running; relaunch as the intended version; produce manual-install-required for a non-writable install; and keep every update-stage failure actionable.
 
 FR-22: Support the declared Apple-silicon and Intel promise through normal Finder/Dock launch and accept only updater payloads authorized for the installed application; report success only after relaunch as the intended version.
+
+FR-23: Constrain which Manager-suggested fixes become runnable — only the exact recognized suggestion exposes a trusted fix command, the command exposed is the backend's canonical one and never a string scraped from Manager output, and altered, missing, or malformed suggestions stay visible as warning detail while being neither copyable nor runnable. **`prd.md` §4.3 places this between FR-12 and FR-13; it post-dates this document's inventory and is owned by Epic UX-PB with no new story** — see the FR Coverage Map for the split between the part that ships and the part the 2026-07-24 amendment supersedes. A Health issue's `Run fix` is the fourth immediate-execution call site, deliberately outside FR-6's scope and routed through the plan under this FR by D27–D30. The closed set of three immediate-execution *kinds* may not grow; a fourth kind is a new decision.
 
 RP-1: Preserve launch, six-hour, and app-menu update checks; restore in-process update state after supported UI recreation; preserve saved trigger policy across normal relaunch; ensure failed/interrupted downloads never appear Ready; keep application-update state separate from Package Operation queue and History; and validate this mandatory prerequisite through `docs/RELEASE-CHECKLIST.md`.
 
@@ -110,7 +163,9 @@ NFR-4: Correlate status, output, transcript, structured log, History, and diagno
 
 NFR-5: Send no telemetry, expose no generic shell surface, exclude inherited environment values from logs and diagnostics, and resist diagnostic symlink substitution.
 
-NFR-6: Keep primary interactions keyboard/VoiceOver operable with visible focus and deterministic dialog/sidecar focus restoration, provide non-color status cues and accessible ineligibility reasons, meet at least 4.5:1 text contrast, honor reduced motion, and announce plan progress, verification, cancellation, failure, and completion without noisy output narration.
+NFR-6: Provide non-color status cues and **pointer-accessible** ineligibility reasons, meet at least 4.5:1 text contrast, keep a visible focus indicator on every interactive element (see FR-19 for the mechanism and why it is not an accessibility obligation), honor reduced motion, keep VersionDelta display-only, and stay usable at 900 × 600, at 150–200% zoom, and with more than 100 Packages.
+
+**Restated per `docs/DECISIONS.md` D37.** Removed as criteria: keyboard operability of primary interactions, VoiceOver operability, deterministic dialog and sidecar focus restoration, and announcement of plan progress, verification, cancellation, failure, and completion. `prd.md` NFR-6 records the one unbuilt limb that survives — the explanatory-disabled treatment on ineligible rows, which is **pointer-facing** behavior (FR-5, AD-16, D38) and is owned by Story UX-PB.1d and Story 3.2 below.
 
 NFR-7: Support normal GUI launch and both promised architectures, fail visibly and locally on incompatible Manager output, and require Product and Release to declare the minimum supported macOS version before final candidate acceptance.
 
@@ -262,7 +317,7 @@ longer absorbs application-update state. One documented residual remains —
 as evidence of a code defect.
 
 - DR-1 is CLOSED by `docs/DECISIONS.md` **D31**: the minimum supported macOS version is 15.0, declared as `bundle.macOS.minimumSystemVersion` in `src-tauri/tauri.conf.json` and shipped in v1.0.0. Nothing is blocked on it.
-- DR-2 is RESTATED by **D33**: its substance survives without the gate framing. Automated 4.5:1 contrast and reduced-motion checks belong in the existing Playwright/Vitest lane; one manual VoiceOver pass joins `docs/RELEASE-CHECKLIST.md`. Accessibility here is product quality, not evidence ceremony. Reduced motion is already covered and runs in CI — `src/styles/theme.css` honors `@media (prefers-reduced-motion: reduce)` and `tests/e2e/browser-style-contract.spec.ts` emulates `{ reducedMotion: "reduce" }` and asserts transitions and animations resolve to `0s`, on every push and pull request to `main` via `.github/workflows/test.yml`. Automated 4.5:1 contrast does **not** exist; that same spec disclaims it. Contrast is therefore the outstanding obligation on whichever story adds it, while reduced motion is a regression surface to preserve, not a gap to schedule (`ARCHITECTURE-SPINE.md` AD-1, AD-11).
+- DR-2 is RESTATED by **D33** and then narrowed by **D36** and **D37**, and both halves of its former text are now closed rather than outstanding. Automated 4.5:1 contrast and reduced-motion checks belong in the existing Playwright/Vitest lane — and **both now exist and run in CI.** Reduced motion: `src/styles/theme.css` honors `@media (prefers-reduced-motion: reduce)` and `tests/e2e/browser-style-contract.spec.ts` emulates `{ reducedMotion: "reduce" }` and asserts transitions and animations resolve to `0s`. Contrast: **D36 landed the 4.5:1 guard in commit `a201fb0`** — that same spec reads the rendered primary button's real computed foreground and background, applies the WCAG 2.1 luminance formula, fails below 4.5:1, and carries a negative assertion against `text-white` returning. Both run on every push and pull request to `main` via `.github/workflows/test.yml`. **Neither is a gap to schedule; both are regression surfaces to preserve** — scheduling shipped work is the error `ARCHITECTURE-SPINE.md` AD-1 forbids. The guard is a *sample*, not a sweep: it measures the primary button only, so every other fill remains a by-eye check, and no story may read a green run as a whole-app contrast guarantee (AD-27). **The manual VoiceOver pass this restatement previously added to `docs/RELEASE-CHECKLIST.md` is deleted by D37** and must not be reinstated or reported as a gap; `docs/RELEASE-CHECKLIST.md` was rescoped in `5c8996f` and now states the removal affirmatively.
 - DR-3 is NARROWED by **D32**: the release still builds universal, but the obligation to verify on physical Intel hardware is dropped. Verification is Apple silicon only; Intel remains best-effort and unverified.
 - DR-4 is DISSOLVED by **D33** along with the gate that defined it. There is no P0/P1 threshold, no Acceptance Profile, and no gate decision. Release readiness is `docs/RELEASE-CHECKLIST.md` plus the automated updater-signature and published-endpoint checks in `release.yml`.
 
@@ -307,7 +362,7 @@ dependencies.
 | Product Behavior Prerequisite UX-PB.1..UX-PB.5 | `APPROVED TARGET — NOT IMPLEMENTED` | Product/UX/Architecture accept; Development implements | Epic UX-PB is the primary build queue and runs first, and nothing blocks starting it — the canonical design-token set that blocked UX-PB.1e and UX-PB.5d was decided and shipped (`docs/DECISIONS.md` D35), so both are startable. Any story or test text authored against immediate row execution, direct self-update execution, the Activity drawer, Operation-row History, or active `autoOpenDrawer` behavior is superseded by D27-D30. |
 | Canonical design-token set | `CLOSED` — D35 | Resolved 2026-07-25 | Nothing blocked. `DESIGN.md`'s palette was adopted into `src/styles/theme.css`, focus gained a dedicated indicator, and the CI style contract moved with it in one change — see `ARCHITECTURE-SPINE.md` AD-27 and the *Canonical design-token set* row of its Decision Status table. Retained for the reasoning, since the conflict recurs whenever a story proposes its own values: previously `src/styles/theme.css` ships one palette and `tests/e2e/browser-style-contract.spec.ts` asserts it on every push and PR to `main`, while `DESIGN.md` and `EXPERIENCE.md` specify another plus a dedicated `focusRing` that `docs/SPEC.md`'s accent-coloured ring contradicts. Both stories are bound to build from the UX sources, so whichever lands first either rewrites the tokens and breaks the CI style contract on `main` — the same lane AD-11 relies on for reduced motion — or keeps the shipping values and ships focus rings `EXPERIENCE.md` forbids. The token set and the focus mechanism are decided together, then the CI assertion moves with them in one change. Not a story's call and not architecture's alone. |
 | DR-1 — minimum supported macOS | `CLOSED` — D31 | Resolved 2026-07-24 | None. 15.0 declared and shipped in v1.0.0. The `notarytool` `minos 15.0` question is CLOSED by `docs/DECISIONS.md` D34: CI and release moved to `macos-15`, so the build SDK is no longer behind the declared floor and the mismatch the question was about no longer exists. A manual Release run verified signing and notarization on the new image. |
-| DR-2 — packaged accessibility method | `RESTATED` — D33 | Existing Playwright/Vitest lane + release checklist | None. Reduced motion is already automated and runs in CI (`tests/e2e/browser-style-contract.spec.ts` via `.github/workflows/test.yml`); automated 4.5:1 contrast does not exist and is the one outstanding obligation, on whichever story adds it. |
+| DR-2 — packaged accessibility method | `CLOSED` — D33, then D36 and D37 | Existing Playwright/Vitest lane | **None, and nothing is outstanding.** Reduced motion *and* automated 4.5:1 contrast both run in CI (`tests/e2e/browser-style-contract.spec.ts` via `.github/workflows/test.yml`); the contrast guard landed with D36 in commit `a201fb0`. **No story owes a contrast check** — this row previously named one as the outstanding obligation and a builder consulting it would schedule shipped work, which AD-1 forbids. The guard is a named-sample assertion on the primary button, not a whole-app sweep. The manual VoiceOver pass is deleted by D37 and is not a gap. |
 | DR-3 — physical Intel requirement | `NARROWED` — D32 | Resolved 2026-07-24 | None. Universal build retained; verification Apple silicon only. |
 | DR-4 — P0 gate/retry policy | `DISSOLVED` — D33 | Retired with the gate | None. |
 | Named assignees and calendar dates | `REMOVED` — D33 | n/a | None. The `Assignee` and `Calendar date` fields were removed from every surviving story on 2026-07-25. |
@@ -441,13 +496,18 @@ FR-17: Epic 3 — Expose and validate user-controlled Settings; Epic 6 supplies 
 
 FR-18: Epic 6 — Export privacy-preserving diagnostics through native filesystem boundaries.
 
-FR-19: Release checklist — Validate the coherent accessible interface in the installed packaged application.
+FR-19: Release checklist — Validate the coherent macOS interface in the installed packaged application. Its keyboard and VoiceOver limbs are removed by D37 and the checklist steps that carried them are gone; contrast and reduced motion are CI-asserted rather than checklist steps.
 
 FR-20: Release checklist — Validate application-update discovery and background download.
 
 FR-21: Release checklist — Validate explicit install/relaunch, active-operation refusal, and non-writable behavior.
 
 FR-22: Release checklist — Attest normal packaged launch and authorized, coherent release/update artifacts.
+
+FR-23: Epic UX-PB — Constrain which Manager-suggested fixes become runnable. **Owner decision, 2026-07-25; no new story is required, and the requirement splits by what ships.**
+
+- **The safety property ships today and needs no story.** The load-bearing rule is that a Manager's *scraped* suggestion never becomes runnable text: `src-tauri/src/managers/parse/uv.rs:82`-`:83` computes `fixable` as `SAFE_TOOL_NAME_RE.is_match(&name) && suggested_fix.as_deref() == Some(canonical_fix.as_str())` — a byte-equality test between the scraped suggestion and the argv Pack-Manager constructed itself — and `:93`-`:94` expose `fix_command` / `fix_args` only when that holds, leaving an altered or malformed suggestion visible in `detail` but neither copyable nor runnable. `src-tauri/src/queue.rs:334` re-checks `!issue.fixable` at submission and refuses, and the command reaches the frontend as a distinct `HealthFix` kind (`src-tauri/src/ipc.rs:93`) registered at `src-tauri/src/lib.rs:240` (`commands::run_health_fix`) and invoked from `src/components/manager/HealthBanner.tsx:43`. **Recorded as satisfied. Do not schedule it** — `ARCHITECTURE-SPINE.md` AD-1's second rule forbids scheduling shipped behavior.
+- **The unbuilt limb is routing `Run fix` through the draft plan under D27–D30**, and it is the identical work as the other immediate-execution bypasses — a Package row's own update action and a Manager's self-update. Those are handled by the **2026-07-24 Correct Course amendment's supersession umbrella** (see the Overview above and `#### 2026-07-24 Correct Course story amendment`) rather than by a dedicated story, and FR-23 joins that umbrella under Epic UX-PB on the same terms. `prd.md` FR-23 counts three immediate-execution *kinds* while FR-6 counts four *call sites*; both are correct and measure different things, and a story that removes "three" must confirm which. **The set may not grow: a fourth kind is a new decision, and SM-2 is the metric it would breach.**
 
 RP-1: Release checklist — Validate scheduled/menu update triggers and state continuity.
 
@@ -511,7 +571,7 @@ confirmation gate. It is the primary build queue.
 ### Story UX-PB.1a: Persistent draft domain with single-entry membership and Rust rebuild
 
 **Primary concern:** Product Behavior  
-**Dependencies:** D27-D30; AD-16; AD-17; finalized UX spines; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** D27-D30; AD-16; AD-17; AD-28 (a Package checkbox **is** membership — there is no transient selection set, and the live `selection` set in `src/store/packages.ts` retires with this story); finalized UX spines; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.1b, UX-PB.1c; Story 3.5  
 
 As a Pack-Manager user, I want one eligible Package to become persistent draft-plan membership so that acting on a single row never executes and always has a reviewable home.
@@ -542,7 +602,7 @@ As a Pack-Manager user, I want one eligible Package to become persistent draft-p
 ### Story UX-PB.1b: Sidecar lifecycle and navigation-persistent visibility
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.1a; D27-D30; AD-16; AD-17; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** UX-PB.1a; D27-D30; AD-16; AD-17; AD-28 (this story renders the `Updates` / `Managers` / `Commands` counts, and the count a batch reports is defined there — it is the size of the concrete identity set the batch carried, computed from the snapshot the user was looking at); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.1d, UX-PB.1e  
 
 As a Pack-Manager user, I want the Upgrade Sidecar to appear, persist, and close in step with the draft so that my proposed plan always has a stable reviewable home and no empty drawer clutters the workspace.
@@ -569,7 +629,7 @@ As a Pack-Manager user, I want the Upgrade Sidecar to appear, persist, and close
 ### Story UX-PB.1c: Remaining draft entry points as independent removable items
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.1a; D27-D30; AD-16; AD-17; AD-23 (per-member provenance and tombstones); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** UX-PB.1a; D27-D30; AD-16; AD-17; AD-23 (per-member provenance and tombstones); AD-28 (provenance follows the shape of the act — the header checkbox and `⌘A` are `Bulk { scope: FilteredView }`, a range is `Explicit` for every member; and removal is a closed three-way taxonomy in which a scope-wide removal clears the tombstones **only** of the refs whose membership it actually cleared); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.1d, UX-PB.1e  
 
 As a Pack-Manager user, I want selected-Package, Manager-header, Manager-wide, and `Update Everything` actions to all feed the same draft as independent removable items so that every entry point stages into one plan and no global toggle bypasses it.
@@ -593,24 +653,28 @@ As a Pack-Manager user, I want selected-Package, Manager-header, Manager-wide, a
 **When** both mutations resolve
 **Then** the draft converges to one coherent deduplicated membership set, no item is doubled or lost, and a single authenticated rebuild reflects the final canonical intent.
 
-### Story UX-PB.1d: Ineligible-control inertness with keyboard, pointer, and VoiceOver explanation
+### Story UX-PB.1d: Ineligible-control inertness with a pointer-reachable explanation
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.1a, UX-PB.1c; D27-D30; AD-16; AD-17; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** UX-PB.1a, UX-PB.1c; D27-D30; AD-16 (ineligible-item inertness: the control is **inert, not inactive**, and may not use the native `disabled` state); AD-17; AD-28 (the header checkbox's tri-state denominator is the eligible set matching the active filter, including off-screen virtualized rows); D38 (D15's disabled-checkbox *mechanism* is superseded; its substance — a pinned formula is never upgradable in-app — is unchanged); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** Story 3.2  
 
-As a Pack-Manager user, I want pinned, current, excluded, and unavailable Packages to stay inert and explain themselves through keyboard, pointer, and VoiceOver so that I understand why they cannot join the plan without guessing.
+**Restated per `docs/DECISIONS.md` D37, and deliberately not deleted.** D37 names this story and says explicitly that it **is not to be deleted**: its pointer-hover explanation of why a Package is ineligible is mouse-facing behavior D37 protects by name, and only its keyboard and VoiceOver limbs were in scope. The trap this restatement avoids is recorded in `ARCHITECTURE-SPINE.md`: the not-native-`disabled` rule AD-16 now **requires** was previously stated only inside a criterion gated on a keyboard-or-VoiceOver `Given`/`When`, so stripping those limbs would have deleted the only stated trigger for the one rule that must survive. It is re-gated on pointer interaction below. D37 equally forbids stripping ARIA that already ships in `src/` to satisfy a scope decision about plans.
+
+As a Pack-Manager user, I want pinned, current, excluded, and unavailable Packages to stay inert and explain themselves when I point at them so that I understand why they cannot join the plan without guessing.
 
 **Acceptance Criteria:**
 
 **Given** pinned, current, excluded, and unavailable Package controls
-**When** I activate any of them by pointer, Enter/Space, or the grid Space key
+**When** any activation path reaches one of them — the criterion is pointer activation, and the inertness is a fail-closed property of the control that no other activation path may defeat either
 **Then** membership never changes and each exposes its plain-language reason — pinned `This Package is pinned and cannot be updated. Unpin it, then refresh Pack-Manager to make it selectable.`, excluded `This Package is excluded by your Settings. Change the setting, then refresh Pack-Manager.`, current `This Package is already current.`, and unavailable `An update target is not available. Refresh or view details.`
-**And** the bulk header Checkbox scope covers only eligible Packages matching the active filter and adds no ineligible identity.
+**And** the bulk header Checkbox scope covers only eligible Packages matching the active filter, including off-screen virtualized rows, and adds no ineligible identity.
 
 **Given** an explanatory-disabled Package control
-**When** a keyboard or VoiceOver user reaches it
-**Then** it uses `aria-disabled="true"` rather than native `disabled`, keeps focus, announces its persistent reason as an accessible description, stays inert on activation, and retains focus when Escape closes its supplemental Tooltip/Popover.
+**When** I hover or click it with the pointer
+**Then** it uses `aria-disabled="true"` rather than native `disabled` and stays inert on activation — **a natively disabled form control dispatches no mouse events, so the native state and the pointer-reachable explanation are mutually exclusive and the explanation wins** (AD-16, `prd.md` FR-5)
+**And** the reason renders on that pointer interaction rather than living only in an attribute, because the shipping defect D38 diagnoses is exactly a `title` attached to a natively `disabled` input at `src/components/manager/PackageRow.tsx:95`/`:92`, which therefore never renders on hover
+**And** reduced opacity alone is not the treatment: ineligibility never rests on gray styling without a text or icon equivalent, and `disabled:opacity-40` (`:100`) is the shipping defect this names, not the reference.
 
 **Given** a Package whose update is delegated to another Manager
 **When** its row renders
@@ -619,7 +683,7 @@ As a Pack-Manager user, I want pinned, current, excluded, and unavailable Packag
 ### Story UX-PB.1e: Standardized Manager workspace presentation
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.1c; D27-D30; AD-16; AD-17; AD-25 (Last-good Snapshot retention on refresh failure); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** UX-PB.1c; D27-D30; AD-16; AD-17; AD-25 (Last-good Snapshot retention on refresh failure); AD-28 (this story renders the Manager `Remove` affordance, so it reads AD-23's provenance and AD-28's closed removal taxonomy — a Manager self-update `Remove` is a single-ref removal and writes a tombstone); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** Story 3.1  
 
 As a Pack-Manager user, I want each Manager Header and Card to present standardized identity, version, status, ownership, counts, and deltas so that every Manager reads consistently and its self-update staging is obvious.
@@ -681,7 +745,7 @@ As a Pack-Manager user, I want confirming a reviewed plan to atomically create e
 ### Story UX-PB.2c: Persist reviewed intent and the exact command snapshot durably
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.2b; AD-16; D29; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** UX-PB.2b; AD-16; AD-18 (the plan-attempt journal's home, format, and durability discipline — an append failure is nonfatal, compaction is temp file + fsync + rename); AD-29 (one append authority, exactly two records per attempt, and this story appends the **admission** record); D29; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.3 (on UX-PB.2 completion)  
 
 As a Pack-Manager user, I want the confirmed attempt to durably store exactly what I reviewed and the exact commands as a snapshot so that recovery and history are reconstructible and never rebuild executable input from display text.
@@ -690,12 +754,15 @@ As a Pack-Manager user, I want the confirmed attempt to durably store exactly wh
 
 **Given** a plan admitted under a new `planAttemptId`
 **When** the attempt is persisted
-**Then** the append-only record stores the reviewed Manager/Package scope, Manager self-update identities, exact command snapshot, version evidence, timestamps, and result/verification state as immutable plan-admission metadata
-**And** the stored command snapshot is read back only as evidence and is never converted back into executable input.
+**Then** the append-only **admission** record stores the reviewed Manager/Package scope, Manager self-update identities, exact command snapshot, version evidence, and timestamps as immutable plan-admission metadata
+**And** the stored command snapshot is read back only as evidence and is never converted back into executable input
+**And** **AD-29 deliberately overrides this story's former record contents:** result and verification state do **not** ride the admission record — they ride the **terminal** record, because an admission record cannot hold a result that does not exist yet and writing the field at admission would either persist a placeholder History must then distinguish from a real outcome, or require the in-place update an append-only journal forbids. Exactly two records exist per attempt, admission and terminal, and this story writes the first
+**And** `PlanAttempt.state` is a **derived read-model value, never a persisted field** — no record written here carries it (AD-29). `admitted` and `terminal` are implied by which records exist; `running` and `verifying` live only in the live process's memory.
 
 **Given** a plan admitted under a new `planAttemptId`
 **When** persisting the reviewed intent or command snapshot fails
-**Then** the failure is surfaced, no partial attempt record is left behind, and the prior consistent state is preserved rather than proceeding as if durably recorded.
+**Then** the failure is surfaced and the prior consistent state is preserved rather than proceeding as if durably recorded — meaning **the visible and durable claims stay honest**, not that admission is blocked and not that a line is deleted from an append-only file. **The append gates nothing** (AD-29, AD-18): an attempt-journal append failure is nonfatal and is surfaced, never fatal to admission, because a full disk must not stop all Package work. "No partial attempt record is left behind" is satisfied by an append that either lands whole or does not land — never by removing a written line
+**And** the ordering is mint-and-admit, **then** append; nothing precedes the admission it records. A crash in that window leaves Operations pointing at an attempt that does not resolve, which AD-18 dispositions as legacy, never as corrupt.
 
 **Given** a `planAttemptId` was minted but its durable record was lost to a crash or forced quit mid-admission
 **When** Pack-Manager relaunches
@@ -708,7 +775,7 @@ As a Pack-Manager user, I want the confirmed attempt to durably store exactly wh
 ### Story UX-PB.2d: Correlate every Operation, event, and durable record by planAttemptId
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.2b; AD-16; D29; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** UX-PB.2b; AD-16; AD-18 (`operations.jsonl` keeps its record shape and carries `planAttemptId` only where one exists — *field presence*, conditional, and not a cardinality rule); AD-29 (an attempt is a fold over exactly two records; correlation never depends on a persisted attempt `state` field); D29; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.2e  
 
 As a Pack-Manager user, I want every Operation, event, and durable record produced by a confirmed attempt to carry that attempt's identity so that its progress, output, and evidence reconstruct as one coherent whole.
@@ -723,13 +790,18 @@ As a Pack-Manager user, I want every Operation, event, and durable record produc
 **Given** the same admitted attempt
 **When** its durable and diagnostic records are written
 **Then** crash-journal start/finish records, diagnostics, and verification refreshes carry the same `planAttemptId` where applicable
+**And** **"where applicable" is defined here rather than left to two stories to read oppositely:** a record carries `planAttemptId` when the attempt is known at the moment the record is written, and carries `opId` only once the work has become an Operation. A verification refresh has no `opId` until it becomes an Operation, so before that point it correlates by `planAttemptId` alone and its `opId` is absent rather than null-filled or invented; once it is an Operation it carries both. Absence is never a correlation failure, and nothing wedges on it — but a fabricated identifier would break NFR-4
 **And** persisted evidence stays correlated to the attempt that produced it rather than standing as flat, uncorrelated Operation records.
 
 ### Story UX-PB.2e: Plan-level cancellation that skips unstarted work and escalates running process groups
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.2b, UX-PB.2d; AD-16; D30; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** UX-PB.2b, UX-PB.2d; AD-16 (attempt-scoped cancellation; **there is no `Cancelling` state, durable or otherwise**); AD-29 (this story is the terminal-record writer — see below); D30; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.3 (on UX-PB.2 completion)  
+
+**Ordering-critical, and the reason is wire surface rather than story text.** An earlier version of this story moved running work to a `Cancelling` state. `prd.md` FR-13 forbids that state by name and `ARCHITECTURE-SPINE.md` AD-16 refuses it. **This story ships in wave 2**, and adding an `OpStatus` variant is one atomic AD-3 change across the Rust enum, `src/lib/ipc/types.ts`, the guards, and the committed fixtures in `dev/fixtures/ipc/` under D17's byte-equality drift guard — so the correction had to land **before** this story is built, not after, or the fix would be undoing shipped wire surface instead of editing a criterion. It is applied below. **A builder must not add the variant.** `EXPERIENCE.md` still carries the state at its Activity Operation Row and 120-second stall rows; that is a `bmad-ux` Update, and it is a known divergence rather than authority.
+
+**This story owns the single durable terminal write (AD-29).** The terminal append fires on the attempt's terminal transition inside the Rust plan-attempt store, in the same critical section that makes the transition, so it is owned by whichever story first makes an attempt reachable terminal — which is this one, via cancellation, not the History story that reads it. UX-PB.4a is a reader and folder only.
 
 As a Pack-Manager user, I want cancelling the plan to stop only that attempt's work honestly so that unstarted items are marked Skipped, running work is escalated through existing mechanics, and every real outcome is preserved.
 
@@ -737,7 +809,9 @@ As a Pack-Manager user, I want cancelling the plan to stop only that attempt's w
 
 **Given** a confirmed attempt with some Operations running and others not yet started
 **When** I choose `Cancel plan`
-**Then** cancellation operates only on the Operation IDs bound to that `planAttemptId`: running work moves to `Cancelling` and escalates through the existing process-group mechanics, unstarted attempt work is prevented from beginning and recorded as `Skipped`, no second confirmation is required, rollback is not promised
+**Then** cancellation operates only on the Operation IDs bound to that `planAttemptId`: running work escalates through the existing process-group mechanics and moves **straight to its terminal state**, unstarted attempt work is prevented from beginning and recorded as `Skipped`, no second confirmation is required, rollback is not promised
+**And** **no `Cancelling` state is introduced at any level** — not a durable wire state, not a presentation state derived in React, and not an event standing in for one. The 5-second SIGTERM grace window is never surfaced as its own status (`prd.md` FR-13, AD-16). `OpStatus` gains no variant from this story
+**And** the attempt's terminal transition appends its **terminal** record inside the same critical section that makes the transition, so **no window exists in which a force-quit loses the outcome** (AD-29); verification and result state ride that record, and the append gates nothing
 **And** every prior outcome is preserved.
 
 **Given** a plan cancellation where process-group escalation cannot stop some running work
@@ -748,7 +822,7 @@ As a Pack-Manager user, I want cancelling the plan to stop only that attempt's w
 ### Story UX-PB.2f: Keep legacy Operations honest without inferred plan grouping
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.2a; AD-16; D29; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** UX-PB.2a; AD-16; AD-18 (a record without a `planAttemptId` stays an individually labeled legacy Operation, and a record that loses its counterpart under shared retention reads as legacy rather than as corrupt); D29; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** None  
 
 As a Pack-Manager user, I want Operations that predate the attempt model to stay honestly labeled as legacy so that older records are never fabricated into plans that never existed.
@@ -775,7 +849,9 @@ As a Pack-Manager user, I want the sidecar I confirmed to become the one live su
 
 **Given** a confirmed plan whose atomic admission returned one durable `planAttemptId`
 **When** final confirmation closes the Confirmation Dialog
-**Then** the same Upgrade Sidecar transforms in place into the one active plan summary for that `planAttemptId`, focus moves to its programmatically focusable Upgrade Activity summary heading, and the status channel announces plan start.
+**Then** the same Upgrade Sidecar transforms in place into the one active plan summary for that `planAttemptId`, and no second surface opens
+**And** **no story is obliged to build a status-announcement channel** (AD-17, D37): "the status channel announces plan start" was a required obligation in the prior wording and is now **optional**. If a channel exists there is exactly **one**, owned alongside the sidecar region — two live regions narrating one attempt is a defect, not additive coverage — and that convergence rule survives D37 because it is about not building two of something
+**And** a safety-critical attempt state — the stall handoff and `Interaction required` — reaches the user through a **visible** surface and never depends on an announcement channel (AD-17). Below 720 usable CSS pixels, where the owning surface may be stacked behind another, that state surfaces in a persistent, non-occludable indicator that routes to it.
 
 **Given** a confirmed attempt already summarized live in the sidecar
 **When** the user keeps reviewing a draft or attempts a second confirmation
@@ -824,7 +900,7 @@ As a Pack-Manager user, I want each Package and Manager item to show its own hon
 ### Story UX-PB.3d: Verification-gated Results with outcome taxonomy
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.3c; D29-D30; AD-16 (verification-gated success; post-exit fresh acquisition); AD-18 (the plan-attempt journal's home, format and durability — note AD-18 does not itself name a writer or a record cardinality, so the terminal-write ownership below is stated here and belongs in AD-18 when it is next amended); UX-PB.4a owns the single durable terminal write and this story never writes one; AD-25 (a failed verification refresh leaves the Last-good Snapshot in place); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** UX-PB.3c; D29-D30; AD-16 (verification-gated success; post-exit fresh acquisition); AD-18 (the plan-attempt journal's home, format and durability — and **only** those: AD-18 deliberately fixes nothing about who appends or how many records an attempt produces); **AD-29** (which does: one append authority, exactly two records, and the fold — it **supersedes this story's former terminal-write assignment**, moving ownership from UX-PB.4a to UX-PB.2e); AD-25 (a failed verification refresh leaves the Last-good Snapshot in place); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.3e, UX-PB.3g; Story 6.5
 
 As a Pack-Manager user, I want the plan to become Results only after affected state is verified so that success is earned, not assumed from a process exit.
@@ -833,7 +909,7 @@ As a Pack-Manager user, I want the plan to become Results only after affected st
 
 **Given** an active attempt whose mutations have all reached a process-terminal state
 **When** the required refresh verification for the affected Managers completes
-**Then** the attempt becomes terminal, the sidecar transforms in place into a persistent Results Summary that remains until `Done`, focus preserves the current viable node or moves to the Results heading, and one atomic outcome summary is announced (e.g. `12 of 12 updates verified` or `10 of 12 verified · 2 failed`).
+**Then** the attempt becomes terminal, the sidecar transforms in place into a persistent Results Summary that remains until `Done`, and it **displays** one atomic outcome summary (e.g. `12 of 12 updates verified` or `10 of 12 verified · 2 failed`). Announcing that summary is optional rather than required (AD-17, D37); the summary must be **visible**.
 
 **Given** a completed attempt
 **When** Results renders
@@ -845,8 +921,10 @@ As a Pack-Manager user, I want the plan to become Results only after affected st
 **And** the Manager's Last-good Snapshot is left in place with its timestamp (AD-25) — a verification refresh that errors or times out never replaces or clears the snapshot it failed to refresh, so the surface keeps showing the last state it actually knows rather than blanking.
 
 **Given** an attempt reaching terminal state (Results persistence failure)
-**When** the single durable terminal write owned by UX-PB.4a fails
-**Then** the failure to persist is surfaced honestly, the visible Results are not presented as durably recorded, and no fabricated success is shown. This story renders and announces Results; it never writes a durable record itself. An attempt accumulates several append-only records — UX-PB.2c writes the admission record at mint — but exactly one **terminal** record exists per `planAttemptId` and UX-PB.4a writes it, folding the attempt's records into the single immutable History row. A second terminal write here would append a duplicate with no rule for which record is authoritative.
+**When** the single durable terminal write owned by **UX-PB.2e** fails
+**Then** the failure to persist is surfaced honestly, the visible Results are not presented as durably recorded, and no fabricated success is shown. This story **renders** Results; it never writes a durable record itself, and it is not obliged to announce them (AD-17, D37). An attempt accumulates **exactly two** append-only records — UX-PB.2c writes the admission record at mint, and the terminal record fires on the terminal transition inside the plan-attempt store, owned by UX-PB.2e — never one per transition, because `operations.jsonl` already carries per-step detail under the same `planAttemptId` and a per-transition attempt record is the duplication AD-18 exists to prevent
+**And** **the "no rule for which record is authoritative" gap this story previously recorded is now answered by AD-29's fold rule** rather than left open: an attempt is a fold over its records resolved in one direction only — admission plus terminal yields the terminal record's outcome, admission with no terminal record yields `Interrupted` once no live attempt owns it, and a second terminal record for one attempt is duplicate evidence and **never** a state change, because a terminal state is durable and an attempt cannot leave one. The fold is idempotent and keyed by `planAttemptId`
+**And** per-Operation `Verifying` and `Skipped` remain durable states in the **Operation** journal (AD-16); "durably journaled" at the Operation level and "not per transition" at the attempt level are two different journals and are consistent, not contradictory.
 
 ### Story UX-PB.3e: Failure guidance and safe next step before Retry
 
@@ -891,7 +969,7 @@ As a Pack-Manager user, I want `Interaction required` to appear only when a trus
 ### Story UX-PB.3g: Two labeled cancellation scopes
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.3d, UX-PB.2e; D30; AD-16 (attempt-scoped cancellation; `Skipped` marks only never-started work); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** UX-PB.3d, UX-PB.2e; D30; AD-16 (attempt-scoped cancellation; `Skipped` marks only never-started work; **there is no `Cancelling` state**); AD-29 (this story can also drive an attempt terminal, so the terminal record and the fold bind it — the append still belongs to the store, in the critical section that makes the transition, and this story never writes a second one); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.4a-4e  
 
 As a Pack-Manager user, I want the primary cancel action to clearly stop the whole plan, with an Operation-only cancel reserved for a deliberate diagnostic, so that I always know the scope of what I am stopping.
@@ -900,7 +978,8 @@ As a Pack-Manager user, I want the primary cancel action to clearly stop the who
 
 **Given** an active confirmed attempt
 **When** I choose the primary cancellation labeled `Cancel plan`
-**Then** it requires no second confirmation, changes still-running Operations bound to that `planAttemptId` to `Cancelling`, prevents unstarted attempt work from beginning and marks it `Skipped`, promises no rollback, and never delays cancellation behind a dialog.
+**Then** it requires no second confirmation, moves still-running Operations bound to that `planAttemptId` **straight to their terminal state** through the existing process-group escalation, prevents unstarted attempt work from beginning and marks it `Skipped`, promises no rollback, and never delays cancellation behind a dialog
+**And** **no `Cancelling` state is introduced** — the 5-second SIGTERM grace window is never surfaced as its own status, at any level (`prd.md` FR-13, AD-16). This is the same atomic AD-3 wire concern UX-PB.2e carries, and neither story adds the variant.
 
 **Given** a deliberately Operation-scoped diagnostic action
 **When** an Operation-level cancel is offered
@@ -913,7 +992,7 @@ As a Pack-Manager user, I want the primary cancel action to clearly stop the who
 ### Story UX-PB.4a: One immutable History row per confirmed attempt
 
 **Primary concern:** Product Behavior  
-**Dependencies:** D29; AD-16 (durable `planAttemptId` identity; atomic all-or-none admission); AD-18; UX-PB.3 complete (PB.3a-g); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** D29; AD-16 (durable `planAttemptId` identity; atomic all-or-none admission); AD-18; **AD-29** (this story is a **reader and folder only** and appends nothing — its "one immutable History row" is the fold's output, not a write; the terminal record is UX-PB.2e's, because this story depends on all of UX-PB.3a–3g while UX-PB.2e ships in wave 2, and giving the terminal append to this story would leave every attempt terminating in between persisted admission-only and therefore read as `Interrupted`); UX-PB.3 complete (PB.3a-g); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.4b, UX-PB.4e  
 
 As a Pack-Manager user, I want each plan I confirm to become exactly one immutable History entry so that every attempt has one durable record instead of scattered per-command rows.
@@ -923,7 +1002,7 @@ As a Pack-Manager user, I want each plan I confirm to become exactly one immutab
 **Given** a confirmed plan attempt that reaches a terminal state — succeeded, failed, cancelled, interrupted, or partially skipped, and regardless of how many Managers, commands, Packages, failures, or skips it contained
 **When** it terminates
 **Then** exactly one immutable History row is created for that `planAttemptId`, its Operation-level evidence is nested inside that row, and its summary uses verified-outcome wording such as `10 of 12 verified · 2 failed` rather than a generic completion ratio
-**And** no attempt ever yields more than one row or a per-Package or per-command row.
+**And** no attempt ever yields more than one row or a per-Package or per-command row — **true by construction under AD-29 rather than by this story remembering to deduplicate**: the fold is idempotent and keyed by `planAttemptId`, and two records of the same kind for one attempt fold to one attempt. This story must **not** inherit the shipping Operation loader's behavior, which is not idempotent — every start-shaped line pushes a new entry and only the finish half dedups, so a duplicate admission line would replay as an extra row.
 
 **Given** a confirmed attempt has terminated
 **When** its single immutable History row cannot be persisted
@@ -941,7 +1020,7 @@ As a Pack-Manager user, I want each plan I confirm to become exactly one immutab
 ### Story UX-PB.4b: Read-only Activity replay of a History row
 
 **Primary concern:** Product Behavior  
-**Dependencies:** D29-D30; AD-16; AD-24 (Retry derives its own intent; revealing the scope executes nothing); UX-PB.4a; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** D29-D30; AD-16; AD-18 (the attempt journal is where a replay's evidence is read from, under the same retention policy as `operations.jsonl` — a record that loses its counterpart reads as legacy, never as corrupt); AD-29 (the replay is a **reader**; it appends nothing, and it reconstructs the attempt by folding its two records rather than by trusting any single one); AD-24 (Retry derives its own intent; revealing the scope executes nothing); UX-PB.4a; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.4c, UX-PB.4d  
 
 As a Pack-Manager user, I want opening a History row to route Activity into read-only replay so that I can inspect exactly what a prior attempt did instead of piecing together unrelated commands.
@@ -1001,7 +1080,7 @@ As a Pack-Manager user, I want Retry to first show the failed-item scope and the
 ### Story UX-PB.4e: Legacy Operation History honest labeling
 
 **Primary concern:** Product Behavior  
-**Dependencies:** D29; AD-16 (legacy honesty — no inferred plan grouping); AD-18; UX-PB.4a, UX-PB.2f; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** D29; AD-16 (legacy honesty — no inferred plan grouping); AD-18; AD-29 (an attempt record that loses its counterpart is legacy, and `Interrupted` requires a **genuine** absence — a terminal record present but unreadable is reported as unreadable evidence, never silently reclassified); UX-PB.4a, UX-PB.2f; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 
 As a Pack-Manager user, I want legacy Operation records that predate plan attempts to stay honestly labeled so that older history remains readable without being faked into plans it never had.
 
@@ -1021,6 +1100,10 @@ As a Pack-Manager user, I want legacy Operation records that predate plan attemp
 **Dependencies:** UX-PB.1 and UX-PB.2 complete; D27, D28; AD-16; finalized UX spines; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.5b, UX-PB.5d  
 
+**Restated per `docs/DECISIONS.md` D37 — owner decision, 2026-07-25.** This story was **not** in D37's named list of sections, and D37's rule is "scope by named section, never by a mention count". The owner extended the list to include this story rather than making an exception to the rule, on the ground that its dismissal criterion carried focus-restoration language of exactly the class `prd.md` NFR-6 drops. Removed as criteria: "focus moves to the dialog heading/command summary with `Change Plan` as the first actionable control so a final confirmation is never the accidental default for an unfocused Enter" (the failure it guards requires a keyboard), the *focus* half of `Change Plan`'s return target, and "restore focus to the originating `Confirm N Updates` action".
+
+**The criterion was cut surgically rather than stripped wholesale, and the reason is the same trap Story UX-PB.1d carried:** one sentence bundled three separate things, and only two of them were keyboard. `Change Plan`'s **return target survives as navigation** — where the dialog closes back to, which a mouse user experiences as scroll position. **`Escape`/backdrop "dismiss only while no command has begun" survives untouched** — it is a dismissal-safety rule about not tearing the dialog down mid-execution, not focus restoration. Pattern-stripping the sentence would have deleted a safety property along with the keyboard limbs. The dimmed, focus-trapped background in the criterion above is modal behavior and is likewise unaffected.
+
 As a Pack-Manager user, I want the persistent Upgrade Plan to present one deliberate final confirmation before anything runs so that a review step always stands between staging and execution and nothing bypasses it silently.
 
 **Acceptance Criteria:**
@@ -1034,8 +1117,9 @@ As a Pack-Manager user, I want the persistent Upgrade Plan to present one delibe
 **Then** the `Proceed with Upgrade Plan?` Confirmation Dialog opens over a dimmed, focus-trapped background, shows the exact commands that will run, and offers `Change Plan` plus a final `Confirm N Updates`, and nothing executes until the final confirmation is chosen.
 
 **Given** the open Confirmation Dialog
-**When** focus lands and I use `Change Plan`, Escape, or the backdrop
-**Then** focus moves to the dialog heading/command summary with `Change Plan` as the first actionable control so a final confirmation is never the accidental default for an unfocused Enter, `Change Plan` returns focus to the first staged Remove control or the plan heading, and Escape/backdrop dismiss only while no command has begun and restore focus to the originating `Confirm N Updates` action.
+**When** I use `Change Plan`, Escape, or the backdrop
+**Then** `Change Plan` returns to the first editable plan item or the plan heading — a **navigation** target rather than a focus target, which a mouse user experiences as scroll position and as what the dialog closes back to (`EXPERIENCE.md`'s Confirmation Dialog contract)
+**And** Escape or the backdrop dismiss **only while no command has begun** — a dismissal-safety rule about not tearing down the dialog mid-execution, which is **not** focus restoration and is **not** in D37's scope.
 
 **Given** the open dialog
 **When** I choose the final `Confirm N Updates`
@@ -1103,30 +1187,32 @@ As a user who has disabled the final confirmation, I want the run action to stil
 **When** native rebuild or stale validation fails, for example a Package pinned, updated, or removed since staging
 **Then** the run is blocked, the invalidated details are replaced and what changed is explained, and nothing executes until the plan is rebuilt and re-authorized.
 
-### Story UX-PB.5d: Accessibility and responsiveness of the confirmation and safety surfaces
+### Story UX-PB.5d: Responsiveness of the confirmation and safety surfaces at the size and zoom floors
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.5a; finalized focus and high-zoom contracts; FR-19; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** UX-PB.5a; finalized high-zoom contracts; **NFR-3** (the size and zoom floors this story now rests on); AD-17 (below 720 usable CSS pixels the sidecar region becomes a full-workspace or stacked surface, one surface visible at a time, with a persistent non-occludable indicator for safety-critical attempt state); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 
-As a keyboard and VoiceOver user at high zoom, I want every safety action reachable and announced so that the confirmation gate protects everyone at the 900 x 600 minimum and at 150-200% zoom.
+**Restated per `docs/DECISIONS.md` D37, and deliberately not deleted.** This story was built almost entirely on D37-removed scope — a "keyboard and VoiceOver user at high zoom" persona, a keyboard/VoiceOver `When`, a focus-order-and-announcements `Then`, and a deterministic focus-restoration criterion that `prd.md` NFR-6 names among the dropped obligations. **Its zoom and minimum-window half survives under NFR-3** and is what remains below; the accessibility half is removed as a criterion, not as shipped code. `prd.md` §10 records the owner's 2026-07-25 confirmation that NFR-6's "deterministic dialog/sidecar focus restoration" stays dropped rather than being carved out as an exception. The story's former dependency on FR-19 is repointed to NFR-3, because the limb it actually needs is the responsiveness floor rather than the interface FR.
+
+As a Pack-Manager user at the smallest supported window and at high zoom, I want every safety action to stay fully visible and operable so that the confirmation gate protects me at the 900 x 600 minimum and at 150-200% zoom.
 
 **Acceptance Criteria:**
 
-**Given** the plan and the `Proceed with Upgrade Plan?` dialog
-**When** a keyboard/VoiceOver user operates them with reduced motion active
-**Then** the dialog traps focus, exposes meaningful names, roles, and states, honors reduced motion, and every safety action (`Confirm N Updates`, `Change Plan`, the disable checkbox, and `Run N Updates`) has an accessible name and a reachable focus order.
+**Given** the plan and the `Proceed with Upgrade Plan?` dialog with reduced motion active
+**When** they render
+**Then** transitions and animations are suppressed, and every safety action (`Confirm N Updates`, `Change Plan`, the disable checkbox, and `Run N Updates`) carries a visible focus indicator drawn as a real `outline` per AD-27 — a rendering mechanism D37 keeps by name, verified for each control at runtime in a macOS Tauri build rather than inferred from a green CI run.
 
 **Given** the 900 x 600 minimum window at 100%, 150%, and 200% zoom
 **When** the Plan, Confirmation, Activity, and Results surfaces render
-**Then** below 720 usable CSS pixels the layout enters high-zoom mode, navigation collapses to an accessible rail or temporary panel, and Plan/Confirmation/Activity/Results present as a full-workspace or stacked surface with a visible Back route, no overlapping panes, and no two-dimensional scrolling for the primary task, keeping every safety action reachable.
-
-**Given** the open Confirmation Dialog
-**When** it is dismissed via `Change Plan`, Escape, backdrop, or final confirm and the return target no longer survives
-**Then** focus is restored to a defined fallback (the first staged Remove control or the plan heading) rather than lost to the document body, and focus is never stranded inside a closed dialog.
+**Then** below 720 usable CSS pixels the layout enters high-zoom mode, navigation collapses to a rail or temporary panel, and Plan/Confirmation/Activity/Results present as a full-workspace or stacked surface with a visible Back route, no overlapping panes, and no two-dimensional scrolling for the primary task, keeping every safety action reachable.
 
 **Given** 150% zoom, 200% zoom, or the 900 x 600 minimum
 **When** a safety action would otherwise clip or overflow
-**Then** it remains fully visible and operable with its name, state, versions, primary action, error/recovery, focus order, and announcements preserved, and no safety action becomes unreachable behind an overlapping or two-dimensionally scrolling pane.
+**Then** it remains fully visible and operable with its name, state, versions, primary action, and error/recovery preserved, and no safety action becomes unreachable behind an overlapping or two-dimensionally scrolling pane.
+
+**Given** a live attempt whose owning surface is stacked behind another at that width
+**When** a safety-critical attempt state occurs — the stall handoff or `Interaction required`
+**Then** it reaches the user through a persistent, non-occludable indicator that routes to the surface owning it (AD-17), and never depends on an announcement channel, because the announcement channel that used to carry it is now optional.
 
 ### Story UX-PB.5e: Application-update presentation kept separate from Package plans and History
 
@@ -1197,7 +1283,7 @@ So that I can understand what each Manager reports without losing Manager-specif
 
 - FR and requirement links: FR-2; FR-5; FR-6; FR-10; FR-11; FR-19
 - Required test level: Component
-- Governing invariants: AD-16, AD-17, AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)
+- Governing invariants: AD-16, AD-17, AD-28 (the row Checkbox **is** membership — no transient selection, and the row reads the same single eligibility-and-visibility predicate as the header Checkbox, `⌘A`, the batch payload, and the tri-state denominator, projected from Rust with the snapshot it was computed against), AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)
 - Dependencies: representative all-state fixtures
 
 **Acceptance Criteria:**
@@ -1221,14 +1307,16 @@ So that no plan silently overrides a pin or includes default-excluded work.
 
 - FR and requirement links: FR-5; FR-6; FR-7
 - Required test level: Unit plus component
-- Governing invariants: AD-16, AD-17, AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)
-- Dependencies: Story 3.1; deterministic plan-builder and UI fixtures
+- Governing invariants: AD-16 (ineligible-item inertness: **inert, not inactive** — the control may not use the native `disabled` state), AD-17, AD-28 (membership, the single predicate, and the closed removal taxonomy), AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)
+- Governing decisions: **D38** — D15's disabled-checkbox *mechanism* is superseded; D15's substance (a pinned formula is never upgradable in-app and is excluded from every plan) is unchanged and not reopened
+- Dependencies: Story 3.1; **Story UX-PB.1d** (which declares `Blocks: Story 3.2` and owns the inertness contract this story renders — the edge previously existed in one direction only, so nothing sequenced the contract); deterministic plan-builder and UI fixtures
 
 **Acceptance Criteria:**
 
 **Given** pinned Homebrew formulae
-**When** selection, row plan-add, per-Manager update-all, update-selected, and Update Everything draft-entry paths are exercised across every active filter
-**Then** pinned rows stay inert, add nothing to the draft Upgrade Plan, and are explained, disabled, and excluded from every plan with the correct reason.
+**When** membership mutation, row plan-add, per-Manager update-all, and Update Everything draft-entry paths are exercised across every active filter
+**Then** pinned rows stay inert, add nothing to the draft Upgrade Plan, and are explained and excluded from every plan with the correct reason
+**And** the control uses `aria-disabled="true"` and **not** the native `disabled` state — this story renders the same control as UX-PB.1d and takes the same correction. A natively disabled form control dispatches no mouse events, so `disabled` and the pointer-reachable reason are mutually exclusive and the reason wins (AD-16, D38). Reduced opacity alone is not the treatment either.
 
 **Given** ordinary and greedy-only casks
 **When** the default and explicit opt-in flows execute
@@ -1244,7 +1332,7 @@ So that configuration changes and environment evidence remain trustworthy.
 
 - FR and requirement links: FR-17
 - Required test level: Unit plus component
-- Governing invariants: AD-4, AD-5, AD-19
+- Governing invariants: AD-4, AD-5, AD-19, **AD-27** (this story renders Settings controls, and AD-27 revision 10 widened its `Binds` to name Story 3.4 explicitly — an earlier enumeration omitted it and this document faithfully mirrored the omission. Focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls, and never `outline-none`. Verify each added control's focus state at runtime — no grep and no green suite substitutes for that)
 - Dependencies: controlled persistence and clipboard seams
 
 **Acceptance Criteria:**
@@ -1259,30 +1347,47 @@ So that configuration changes and environment evidence remain trustworthy.
 **Then** every required field and evidence value is present
 **And** copy success and failure are visible and actionable.
 
-### Story 3.5: Preserve Exact Keyboard Selection and Row Plan Actions
+### Story 3.5: Preserve Exact Batched Plan Membership and Row Plan Actions
 
 As a Pack-Manager user,
-I want keyboard selection and single-row plan actions to preserve exact Package identity,
+I want membership interactions and single-row plan actions to preserve exact Package identity,
 So that I can act efficiently without adding excluded or unrelated Packages to the Upgrade Plan.
+
+**Restated per `ARCHITECTURE-SPINE.md` AD-28.** This story's criteria were written on the transient-selection model AD-28 abolishes — "the exact selectable identities", a `Clear` that cleared a selection set, and an `Esc` rung. AD-28 exists precisely to prevent this story building a transient selection set while UX-PB.1a builds direct membership: two stories that obey every other invariant and ship opposite models of the same checkbox. The criteria below are restated in membership terms and batched. `epics.md` never named `⌘U`, so no `⌘U` limb is removed here — only `docs/SPEC.md` §4.11 carries that, and it is hand-written and workflow-unowned.
 
 **Story Contract:**
 
-- FR and requirement links: FR-6; FR-10; FR-13; FR-19
+- FR and requirement links: FR-6; FR-10; FR-13; FR-19; RP-2 (`⌘A` as an Edit-menu action, and the surviving accelerator map); NFR-3 (the 101-rows requirement that makes batching a requirement rather than an optimization)
 - Required test level: Component plus browser E2E
-- Governing invariants: AD-16, AD-17, AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)
-- Dependencies: Stories 3.1 and 3.2; semantic keyboard/focus locators; deterministic bridge
+- Governing invariants: AD-16, AD-17, **AD-28** (a Package checkbox **is** membership; the anchor survives and the selection set does not; a range or filter-wide interaction is **one** membership operation; a batch carries concrete canonical identities computed from the snapshot the user is looking at, never a predicate for Rust to re-expand; one predicate, and it is Rust's), AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)
+- Dependencies: Stories 3.1 and 3.2; **UX-PB.1a** (which retires the live `selection` set in `src/store/packages.ts`); deterministic bridge
 
 **Acceptance Criteria:**
 
 **Given** eligible, current, pinned, greedy, filtered, and range-addressable rows
-**When** toggle, shift-range, tri-state, Cmd+A, Space, Cmd-click, Clear, and Esc interactions execute
-**Then** the exact selectable identities and visible filter semantics are preserved
-**And** excluded rows never enter selection.
+**When** a toggle, a shift-range, the tri-state header Checkbox, `⌘A`, Space, or `⌘`-click mutates membership
+**Then** each acts **directly on Upgrade Plan draft membership** — checking an eligible Package adds it and unchecking removes it, with no separate selection set to build and no `Add Selected` submit step — the exact canonical identities and visible filter semantics are preserved, and ineligible rows never enter membership under any of them, including the header Checkbox
+**And** a range or filter-wide interaction submits **one** membership operation covering every affected identity — one round trip, one canonical rebuild — never one operation per row, because the canonical draft lives in Rust and every mutation round-trips before the projection updates (NFR-3, AD-28)
+**And** the batch carries **concrete canonical identities computed from the snapshot the user is looking at**, plus the snapshot token it read, and Rust rejects a batch whose token is not its current snapshot — never a predicate for Rust to re-expand, which would resolve against whatever snapshot Rust holds at that instant and stage a Package the user never saw
+**And** a range is an anchor and a target over the **ordered filtered set the projection holds**, including off-screen virtualized rows, and **not** the rendered DOM window — the product virtualizes, so at 500 rows roughly twenty are rendered and a 400-row range would otherwise mean two different things to this story and the story that owns the table
+**And** the frontend may hold the shift-range anchor, the search term, and the filter — *where the user is* — and never *what is staged*: the **anchor survives, the selection set does not**, and losing the anchor degrades a range into a single toggle, which is already the shipping fallback
+**And** the header Checkbox's tri-state denominator is the eligible set matching the active filter including off-screen rows — unchecked when none of that set is staged, `mixed` when some, checked when all — derived from the membership projection and never stored
+**And** the batch is **all-or-none in application and narrowing in resolution**: one rebuild applies every member it still finds eligible and drops the rest as one transaction, reporting the dropped refs and their reasons; it never half-applies silently and is rejected outright only when the rebuild **errors**, in which case the prior coherent draft and its last authenticated preview are preserved unchanged (AD-16)
+**And** provenance follows the shape of the act (AD-23, AD-28): a **range is `Explicit`** for every member because it names concrete visible rows, while the header Checkbox and `⌘A` are `Bulk { scope: FilteredView }`
+**And** **`Clear` survives with a changed meaning and `Esc` does not.** `Clear` is no longer a selection clear — it is a **scope-wide membership removal** under AD-28's closed three-way taxonomy, clearing membership for the refs in its scope and clearing the tombstones **only** of the refs whose membership it actually cleared, never of refs that held none. **`Esc` never touches membership**: its clear-selection rung is deleted rather than re-pointed, and `Esc` is not handed the sidecar as a replacement sink, so the cascade is **close-dialog alone** (AD-17, `prd.md` FR-6). One `Esc` mass-writing tombstones and poisoning a draft against `Update Everything` is the failure this closes.
+
+**Given** the Dashboard, History, and Settings — the views with no Package list
+**When** `⌘A` is pressed
+**Then** the native select-all is **not** suppressed and behaves normally, because an accelerator that shadows a standard Edit-menu action suppresses the native default **only on surfaces where it performs its own action** (AD-28)
+**And** this is a named shipping defect with an owner rather than a hypothetical: the handler calls `preventDefault()` before the select-all helper early-returns on views with no Package list, so today `⌘A` blocks native select-all on those three views and puts nothing in its place. The search field escapes it only because the handler bails on editable targets first
+**And** `docs/DECISIONS.md` D37 does not excuse it — `⌘A` is an Edit-menu action D37 keeps by name, and RP-2 makes it a release prerequisite. It is a functional regression in select-all, not an accessibility item
+**And** re-pointing `⌘A` to membership must not inherit the defect (`prd.md` FR-6).
 
 **Given** one eligible or ineligible Package row
 **When** the single-row plan action is invoked
 **Then** exactly one eligible Package's canonical identity is added to (or removed from) the persistent draft Upgrade Plan, nothing is built, submitted, enqueued, or executed, and the sidecar reflects the membership change
-**And** ineligible, pinned, or current rows add nothing, stay inert with an explained reason, and never expand the selection
+**And** ineligible, pinned, or current rows add nothing, stay inert with an explained reason, and never expand membership
+**And** a single-row removal is a **single-ref removal** under AD-28's taxonomy and writes a tombstone (AD-23), so no later bulk expansion of any scope re-adds it
 **And** the resulting one-Package plan enters the same review and separate-confirmation path as a multi-Package plan, with its execution, verification, Results, and History lifecycle proven by the later-wave stories that own those stages.
 
 ## Epic 6: Preserve State, Evidence, and Privacy Across Failure and Relaunch
@@ -1299,7 +1404,7 @@ So that support evidence is complete, inspectable, and actionable.
 
 - FR and requirement links: FR-18
 - Required test level: Real native Tauri E2E plus artifact inspection. Satisfiable as written — **AD-26** names a compliant shape and no renegotiation is needed.
-- Governing invariants: AD-3, AD-4, AD-5, AD-16, AD-18, AD-26
+- Governing invariants: AD-3, AD-4, AD-5, AD-16, AD-18, AD-26, **AD-29** (the archive carries the **raw journal lines**, never a synthesized record — this story's assertion that the exported plan-attempt records carry scope, exact commands, verification facts and results is satisfied by the record **set** for a `planAttemptId` and cannot be satisfied by any single record, because AD-29's admission/terminal split makes such a record impossible. A folded attempt view may be added as an **additional** entry marked as derived; it never replaces the raw lines and is never written back to the journal), **AD-27** (this story renders the diagnostics action, and AD-27 revision 10 widened its `Binds` to name Story 6.5 explicitly — an earlier enumeration omitted it and this document faithfully mirrored the omission. Focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, and never `outline-none`; verify the added control at runtime)
 - Harness constraint (AD-26): the native automation surface is excluded from release bits at **compile time**, never by a runtime selector, and the harness must drive the **production composition** — the same registered commands and events, the same handlers, the same serialization. No delivery coverage may be claimed from a fixture, from the browser double, or from a harness that introduces a test-only command, a second composition root, or a different registration set.
 - Dependencies: disposable logs/transcripts/journal
 
@@ -1311,7 +1416,9 @@ So that support evidence is complete, inspectable, and actionable.
 
 **Given** more than three app logs, 25 transcripts, 1,000 journal records, and durable plan-attempt records correlated by `planAttemptId`
 **When** the produced ZIP is opened and inspected
-**Then** it contains `report.json`, the newest three app logs, newest 25 transcripts, `operations.jsonl`, and the durable plan-attempt records that correlate the exported evidence — each carrying its `planAttemptId`, reviewed Manager/Package scope, exact commands, verification facts, results, and optional `retryOfPlanAttemptId` — with exact expected contents and no missing required entry, including those plan-attempt entries.
+**Then** it contains `report.json`, the newest three app logs, newest 25 transcripts, `operations.jsonl`, and the durable plan-attempt records that correlate the exported evidence — with exact expected contents and no missing required entry, including those plan-attempt entries
+**And** the required fields are carried **between** an attempt's two records rather than duplicated into each (AD-29): the **admission** record carries `planAttemptId`, reviewed Manager/Package scope, exact commands, identities and timestamps, and the **terminal** record carries verification facts and results; `retryOfPlanAttemptId` accompanies the attempt where one exists. The assertion is satisfied by the record **set** for a `planAttemptId` and may not be written as a single-record assertion
+**And** the archive carries the raw journal lines, so widening the export does not widen disclosure — plan-attempt records enter under the same allowlist the export already applies, inherited environment values stay excluded, and a record carries the reviewed intent and the exact argv Pack-Manager constructed and never ambient environment or user paths (AD-18).
 
 **Given** Export diagnostics and Open Logs actions
 **When** native command/opener success and failure are controlled
