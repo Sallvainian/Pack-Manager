@@ -1,7 +1,11 @@
 # Epics 1-6 story triage — 2026-07-24 scope recalibration
 
 Companion to `docs/DECISIONS.md` D33. Records the per-story reasoning behind the
-37 Epic 1-6 entries that `sprint-status.yaml` marks UNSCHEDULED.
+37 Epic 1-6 entries as they stood before the rescope. The rescope was applied on
+2026-07-25: the 19 merged and 12 retired stories moved to
+`_bmad-output/archive/2026-07-24-scope-recalibration/planning/epics-1-6-triaged-out.md`,
+Epics 1, 4, and 5 lost every story and were removed, and `sprint-status.yaml` now
+carries only the 6 keeps (2.2, 3.1, 3.2, 3.4, 3.5, 6.5) alongside the 28 UX-PB stories.
 
 **Method.** One pass per epic classified every story against a single test: *does this
 make the app better for someone using it, or does it only produce paperwork about the
