@@ -13,3 +13,27 @@
 - source_spec: `/Users/sallvain/Projects/Pack-Manager/_bmad-output/implementation-artifacts/spec-harden-command-trust-boundaries.md`
   summary: Define whether plan confirmation must re-probe package-manager native state changed by processes outside Pack-Manager.
   evidence: Plan validation consistently protects the app's coherent cached epoch, but external package, pin, shim, or path changes do not advance that in-process revision; live re-probing would materially change confirmation latency and semantics.
+
+- source_spec: `/Users/sallvain/Projects/Pack-Manager/_bmad-output/implementation-artifacts/spec-fix-window-drag-region.md`
+  summary: Regenerate the project-context rule that still claims the capability file grants only `core:default` and `opener:default`.
+  evidence: `_bmad-output/project-context.md:136` states that verbatim; `src-tauri/capabilities/default.json` now carries a third permission. The file is workflow output, so it must be regenerated rather than hand-edited.
+
+- source_spec: `/Users/sallvain/Projects/Pack-Manager/_bmad-output/implementation-artifacts/spec-fix-window-drag-region.md`
+  summary: Record a DECISIONS entry for the `core:window:allow-start-dragging` grant so it is not pruned as unexplained scope.
+  evidence: `docs/DECISIONS.md` runs D1-D33 with no entry covering window capabilities; the grant's only rationale currently lives in source comments, and removing it silently kills window dragging with no test to catch it.
+
+- source_spec: `/Users/sallvain/Projects/Pack-Manager/_bmad-output/implementation-artifacts/spec-fix-window-drag-region.md`
+  summary: Decide whether `security.csp: null` should be tightened now that a window-manipulation command is reachable from the webview.
+  evidence: `src-tauri/tauri.conf.json` sets `"csp": null`, and project-context calls any capability change security-sensitive; the accepted risk was never written down either way.
+
+- source_spec: `/Users/sallvain/Projects/Pack-Manager/_bmad-output/implementation-artifacts/spec-fix-window-drag-region.md`
+  summary: Update SPEC §4.3 and its shell diagram to describe the main column's title-bar strip alongside the sidebar's.
+  evidence: `docs/SPEC.md:212` documents only the sidebar's 38px drag padding and diagrams MainView flush to the top of the right column, which no longer matches `AppLayout.tsx`.
+
+- source_spec: `/Users/sallvain/Projects/Pack-Manager/_bmad-output/implementation-artifacts/spec-fix-window-drag-region.md`
+  summary: Extract the 38px title-bar reserve into one shared token consumed by both the sidebar and the main column.
+  evidence: `Sidebar.tsx` `pt-[38px]` and `AppLayout.tsx` `h-[38px]` must agree to keep the drag band level, but nothing links them and Tailwind v4 here has no titlebar spacing token.
+
+- source_spec: `/Users/sallvain/Projects/Pack-Manager/_bmad-output/implementation-artifacts/spec-fix-window-drag-region.md`
+  summary: Add a regression guard pinning the capability permission list and asserting the shell renders its drag regions.
+  evidence: `src-tauri/gen/schemas` is gitignored, so a dropped or misspelled permission identifier is only caught when a machine regenerates schemas at build time; no test references `data-tauri-drag-region`.
