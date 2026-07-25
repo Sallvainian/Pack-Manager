@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/Sallvainian/Pack-Manager/compare/v0.2.9...v1.0.0) (2026-07-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* Pack-Manager now requires macOS 15.0 (Sequoia) or later. Installations on macOS 11-14 will not launch after updating. The universal build and both updater targets are retained; only the supported-version floor changes.
+
+### Bug Fixes
+
+* declare minimum supported macOS version ([8580a50](https://github.com/Sallvainian/Pack-Manager/commit/8580a50bd79dd89afd3268d821efbd4f61249ec5))
+
 ## [0.2.9](https://github.com/Sallvainian/Pack-Manager/compare/v0.2.8...v0.2.9) (2026-07-24)
 
 
