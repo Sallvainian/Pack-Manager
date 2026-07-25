@@ -44,12 +44,17 @@ src-tauri/target
 _bmad/
 .github/copilot-instructions.md
 
-# BMAD UX working scratch — screenshots, Playwright CLI logs, mockup
-# iterations, and memlogs. Regenerable exploration output, not deliverables;
+# BMAD UX working scratch — screenshots, Playwright CLI logs, and mockup
+# iterations. Regenerable exploration output, not deliverables;
 # the DESIGN.md/EXPERIENCE.md/mockups and reports under _bmad-output are tracked.
+#
+# .memlog.md is deliberately NOT ignored. It is a workflow run's append-only
+# working memory — `_bmad/scripts/memlog.py` has no edit or delete subcommand by
+# design — and the bmad-* Update intents resume from it as "the authority on what
+# was decided", not from the rendered artifact. It is not a deliverable, but it is
+# not regenerable either: lose it and the artifact can never be re-distilled.
 **/.working/
 **/.playwright-cli/
-**/.memlog.md
 .bmad-loop/runs/
 .bmad-loop/cache/
 .bmad-loop/policy.toml

@@ -59,7 +59,7 @@ export function PackageToolbar({
         aria-label="Search packages"
         className={[
           "h-8 w-[240px] rounded-control border border-border bg-bg-raised px-2.5 text-[13px] text-text-primary",
-          "placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+          "placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1",
         ].join(" ")}
       />
 
@@ -69,7 +69,7 @@ export function PackageToolbar({
           checked={outdatedOnly}
           onChange={(e) => setOutdatedOnly(managerId, e.target.checked)}
           aria-label="Outdated only"
-          className="h-4 w-4 rounded-[4px] border border-border-strong bg-bg-raised accent-accent"
+          className="h-4 w-4 rounded-[4px] border border-border-strong bg-bg-raised accent-accent focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1"
         />
         Outdated only
       </label>

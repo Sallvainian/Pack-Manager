@@ -4,28 +4,47 @@ stepsCompleted:
   - step-02-design-epics
   - step-03-create-stories
   - step-04-final-validation
+# Live, authoritative inputs.
 inputDocuments:
-  - _bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-22/prd.md
-  - _bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-22/addendum.md
   - _bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md
-  - _bmad-output/test-artifacts/test-design-architecture.md
-  - _bmad-output/test-artifacts/test-design-qa.md
-  - _bmad-output/test-artifacts/test-design-progress.md
-  - _bmad-output/test-artifacts/test-design/Pack-Manager-handoff.md
-  - _bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-22/readiness-coverage-map.md
   - _bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/DESIGN.md
   - _bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/EXPERIENCE.md
   - _bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/validation-report.md
-  - _bmad-output/planning-artifacts/sprint-change-proposal-2026-07-24.md
+  - _bmad-output/planning-artifacts/story-triage-2026-07-24.md
+  - _bmad-output/planning-artifacts/sprint-change-proposal-2026-07-25.md
+  - _bmad-output/project-context.md
   - docs/SPEC.md
   - docs/DECISIONS.md
+  - docs/RELEASE-CHECKLIST.md
+# Historical inputs that fed earlier revisions. Repointed to their real archive
+# locations on 2026-07-25 — every path above them was stale. NOT authoritative:
+# project-context.md states "Nothing under
+# _bmad-output/archive/2026-07-24-scope-recalibration/ is authoritative", and
+# archived files must never be moved back into planning-artifacts, because BMAD
+# skills glob *prd*.md and *epic*/*.md from there and would silently reload the
+# readiness gate that docs/DECISIONS.md D33 retired.
+historicalInputDocuments:
+  - _bmad-output/archive/2026-07-24-scope-recalibration/planning/prds/prd-Pack-Manager-2026-07-22/prd.md
+  - _bmad-output/archive/2026-07-24-scope-recalibration/planning/prds/prd-Pack-Manager-2026-07-22/addendum.md
+  - _bmad-output/archive/2026-07-24-scope-recalibration/planning/prds/prd-Pack-Manager-2026-07-22/readiness-coverage-map.md
+  - _bmad-output/archive/2026-07-24-scope-recalibration/planning/sprint-change-proposal-2026-07-24.md
+  - _bmad-output/archive/2026-07-24-scope-recalibration/test-artifacts-gate/test-design-architecture.md
+  - _bmad-output/archive/2026-07-24-scope-recalibration/test-artifacts-gate/test-design-qa.md
+  - _bmad-output/archive/2026-07-24-scope-recalibration/test-artifacts-gate/test-design-progress.md
+  - _bmad-output/archive/2026-07-24-scope-recalibration/test-artifacts-gate/test-design/Pack-Manager-handoff.md
 ---
 
 # Pack-Manager - Epic Breakdown
 
 ## Overview
 
-This document provides the complete epic and story breakdown for Pack-Manager, decomposing the finalized requirements, formal architecture, finalized UX contract, reconciled System-Level Test Design, normative readiness mapping, and product-behavior authorities into implementable stories. The 2026-07-24 Correct Course amendment below is binding and supersedes older immediate-row, direct Manager-update, Activity-drawer, Operation-History, and `autoOpenDrawer` wording in affected stories.
+This document provides the complete epic and story breakdown for Pack-Manager, decomposing the finalized requirements, formal architecture, finalized UX contract, and product-behavior authorities into implementable stories. The 2026-07-24 Correct Course amendment below is binding and supersedes older immediate-row, direct Manager-update, Activity-drawer, Operation-History, and `autoOpenDrawer` wording in affected stories.
+
+On 2026-07-25 this document was reconciled with `ARCHITECTURE-SPINE.md` revision 6
+and `docs/DECISIONS.md` D33, which retired the 72-criterion readiness gate and the
+register this document previously carried at `#### Additional Requirements`. Where
+this document and the spine disagree, **the spine is upstream and wins.** Record:
+`_bmad-output/planning-artifacts/sprint-change-proposal-2026-07-25.md`.
 
 ## Requirements Inventory
 
@@ -75,9 +94,9 @@ FR-21: Install a downloaded application update only after the user chooses Resta
 
 FR-22: Support the declared Apple-silicon and Intel promise through normal Finder/Dock launch and accept only updater payloads authorized for the installed application; report success only after relaunch as the intended version.
 
-RP-1: Preserve launch, six-hour, and app-menu update checks; restore in-process update state after supported UI recreation; preserve saved trigger policy across normal relaunch; ensure failed/interrupted downloads never appear Ready; keep application-update state separate from Package Operation queue and History; and validate this mandatory prerequisite outside the 72-row P0 denominator.
+RP-1: Preserve launch, six-hour, and app-menu update checks; restore in-process update state after supported UI recreation; preserve saved trigger policy across normal relaunch; ensure failed/interrupted downloads never appear Ready; keep application-update state separate from Package Operation queue and History; and validate this mandatory prerequisite through `docs/RELEASE-CHECKLIST.md`.
 
-RP-2: Preserve standard macOS Edit and Window menu actions, including cut/copy/paste/select-all in search and every copyable command surface, as a mandatory prerequisite outside the 72-row P0 denominator.
+RP-2: Preserve standard macOS Edit and Window menu actions, including cut/copy/paste/select-all in search and every copyable command surface, as a mandatory prerequisite validated through `docs/RELEASE-CHECKLIST.md`.
 
 ### NonFunctional Requirements
 
@@ -99,15 +118,30 @@ NFR-8: Keep direct-download and updater artifacts mutually consistent, cryptogra
 
 ### Additional Requirements
 
-#### Readiness and Scope Controls
+#### Scope Controls
 
-- Preserve exactly 72 P0 criteria from `readiness-coverage-map.md`, whose status remains `final-pending-approval`.
-- Preserve the historical planning baseline as FAIL with 14/72 FULL. Plan closure for all 58 non-FULL criteria and candidate-era revalidation of all 14 historical-FULL criteria at their mapped evidence depth; never carry a historical status forward automatically.
-- Preserve the 58-row provisional concern split of 1 Product Behavior, 52 Reusable Test Infrastructure, and 5 Candidate-Specific Release Evidence, subject to TIR-1 behavior-present reclassification.
-- Keep RP-1 and RP-2 mandatory but outside the denominator, baseline totals, concern totals, and batch counts.
-- Do not promote criteria, approve or revise the coverage map, regenerate traceability, configure the gate, execute evidence, or claim product-and-release readiness in this planning artifact.
-- Treat Product Behavior, Reusable Test Infrastructure, and Candidate-Specific Release Evidence as separate primary concerns. Every criterion-bearing story declares exactly one.
-- For each of the 24 `BP` rows, check that required behavior is present before accepting regression work. Missing or incorrect behavior creates Product Behavior work and requires a reviewed map revision before regression evidence can receive credit.
+The 72-criterion P0 readiness gate this section carried is retired by
+`docs/DECISIONS.md` **D33**. There is no P0 denominator, no coverage percentage,
+no `readiness-coverage-map.md` oracle, no criterion promotion, and no three-way
+primary-concern taxonomy. Release readiness is `docs/RELEASE-CHECKLIST.md` plus
+the two publication-blocking checks in `release.yml`. The retired artifacts are
+archived under `_bmad-output/archive/2026-07-24-scope-recalibration/` and are not
+authoritative.
+
+One habit survives the gate, and it binds every story below: **before scheduling
+work described as a test gap, verify whether the behavior is already present in
+the shipping code.** `docs/DECISIONS.md` D33 records why — an adversarial pass
+over the Epics 1-6 triage overturned 14 of 20 initial keep verdicts for exactly
+that reason. `ARCHITECTURE-SPINE.md` AD-1 carries it as a rule.
+
+Every live story is product-behavior work. The `Primary concern` label retained
+on the 28 Epic UX-PB stories records that; the retired Reusable Test
+Infrastructure and Candidate-Specific Release Evidence alternatives no longer
+exist.
+
+RP-1 and RP-2 remain mandatory requirements, validated through the release
+checklist per the FR Coverage Map below. They no longer sit inside or outside any
+denominator.
 
 #### Product Acceptance Journeys
 
@@ -118,93 +152,178 @@ NFR-8: Keep direct-download and updater artifacts mutually consistent, cryptogra
 - AJ-5: Prove searchable History, command/outcome/transcript reconstruction, Finder reveal, and privacy-preserving diagnostics export.
 - AJ-6: Prove trusted direct installation, normal launch, prior-public-version discovery/download, explicit Restart to update, intended-version relaunch, and non-writable manual-install behavior without privilege escalation.
 
-#### Test Infrastructure Readiness
+#### Test Infrastructure
 
-- TIR-1: Begin every provisionally test-only gap with behavior-present verification; reclassify missing/incorrect behavior into Product Behavior before regression credit; complete PC-1 before D23a recurrence credit; and use the formal FULL definition rather than test-file presence.
-- TIR-2: Provide a deterministic forced-offline lane from a clean checkout with real outbound network denied, controlled process/state/time seams, no real Manager processes, no sleeps, no undeclared host state, separate live/release checks, full deterministic success/failure coverage, and exact D26 positive/negative boundaries.
-- TIR-3: Provide a reusable real native lane crossing frontend invocation, Tauri serialization/registration, Rust handlers, and representative events using the shared production boundary; isolate state and executables; prove startup ordering, detection, Re-detect, and six-Manager refresh; and never relabel fake-browser evidence as native.
-- TIR-4: Provide deterministic stdout/stderr/silence/exit/expected-nonzero/cancellation/escalation/timeout/external-lock conditions; prove null input, no-password behavior, process cleanup, and queue/lock timelines; and control opener, reveal, restart, discovery, writability, and time at acceptance boundaries.
-- TIR-5: Provide disposable application-data lifecycle acceptance for crash, forced quit, relaunch, persistence, History, transcript, journal, interrupted recovery, Settings atomicity, diagnostics, retention, hostile filesystem cases, and historical-process non-signal.
-- TIR-6: Provide a serialized provisioned-target-Mac lane with dated six-Manager topology including live `mas`, immutable real-capture provenance, explicit drift detection, and no credit for ignored live tests unless explicitly executed and admitted.
-- TIR-7: Provide installed packaged-WKWebView acceptance for keyboard/focus, automated 4.5:1 text contrast, reduced motion, manual VoiceOver focus/completion announcements, updater check/metadata/download/signature/explicit install/relaunch/non-writable behavior, and before/after evidence from an actually installed prior public version; keep no-sign smoke separate; preserve one candidate identity.
-- TIR-8: Record source-bound, environment-bound, and candidate-bound provenance at their exact depth; exclude collected-only and ignored checks; preserve first failures; disable automatic retries; and keep human- and machine-readable outputs consistent and available for later trace regeneration.
+TIR-1 through TIR-8 are retired by `docs/DECISIONS.md` **D33**, together with the
+evidence lanes they specified: the `forced-offline`, `provisioned-target-mac`, and
+`candidate-release` lane separation, the source/environment/candidate provenance
+depths, and the first-attempt/zero-automatic-retry admission terms.
 
-#### Release Evidence Requirements
+Three obligations survive. Each is owned elsewhere and is deliberately not
+restated here:
 
-- RE-1: Before candidate-bound validation, create an immutable identity-only Candidate Identity Manifest binding one clean source commit, tag, coherent versions, build run/attempt, toolchains, signing identities, final artifact names/checksums, and published metadata checksum; link results separately through an append-only Evidence Index; invalidate affected evidence on any candidate mutation.
-- RE-2: Retain a complete first-attempt clean-checkout forced-offline result for required frontend/Rust formatting, static checks, production builds, contracts, and tests. A no-sign smoke cannot satisfy candidate trust requirements.
-- RE-3: Attest that tag, bundle/package/Cargo/updater versions, asset names, and metadata agree and that the GitHub Release contains the DMG, direct ZIP, updater archive, detached signature, and `latest.json`.
-- RE-4: Attest the exact candidate's required architectures, approved icon source/generated resources, packaged resources, and entitlements; include mandatory physical Intel acceptance in addition to universal-binary inspection.
-- RE-5: Attest valid Developer ID identity, secure signatures, accepted notarization, required stapling, and Gatekeeper acceptance of the downloaded app and disk image without bypass.
-- RE-6: Attest reachable complete HTTPS metadata for both Mac architecture identifiers, correct archive URLs, detached-signature validation against the embedded public key, and candidate-version consistency.
-- RE-7: Produce exact-candidate DMG install and Finder/Dock launch evidence on Apple silicon and physical Intel, covering resources, entitlements, GUI environment discovery, and the packaged WKWebView.
-- RE-8: Produce prior-public-version-to-candidate discovery, download, explicit Restart to update, install, and relaunch evidence on Apple silicon and physical Intel, including before/after versions, no administrator prompt, and refusal while a Package Operation is queued or running.
-- RE-9: Prove that a non-writable install location produces manual-install-required and never invokes administrator authorization.
-- RE-10: Regenerate traceability only in a later workflow against the complete exact-candidate Evidence Set and approved one-to-one coverage map; revalidate all 14 historical-FULL criteria; require QA/Development acceptance tied to the Candidate Manifest digest and Evidence Index; and never auto-promote a criterion.
-- RE-11: Publish the final decision through the append-only Evidence Index with retained human/machine results; preserve every failed attempt and require later retries to explain the change without overwriting the first result.
+- **Determinism and offline defaults** — `ARCHITECTURE-SPINE.md`'s Determinism
+  convention, and the testing rules in `_bmad-output/project-context.md`.
+- **Real-versus-simulated honesty** — `ARCHITECTURE-SPINE.md` AD-3: the committed
+  fixtures in `dev/fixtures/ipc/` prove payload shape on both sides and never
+  dispatch anything through Tauri, so no story may claim event-delivery coverage
+  from a fixture or from the browser double. Proving delivery waits on the native
+  Tauri harness, which `ARCHITECTURE-SPINE.md` records as **OPEN — owner Story
+  6.5; shape named, not yet adopted**, not as a bare deferral. **AD-26** governs
+  it, because the macOS route runs an embedded WebDriver server *inside* the
+  application. A compliant shape exists — the automation surface excluded from
+  release bits at compile time — so Story 6.5 is buildable; what remains open is
+  the adoption itself, an AD-20 security-reviewed change.
+- **Behavior-present verification** before scheduling a test gap — see Scope
+  Controls above.
 
-#### Architecture Invariants and ASR Enablers
+#### Release Acceptance
 
-- AD-1: Each work item and result has exactly one primary readiness concern; missing behavior returns to Product Behavior; infrastructure never issues a readiness status; candidate evidence cannot change product behavior or its oracle.
-- AD-2: Use one production composition root and two construction-time adapter sets. Production and native acceptance use the same application core, commands, events, handlers, and wire types; controlled adapters exist only in a non-distributable harness and cannot be activated from release bits.
-- AD-3 / ASR-01: Architecture is solely accountable for the shared real native command/event boundary. Accept by Batch 4 exit through exact set equality across the versioned `contracts/tauri-boundary/v1.json` catalog, production registration, Rust/TypeScript wire contracts, wrappers/subscriptions, fixtures, inventory, and native vectors; round-trip every catalog command and dispatch every catalog event through real isolated Tauri. The current 20 commands/six events are a baseline, not fixed counts.
-- AD-4 / ASR-02: Development is solely accountable; Platform is the capability area. Accept core deterministic process controls before Batch 5 and relevant filesystem/updater extensions before Batches 6–7. Typed ports/helpers must produce all required output, exit, signal, timeout, lock, stdin, path, permission, opener, restart, and updater conditions while production adapters retain fail-closed safety.
-- AD-5 / ASR-03: QA is solely accountable; Development/Platform supports. Accept before Batch 6 using disposable roots and a lifecycle controller that proves crash, forced quit, relaunch, persistence, retention, hostile filesystem behavior, packaged quit wiring, and historical-PGID non-signal without touching operator data or processes.
-- AD-6 / ASR-05: QA is solely accountable; CI is the execution mechanism. Accept lane separation before any Batch 1 evidence and make the candidate lane operational before Batch 7. Isolate `forced-offline`, `provisioned-target-mac`, and `candidate-release` workspaces, credentials, caches after lane entry, outputs, and provenance; reject cross-lane substitution.
-- AD-7 / ASR-04: Release is solely accountable for candidate identity and attestation. Accept the contract before release preparation, freeze the manifest before Batch 7, and accept the complete ledger in Batch 8.
-- Candidate Identity Manifest v1 must use strict closed JSON Schema Draft 2020-12/I-JSON inputs; reject duplicate keys, invalid Unicode, non-NFC strings, JSON numbers, unknown fields, and invalid ordering; serialize validated values as exact RFC 8785 JCS UTF-8 bytes with no BOM, insignificant whitespace, or trailing newline; compute lowercase `sha256:<64-hex>` over exact bytes; and contain identity rather than results.
-- Freeze the `/v1` evidence contract through `contracts/readiness/v1/contract-lock.json`, the three strict schemas, and canonicalization vectors. Any locked-byte change requires `/v2`.
-- Candidate Manifest artifacts are exactly `direct-app-zip`, `dmg`, `updater-archive`, `updater-metadata`, and `updater-signature`, calculated after signing, notarization, stapling, packaging, signature, and metadata generation.
-- AD-8: Store Evidence Index records as strict LF-terminated JCS envelopes in a hash-chained, single-head, append-only ledger. A protected Release-owned Evidence Registrar using one allowlisted workflow identity is the sole append authority; producers submit immutable attempt bundles but cannot edit the index.
-- The Registrar must enforce schema and canonical form, candidate/profile binding, exact source/environment/candidate provenance, subject/result byte hashes, sequence/predecessor, idempotency, lock/CAS, stale/fork rejection, write-once/no-clobber storage, human/machine agreement, retry linkage, and full retention through the audit period.
-- AD-9: A source commit, tag, version, signing identity, artifact byte or name, metadata byte, rebuild, resign, retag, repackage, replacement, new release-build workflow run, or new release-build run attempt creates a new Candidate Manifest/evidence root and requires affected Batch 7/8 scenarios to rerun; evidence-collection retry against an unchanged candidate creates only a new linked record.
-- AD-10: Preserve source-, environment-, and candidate-bound evidence depths. Association with a matching candidate never upgrades `bindingLevel`; provisioned-target-Mac evidence cannot be relabeled candidate-bound.
-- AD-11: Packaged acceptance ends at the installed exact candidate. Browser, source, universal-header, no-sign, or workflow evidence may support diagnosis but cannot substitute for installed candidate acceptance.
-- AD-12: Keep release-please and GitHub Actions as the release framework and transport, add a write-once staging/freeze hold point, fail candidate preparation closed when required credentials/artifacts are missing, and prevent promotion from replacing manifest-bound assets.
-- AD-13: Preserve the exact dependency waves: Batch 1 first; Batches 2/3/4 may follow in parallel; Batches 5/6 require accepted Batch 4 and may run in parallel; release preparation follows accepted Batches 1–6 and freezes one fully signed/notarized/stapled candidate plus metadata; Batch 7 uses it; Batch 8 follows Batch 7 against it unchanged. Release preparation is not a ninth batch.
-- AD-14: Preserve the map's `final-pending-approval` state, exactly 72 rows, historical FAIL/14-of-72 baseline, 14 mapped revalidations, RP separation, and fail-closed aggregation; architecture/planning does not approve the map or infer FULL/readiness.
-- AD-15 is VOID: the `pack-manager.criterion-acceptance-profile/v1` freeze it describes belonged to the gate retired by **D33**. No Acceptance Profile exists or will be created.
-- Exactly one first attempt exists per profile slot with `attempt.ordinal = "1"` and `attempt.runnerRetryCount = "0"`. A manually authorized retry is a new gapless linked record; branches, missing attempts, duplicate ordinals, and automatic retries fail closed. The first failure remains visible.
-- PASS admission requires every scenario-required check to be collected, executed, and passed with failed, errored, skipped, ignored, cancelled, filtered, and unreported counts all zero. Wrong-lane, wrong-depth, wrong-source, wrong-candidate, incomplete-subject, or conflicting results fail closed.
+RE-1 through RE-11 are retired by `docs/DECISIONS.md` **D33**, together with the
+Candidate Identity Manifest, the append-only Evidence Index, the Evidence
+Registrar, `contracts/readiness/v1/contract-lock.json`, and the candidate-freeze
+machinery. No `contracts/` directory exists and none is to be created.
 
-#### Governance, Risks, and Entry Blockers
+Release acceptance is `docs/RELEASE-CHECKLIST.md` — a manual pass, not a computed
+verdict or gate decision — plus two checks in `release.yml` that block
+publication: the detached updater signature is base64-decoded and verified with
+`minisign` against the public key the shipping app embeds, and the published
+`latest.json` is asserted reachable and coherent after upload. Their failure modes
+are silent and simultaneous across every installed client, which is why they are
+automated rather than manual. `ARCHITECTURE-SPINE.md` AD-11 and AD-12 are the
+architectural statement of this.
 
-- PC-1: Correct stale source truth so `mas` is represented as supported/live-verified, synthetic fixtures are not correctness proof, obsolete notarization/ad-hoc-only claims are removed, and the obsolete five-event invariant does not absorb application-update state. Product correction precedes recurrence-test credit.
-- GP-1: Freeze the denominator at 72 P0 rows and keep RP-1/RP-2 as mandatory external prerequisites; do not import unrelated P1 scope or the conflicting legacy strict-FULL policy.
-- GP-2: Distinguish prospective policy change, incompatible criterion waiver, and risk acceptance. Any candidate-specific conditional release requires Product Owner, QA Lead, and Release Owner approval and must be labeled `CONDITIONAL — NOT 100% PRODUCT-AND-RELEASE READY`.
+The physical-Intel obligation in the former RE-4, RE-7, and RE-8 is separately
+dropped by **D32**: the build stays universal and `latest.json` keeps publishing
+both `darwin-aarch64` and `darwin-x86_64`, but verification is Apple silicon only
+and Intel is best-effort and unverified.
+
+#### Architecture Invariants
+
+`_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`
+is the **single authority** for architecture invariants. Stories cite its AD ids
+and no others. This section does not restate them, so that the two documents
+cannot drift apart again.
+
+The AD-1..AD-15 list this section previously carried was the **retired gate's own
+numbering, and it is not the spine's.** It is removed rather than renumbered,
+because the two schemes collide on the same ids with different meanings:
+
+| Retired id here | Said | `ARCHITECTURE-SPINE.md` says under that id |
+| --- | --- | --- |
+| AD-1 | Each work item has one primary readiness concern | Dependencies point inward; test and release tooling are never product dependencies |
+| AD-3 / ASR-01 | Exact set equality across the versioned `contracts/tauri-boundary/v1.json` catalog | The IPC surface changes atomically, proven by the committed fixtures in `dev/fixtures/ipc/`. "There is no separate versioned boundary-catalog file and none is to be created." |
+| AD-11 | Packaged acceptance ends at the installed exact candidate | Release acceptance is the checklist plus two automated checks |
+| AD-13 | Preserve the exact Batch 1-8 dependency waves | (no such rule; the batch ordering is void) |
+
+`ARCHITECTURE-SPINE.md` records **AD-6..AD-10 and AD-13..AD-15 as retired ids that
+are never reused.** The `ASR-01` / `ASR-02` / `ASR-03` enabler framing is retired
+with the register that defined it; the spine states that the surviving obligations
+are its **AD-2, AD-3, AD-4, and AD-5**.
+
+The Candidate Identity Manifest v1 JCS shape, the
+`contracts/readiness/v1/contract-lock.json` freeze, the Evidence Registrar append
+rules, the attempt-ordinal terms, and the PASS-admission counters are retired by
+`docs/DECISIONS.md` **D33**.
+
+**Four invariants bind every story and are cited by none of them, because they
+have no single owner.** A story that does not name them is still bound:
+
+- **AD-1** — product code never imports, branches on, or requires test
+  infrastructure, CI, or release tooling. Missing behavior is product work, not
+  test work.
+- **AD-2** — one composition root; no release build contains any runtime selector
+  that could activate a controlled adapter.
+- **AD-20** — the webview trust boundary widens only on purpose. `csp` is `null`
+  today, tolerable only while nothing remote loads, so any story introducing a
+  remote font, script, style, or navigation target sets a real CSP **in the same
+  change**. Adding a permission, plugin, window, or capability is a
+  security-sensitive change reviewed on its own terms and never folded into a
+  feature story as a side effect.
+- **The Determinism convention** — default suites stay offline and deterministic.
+
+Cite AD ids by subject, never by rule ordinal. Rule ordinals within an AD are not
+stable across spine revisions — revision 5 inserted AD-16's "no entry point
+executes" as its first rule and shifted every later number.
+
+#### Governance and Risks
+
+GP-1, GP-2, PC-1, the coverage-map approval requirement, the evidence transport
+and retention choice, the provisioned-target-Mac and multi-host environment
+requirements, the per-story criterion-authoring rules, and the candidate-bound
+story rules are retired by `docs/DECISIONS.md` **D33**.
+
+PC-1's substance is closed independently of the gate: **D23a** withdrew the `mas`
+UNVERIFIED label and recorded `mas` as verified live, and the current production
+surface is 20 commands and six events, so the obsolete five-event invariant no
+longer absorbs application-update state. One documented residual remains —
+`src-tauri/tests/live_smoke.rs` still declares this machine as "mas absent".
+`_bmad-output/project-context.md` records that precondition as stale rather than
+as evidence of a code defect.
+
 - DR-1 is CLOSED by `docs/DECISIONS.md` **D31**: the minimum supported macOS version is 15.0, declared as `bundle.macOS.minimumSystemVersion` in `src-tauri/tauri.conf.json` and shipped in v1.0.0. Nothing is blocked on it.
-- DR-2 is RESTATED by **D33**: its substance survives without the gate framing. Automated 4.5:1 contrast and reduced-motion checks belong in the existing Playwright/Vitest lane; one manual VoiceOver pass joins `docs/RELEASE-CHECKLIST.md`. Accessibility here is product quality, not evidence ceremony.
+- DR-2 is RESTATED by **D33**: its substance survives without the gate framing. Automated 4.5:1 contrast and reduced-motion checks belong in the existing Playwright/Vitest lane; one manual VoiceOver pass joins `docs/RELEASE-CHECKLIST.md`. Accessibility here is product quality, not evidence ceremony. Reduced motion is already covered and runs in CI — `src/styles/theme.css` honors `@media (prefers-reduced-motion: reduce)` and `tests/e2e/browser-style-contract.spec.ts` emulates `{ reducedMotion: "reduce" }` and asserts transitions and animations resolve to `0s`, on every push and pull request to `main` via `.github/workflows/test.yml`. Automated 4.5:1 contrast does **not** exist; that same spec disclaims it. Contrast is therefore the outstanding obligation on whichever story adds it, while reduced motion is a regression surface to preserve, not a gap to schedule (`ARCHITECTURE-SPINE.md` AD-1, AD-11).
 - DR-3 is NARROWED by **D32**: the release still builds universal, but the obligation to verify on physical Intel hardware is dropped. Verification is Apple silicon only; Intel remains best-effort and unverified.
 - DR-4 is DISSOLVED by **D33** along with the gate that defined it. There is no P0/P1 threshold, no Acceptance Profile, and no gate decision. Release readiness is `docs/RELEASE-CHECKLIST.md` plus the automated updater-signature and published-endpoint checks in `release.yml`.
-- R-001 through R-008 remain open high risks: source/oracle drift (6), fake/native boundary gap (6), misleading UI state (6), process lifecycle uncertainty (6), persistence/diagnostics failure (6), updater integrity failure (6), invalid shipped artifact (9), and environmental dependency/contamination (6). No mitigation is complete, waived, or accepted through planning.
-- Product and QA must approve and mechanically verify the 72-row map before it becomes a frozen oracle.
-- Release must choose a conforming evidence transport primitive and retention duration before release preparation while preserving protected Registrar identity, candidate/profile lock/CAS, idempotency, write-once/no-clobber objects, one head, complete-set retention, and audit availability.
-- QA must secure and serialize a qualified provisioned target Mac, Apple-silicon and physical Intel hosts, disposable roots/helpers, and an actually installed prior public version by their batch boundaries.
-- Release must provide current signing/notarization/updater credentials and one immutable candidate; missing credentials or required artifacts fail candidate preparation closed. Secrets remain in fnox/GitHub Secrets and never enter manifests or evidence.
-- Every criterion-bearing story must state exact criterion IDs and historical status, one primary concern, batch or revalidation point, required test level, lane, minimum depth, dependencies, ASR/risk links, behavior-present handling where applicable, expected immutable evidence artifact, versioned scenario-contract path/digest, later-FULL-reassessment wording, one accountable role, explicit assignee/date fields, and first-attempt/zero-automatic-retry terms.
-- Every candidate-bound story must name exact Candidate Manifest subject roles and specify that candidate mutation invalidates affected results and restarts the required Batch 7/8 slots.
-- A plan, source inspection, collector, ignored test, green suite, workflow upload attempt, architecture approval, or this planning document is not evidence of criterion closure or readiness.
 
-#### Implementation-Entry Blocker Register
+**The `R-001`..`R-008` register is retired, and its ids must not be reimported.**
+They were defined only in the gate's own test-design artifacts, now archived and
+non-authoritative, and their `Required mitigation` column *was* the retired
+machinery — `R-002`'s mitigation read "Deliver ASR-01 and AD-3 set-equality
+checks", and `R-007`'s required physical-Intel acceptance that **D32** dropped as
+undischargeable. Asserting those mitigations are still owed would resurrect by
+reference exactly what D33 retired, so no live document carries the ids or their
+scores.
 
-| Decision or dependency                                           | Current state                       | Accountable/decision role                              | Deadline boundary                                                                                          | Blocked implementation entry                                                                                                                                                   |
-| ---------------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Product Behavior Prerequisite UX-PB.1..UX-PB.5                   | `APPROVED TARGET — NOT IMPLEMENTED` | Product/UX/Architecture accept; Development implements | Before affected Epic 3–7 evidence stories                                                                  | Any evidence or acceptance authored against immediate row execution, direct self-update execution, Activity drawer, Operation-row History, or active `autoOpenDrawer` behavior |
-| Normative coverage-map approval                                  | `final-pending-approval`            | Product and QA                                         | Before the map is frozen as the implementation oracle or any Acceptance Profile slot is admitted           | Profile freeze and all criterion-evidence admission                                                                                                                            |
-| DR-1 — minimum supported macOS                                   | `CLOSED` — D31                      | Resolved 2026-07-24                                    | None — 15.0 declared and shipped in v1.0.0 | None |
-| DR-2 — packaged accessibility method                             | `RESTATED` — D33                    | QA lane + release checklist                            | None — contrast/reduced-motion in the existing Playwright/Vitest lane; VoiceOver pass on the release checklist | None |
-| DR-3 — physical Intel requirement                                | `NARROWED` — D32                    | Resolved 2026-07-24                                    | None — universal build retained; verification is Apple silicon only, Intel best-effort | None |
-| DR-4 — P0 gate/retry policy                                      | `DISSOLVED` — D33                   | Retired with the gate                                  | None — no threshold, Acceptance Profile, or gate decision exists | None |
-| Named assignees and calendar dates                               | `REMOVED` — D33                      | n/a                                                    | n/a | None — the `Assignee` and `Calendar date` fields were removed from every surviving story |
-| Native harness/test runner                                       | `DEFERRED`                          | Architecture accepts; Development implements           | Accepted by Batch 4 exit                                                                                   | ASR-01 native crossing and every dependent Batch 4–7 story                                                                                                                     |
-| Controlled-helper implementation language                        | `DEFERRED`                          | Development                                            | Before Batch 5                                                                                             | ASR-02 process controls and dependent Batch 5–7 work                                                                                                                           |
-| Evidence transport and retention duration                        | `DEFERRED — BLOCKER`                | Release                                                | Before release preparation                                                                                 | Protected sole-append Registrar, lock/CAS, one head, write-once objects, complete-set retention, and audit availability                                                        |
-| Provisioned target Mac and versioned profile                     | `EXECUTION DEPENDENCY`              | QA                                                     | Before Batch 1 target-Mac collection                                                                       | Environment-bound topology and live-capture stories; no other lane may substitute                                                                                              |
-| Apple-silicon and physical Intel hosts                           | `EXECUTION DEPENDENCY`              | QA                                                     | Before the candidate-release lane is operational                                                           | Packaged accessibility, fresh install, Finder/Dock launch, and updater execution                                                                                               |
-| Actually installed prior public version                          | `EXECUTION DEPENDENCY`              | QA with Release support                                | Before Batch 7 updater execution                                                                           | Prior-version discovery, download, explicit install/relaunch, and refusal scenarios on both architectures                                                                      |
-| Signing, notarization, and updater credentials                   | `EXECUTION DEPENDENCY`              | Release                                                | Before candidate freeze                                                                                    | Candidate preparation; secrets remain in fnox/GitHub Secrets and outside manifests/evidence                                                                                    |
-| Evidence/profile approval records and versioned scenario digests | `EXECUTION DEPENDENCY`              | Product/QA for policy; QA for profile                  | Before Acceptance Profile freeze                                                                           | Every profile slot and all evidence admission                                                                                                                                  |
-| One immutable candidate and all required artifacts               | `NOT YET AVAILABLE`                 | Release                                                | After accepted Epics 1–6 and before Batch 7                                                                | Candidate-release qualification, Batches 7–8, and later Trace eligibility                                                                                                      |
+The engineering concerns behind them are real and each has a live owner in
+`ARCHITECTURE-SPINE.md`. That is where they are governed — not here, and not as a
+parallel risk register:
+
+| Concern | Governed by |
+| --- | --- |
+| Manager output or oracle drift; a parser proving an obsolete format | AD-4 (the manager's own `outdated` verdict is the sole authority; fixture provenance) |
+| Suites green while the real command/event boundary is broken | AD-3 (committed contract fixtures; delivery coverage explicitly unproven) and AD-26 (a native automation surface never reaches release bits — the harness that would prove delivery is OPEN with Story 6.5 as its owner, not deferred) |
+| Stale, failed, or misleading UI state authorizing the wrong action | AD-16, AD-17 (no entry point executes; no rebuild enlarges membership; verification gates success) |
+| Process output, locks, cancellation, timeout, or PID reuse going dishonest | AD-4, AD-5 (complete lock-set rule; output fidelity floor; historical PGIDs never signalled) |
+| Persistence, History, or diagnostics losing evidence or following hostile paths | AD-18, AD-19 (journal never defaulted away; symlinks rejected; disclosure not widened) |
+| Updater metadata, signature, or relaunched version diverging silently | AD-11, AD-12 (the two publication-blocking checks in `release.yml`) |
+| A published artifact set incomplete, unsigned, unnotarized, or unlaunchable | AD-11, AD-12 plus `docs/RELEASE-CHECKLIST.md` |
+| Results depending on network, mutable host state, or ignored tests | The Determinism convention (offline, deterministic default suites) |
+
+Secrets stay in fnox locally and GitHub Secrets in CI and never enter build
+artifacts, manifests, or documentation. Apple Developer ID signing and
+notarization are required for a published release, and updater signing is required
+by the build; `ARCHITECTURE-SPINE.md` AD-12 owns this.
+
+#### Implementation-Entry Register
+
+The `Deadline boundary` column this table carried is removed: every value in it
+was a Batch 1-8 boundary, and the evidence-batch ordering is void along with the
+gate that defined it. The six surviving Epic 1-6 stories carry no inter-epic
+dependencies.
+
+| Decision or dependency | Current state | Accountable role | Effect on implementation entry |
+| --- | --- | --- | --- |
+| Product Behavior Prerequisite UX-PB.1..UX-PB.5 | `APPROVED TARGET — NOT IMPLEMENTED` | Product/UX/Architecture accept; Development implements | Epic UX-PB is the primary build queue and runs first, and nothing blocks starting it **except UX-PB.1e and UX-PB.5d**, which are blocked on the canonical design-token set in the row below. Any story or test text authored against immediate row execution, direct self-update execution, the Activity drawer, Operation-row History, or active `autoOpenDrawer` behavior is superseded by D27-D30. |
+| Canonical design-token set | `OPEN` — needs an owner decision | UX decides; Development implements | **Blocks UX-PB.1e and UX-PB.5d** (`ARCHITECTURE-SPINE.md:944`). `src/styles/theme.css` ships one palette and `tests/e2e/browser-style-contract.spec.ts` asserts it on every push and PR to `main`, while `DESIGN.md` and `EXPERIENCE.md` specify another plus a dedicated `focusRing` that `docs/SPEC.md`'s accent-coloured ring contradicts. Both stories are bound to build from the UX sources, so whichever lands first either rewrites the tokens and breaks the CI style contract on `main` — the same lane AD-11 relies on for reduced motion — or keeps the shipping values and ships focus rings `EXPERIENCE.md` forbids. The token set and the focus mechanism are decided together, then the CI assertion moves with them in one change. Not a story's call and not architecture's alone. |
+| DR-1 — minimum supported macOS | `CLOSED` — D31 | Resolved 2026-07-24 | None. 15.0 declared and shipped in v1.0.0. Whether `notarytool` accepts `minos 15.0` against the CI SDK is OPEN and is settled by a manual Release run, never by assertion. |
+| DR-2 — packaged accessibility method | `RESTATED` — D33 | Existing Playwright/Vitest lane + release checklist | None. Reduced motion is already automated and runs in CI (`tests/e2e/browser-style-contract.spec.ts` via `.github/workflows/test.yml`); automated 4.5:1 contrast does not exist and is the one outstanding obligation, on whichever story adds it. |
+| DR-3 — physical Intel requirement | `NARROWED` — D32 | Resolved 2026-07-24 | None. Universal build retained; verification Apple silicon only. |
+| DR-4 — P0 gate/retry policy | `DISSOLVED` — D33 | Retired with the gate | None. |
+| Named assignees and calendar dates | `REMOVED` — D33 | n/a | None. The `Assignee` and `Calendar date` fields were removed from every surviving story on 2026-07-25. |
+| Native Tauri E2E harness and runner | `OPEN` — owner Story 6.5; shape named, not yet adopted | Architecture accepts; Development implements | None. Story 6.5's "Real native Tauri E2E plus artifact inspection" test level needs no renegotiation: `ARCHITECTURE-SPINE.md` **AD-26** names a compliant shape — `tauri-driver` driven directly does not cover macOS, `@wdio/tauri-service` does by running an embedded WebDriver server inside the app, and that surface is excluded from release bits at **compile time** (`#[cfg(debug_assertions)]`), never by a runtime selector. Any choice must satisfy AD-2, AD-3, and AD-26; adopting the plugin is an AD-20 security-reviewed change, and the CrabNebula fork alternative carries a paid macOS API key. |
+| Controlled child-helper language | `DEFERRED` | Development | No live story requires one. Any choice must satisfy AD-4 and cannot add a production shell-command surface. |
+| Plan-attempt journal filename and serde shape | `DEFERRED` | Development | Owned by Story UX-PB.2c. AD-18 fixes ownership, location, durability, and failure mode; the exact filename and field list are the story's. |
+
+Every other row this register carried is retired by `docs/DECISIONS.md` **D33**:
+normative coverage-map approval, evidence transport and retention duration, the
+provisioned target Mac and versioned profile, Apple-silicon and physical Intel
+hosts, the actually-installed prior public version as a gate dependency, candidate
+credentials as a freeze precondition, evidence/profile approval records with
+versioned scenario digests, and the one immutable candidate with all required
+artifacts. The prior-version update check and the signing credentials survive as
+release-checklist steps and AD-12 obligations respectively — not as entry
+blockers.
 
 ### UX Design Requirements
 
@@ -228,7 +347,15 @@ the following binding requirements:
 
 ### 2026-07-24 Correct Course story amendment
 
-The Product Behavior Prerequisite below precedes affected evidence work.
+**This table is a historical revision record, not a live instruction.** It
+records the prior wording that D27-D30 superseded on 2026-07-24. Every story area
+it names except 3.1, 3.2, 3.4, 3.5, and 6.5 was archived on 2026-07-25 — Stories 3.3,
+3.6, 4.1, 4.6, 5.2, 5.4, 5.5, 6.3, 6.4, and 6.7 along with every Epic 7 and Epic 8
+story, when Epics 1, 4, 5, 7, and 8 were removed. The live contracts are the 28
+Epic UX-PB stories below, whose local text was rewritten directly so the
+superseded experience cannot be built from a single story. The table is retained
+rather than rewritten because rewriting it would destroy what it records.
+
 Where older story text conflicts, these replacements are binding:
 
 | Existing story area         | Superseding requirement                                                                                                                                                           |
@@ -255,7 +382,7 @@ experience:
   sub-stories (`UX-PB.1a`–`UX-PB.5e`), each delivering one shippable behavior
   across the TypeScript/Rust/persistence/acceptance layers it needs, with
   explicit Given/When/Then happy- and failure-path criteria. They remain inside
-  this Product Behavior Prerequisite and do not create a ninth readiness batch.
+  this Product Behavior Prerequisite.
 - **12 stories rewritten** to remove superseded wording and express Decisions
   D27–D30 and AD-16 directly: 3.2, 3.3, 3.5, 3.6, 4.6, 5.2, 5.4, 5.5, 6.3, 6.4,
   6.5, 7.10.
@@ -271,7 +398,7 @@ from every surviving story on 2026-07-25.
 
 ### FR Coverage Map
 
-This map assigns each FR exactly once to its primary epic for planning accountability. An epic may reference additional FRs as cross-cutting acceptance constraints without creating duplicate primary ownership. Exact P0 criterion ownership is governed separately by the 72-row story allocation.
+This map assigns each FR exactly once to its primary epic for planning accountability. An epic may reference additional FRs as cross-cutting acceptance constraints without creating duplicate primary ownership.
 
 Epics 1, 4, and 5 were removed on 2026-07-25 when the story triage recorded in
 `docs/DECISIONS.md` D33 found every one of their stories already shipped or owned by
@@ -292,7 +419,7 @@ FR-6: Epic 3 — Preserve exact eligible Package selection.
 
 FR-7: Epic 3 — Preview every bulk command and exclusion before authorization.
 
-FR-8: Epic 3 — Reject stale, altered, replayed, or otherwise invalid plans. Epic 3 covers the stale-plan replacement/reconfirmation dimension (Stories 3.3, 3.6); the altered/replayed/evicted/conflicting-plan rejection is realized cross-cuttingly by Story 5.8 (byte-identical preview-to-spawn revalidation — "stale, altered, replayed, evicted, or conflicting plans enqueue nothing") and UX-PB.2a's one-use `planId` capability, which expires on mutation, staleness, execution attempt, or eviction. Epic 3 remains primary; these are cross-cutting acceptance constraints per this map's convention.
+FR-8: Epic 3 — Reject stale, altered, replayed, or otherwise invalid plans. The stories that previously carried this (3.3, 3.6, and 5.8) were archived on 2026-07-25, so Epic UX-PB now owns the whole requirement: UX-PB.2a's one-use `planId` capability expires on mutation, staleness, execution attempt, or eviction, and UX-PB.2b's atomic admission rejects on in-progress state change, revision drift, an active refresh, or a lock-set overlap. Epic 3 remains the nominal primary owner for map accounting; the realizing stories are cross-cutting per this map's convention.
 
 FR-9: Triaged out (was Epic 5) — Admit multi-group work atomically and preserve scheduler protections.
 
@@ -328,7 +455,7 @@ RP-2: Release checklist — Validate standard macOS Edit/Window menu behavior.
 
 ## Epic List
 
-The epics below are dependency-ordered closure outcomes required by the finalized planning authorities. Each epic completes one coherent user-confidence outcome and produces accepted foundations for later epics without relying on future work to complete its own domain. No epic, infrastructure result, or evidence plan changes a criterion status.
+Each epic completes one coherent user-confidence outcome and produces accepted foundations for later epics without relying on future work to complete its own domain. Epic UX-PB is the primary build queue and runs first; the six surviving Epic 1-6 stories carry no inter-epic dependencies.
 
 ### Epic UX-PB: The Upgrade Plan redesign (Decisions D27–D30)
 
@@ -384,8 +511,8 @@ confirmation gate. It is the primary build queue.
 ### Story UX-PB.1a: Persistent draft domain with single-entry membership and Rust rebuild
 
 **Primary concern:** Product Behavior  
-**Dependencies:** D27-D30; AD-16; finalized UX spines  
-**Blocks:** UX-PB.1b, UX-PB.1c; Story 3.5 and its affected evidence  
+**Dependencies:** D27-D30; AD-16; AD-17; finalized UX spines  
+**Blocks:** UX-PB.1b, UX-PB.1c; Story 3.5  
 
 As a Pack-Manager user, I want one eligible Package to become persistent draft-plan membership so that acting on a single row never executes and always has a reviewable home.
 
@@ -415,7 +542,7 @@ As a Pack-Manager user, I want one eligible Package to become persistent draft-p
 ### Story UX-PB.1b: Sidecar lifecycle and navigation-persistent visibility
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.1a; D27-D30; AD-16  
+**Dependencies:** UX-PB.1a; D27-D30; AD-16; AD-17  
 **Blocks:** UX-PB.1d, UX-PB.1e  
 
 As a Pack-Manager user, I want the Upgrade Sidecar to appear, persist, and close in step with the draft so that my proposed plan always has a stable reviewable home and no empty drawer clutters the workspace.
@@ -434,15 +561,16 @@ As a Pack-Manager user, I want the Upgrade Sidecar to appear, persist, and close
 **When** I remove the last item
 **Then** the sidecar closes, the draft returns to empty, and nothing lingers in Activity or History.
 
-**Given** an in-progress draft when the app crashes or is force-quit
+**Given** an in-progress draft when Pack-Manager is quit cleanly, crashes, or is force-quit
 **When** Pack-Manager relaunches
-**Then** the draft's canonical membership is reconstructed into the sidecar, or — if it cannot be recovered — the sidecar returns to empty with no fabricated membership and nothing executes; a draft is never surfaced as Activity or History.
+**Then** it starts with an empty draft and a hidden sidecar — the draft is session-scoped and never written to disk, so membership is never reconstructed, never partially restored, and never fabricated, and nothing executes on relaunch
+**And** a draft is never surfaced as Activity or History.
 
 ### Story UX-PB.1c: Remaining draft entry points as independent removable items
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.1a; D27-D30; AD-16  
-**Blocks:** UX-PB.1d, UX-PB.1e; Stories 3.3 and 3.6 and their affected evidence  
+**Dependencies:** UX-PB.1a; D27-D30; AD-16; AD-17; AD-23 (per-member provenance and tombstones)  
+**Blocks:** UX-PB.1d, UX-PB.1e  
 
 As a Pack-Manager user, I want selected-Package, Manager-header, Manager-wide, and `Update Everything` actions to all feed the same draft as independent removable items so that every entry point stages into one plan and no global toggle bypasses it.
 
@@ -456,9 +584,10 @@ As a Pack-Manager user, I want selected-Package, Manager-header, Manager-wide, a
 **When** I remove it
 **Then** only that Manager self-update leaves the plan, Package items in the same Manager group are unaffected, and Rust dedups and rebuilds the authenticated preview from the remaining canonical identities.
 
-**Given** a draft seeded by `Update Everything` as an `AllEligible` intent
+**Given** a draft seeded by `Update Everything`, whose expansion was frozen into concrete members at the moment I invoked it — each carrying `Bulk { scope: Everything }` provenance that is never re-evaluated
 **When** I remove any item
-**Then** the draft converts to an `Explicit` intent of the surviving PackageRefs and Manager self-update identities and rebuilds the authenticated preview from the backend, never from edited display text.
+**Then** that one member leaves the draft and a tombstone records the removal, so no later bulk expansion of any scope re-adds it; the surviving PackageRefs and Manager self-update identities keep their own per-member provenance, and Rust rebuilds the authenticated preview from those canonical identities, never from edited display text
+**And** no whole-intent `kind` is stored or converted — there is no `AllEligible` value to convert from and no `Explicit` value to convert to; a kind, where shown, is derived from member origins.
 
 **Given** two entry classes mutating the same draft in close succession
 **When** both mutations resolve
@@ -467,8 +596,8 @@ As a Pack-Manager user, I want selected-Package, Manager-header, Manager-wide, a
 ### Story UX-PB.1d: Ineligible-control inertness with keyboard, pointer, and VoiceOver explanation
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.1a, UX-PB.1c; D27-D30; AD-16  
-**Blocks:** Story 3.2 and its affected evidence  
+**Dependencies:** UX-PB.1a, UX-PB.1c; D27-D30; AD-16; AD-17  
+**Blocks:** Story 3.2  
 
 As a Pack-Manager user, I want pinned, current, excluded, and unavailable Packages to stay inert and explain themselves through keyboard, pointer, and VoiceOver so that I understand why they cannot join the plan without guessing.
 
@@ -490,8 +619,8 @@ As a Pack-Manager user, I want pinned, current, excluded, and unavailable Packag
 ### Story UX-PB.1e: Standardized Manager workspace presentation
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.1c; D27-D30; AD-16  
-**Blocks:** Stories 3.1 and 5.2 and their affected evidence  
+**Dependencies:** UX-PB.1c; D27-D30; AD-16; AD-17; AD-25 (Last-good Snapshot retention on refresh failure)  
+**Blocks:** Story 3.1  
 
 As a Pack-Manager user, I want each Manager Header and Card to present standardized identity, version, status, ownership, counts, and deltas so that every Manager reads consistently and its self-update staging is obvious.
 
@@ -514,7 +643,7 @@ As a Pack-Manager user, I want each Manager Header and Card to present standardi
 
 **Primary concern:** Product Behavior  
 **Dependencies:** UX-PB.1 complete (PB.1a-e); AD-3; AD-16; D29  
-**Blocks:** UX-PB.2b, UX-PB.2f; Story 4.1  
+**Blocks:** UX-PB.2b, UX-PB.2f  
 
 As a Pack-Manager user, I want the one-use preview identity and the durable confirmed-attempt identity to be separate, non-interchangeable types so that a short-lived authorization can never masquerade as the permanent record of what I confirmed.
 
@@ -532,8 +661,8 @@ As a Pack-Manager user, I want the one-use preview identity and the durable conf
 ### Story UX-PB.2b: Atomic admission mints one planAttemptId and fails a second attempt closed
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.2a; AD-3; AD-16; D29-D30  
-**Blocks:** UX-PB.2c, UX-PB.2d, UX-PB.2e; Story 4.6  
+**Dependencies:** UX-PB.2a; AD-3; AD-16; AD-18; AD-25 (a Manager failure is contained and never destroys a Last-good Snapshot); D29-D30  
+**Blocks:** UX-PB.2c, UX-PB.2d, UX-PB.2e  
 
 As a Pack-Manager user, I want confirming a reviewed plan to atomically create exactly one durable attempt identity so that every Operation it launches shares one reconstructible identity and no two confirmed attempts can ever run at once.
 
@@ -580,7 +709,7 @@ As a Pack-Manager user, I want the confirmed attempt to durably store exactly wh
 
 **Primary concern:** Product Behavior  
 **Dependencies:** UX-PB.2b; AD-16; D29  
-**Blocks:** UX-PB.2e; Story 6.3  
+**Blocks:** UX-PB.2e  
 
 As a Pack-Manager user, I want every Operation, event, and durable record produced by a confirmed attempt to carry that attempt's identity so that its progress, output, and evidence reconstruct as one coherent whole.
 
@@ -620,7 +749,7 @@ As a Pack-Manager user, I want cancelling the plan to stop only that attempt's w
 
 **Primary concern:** Product Behavior  
 **Dependencies:** UX-PB.2a; AD-16; D29  
-**Blocks:** Story 6.4  
+**Blocks:** None  
 
 As a Pack-Manager user, I want Operations that predate the attempt model to stay honestly labeled as legacy so that older records are never fabricated into plans that never existed.
 
@@ -637,7 +766,7 @@ As a Pack-Manager user, I want Operations that predate the attempt model to stay
 ### Story UX-PB.3a: Confirmed sidecar as the single active plan summary
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.2 complete (PB.2a-f); D27-D30; AD-16; finalized UX spines  
+**Dependencies:** UX-PB.2 complete (PB.2a-f); D27-D30; AD-16; AD-17; finalized UX spines  
 **Blocks:** UX-PB.3b  
 
 As a Pack-Manager user, I want the sidecar I confirmed to become the one live summary of the admitted attempt so that I follow a single plan from review into execution without a new surface appearing.
@@ -673,7 +802,7 @@ As a Pack-Manager user, I want full Activity to be a deeper view of the very sam
 ### Story UX-PB.3c: Per-item live progress states
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.3b, UX-PB.2d; D29-D30; AD-16 rule 4  
+**Dependencies:** UX-PB.3b, UX-PB.2d; D29-D30; AD-16 (`Verifying`/`Skipped` as durable wire states)  
 **Blocks:** UX-PB.3d, UX-PB.3f  
 
 As a Pack-Manager user, I want each Package and Manager item to show its own honest live state so that I can see what is running, what is waiting, and what has verified without reading a terminal.
@@ -695,8 +824,8 @@ As a Pack-Manager user, I want each Package and Manager item to show its own hon
 ### Story UX-PB.3d: Verification-gated Results with outcome taxonomy
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.3c; D29-D30; AD-16 rules 6-7  
-**Blocks:** UX-PB.3e, UX-PB.3g; Stories 5.4, 6.5
+**Dependencies:** UX-PB.3c; D29-D30; AD-16 (verification-gated success; post-exit fresh acquisition); AD-25 (a failed verification refresh leaves the Last-good Snapshot in place)  
+**Blocks:** UX-PB.3e, UX-PB.3g; Story 6.5
 
 As a Pack-Manager user, I want the plan to become Results only after affected state is verified so that success is earned, not assumed from a process exit.
 
@@ -722,7 +851,7 @@ As a Pack-Manager user, I want the plan to become Results only after affected st
 
 **Primary concern:** Product Behavior  
 **Dependencies:** UX-PB.3d; D30; AD-16  
-**Blocks:** UX-PB.4 and its affected evidence  
+**Blocks:** UX-PB.4a-4e  
 
 As a Pack-Manager user, I want a failed item to explain what happened and what to do next before I see Retry so that I fix the real cause instead of repeating a doomed attempt.
 
@@ -740,7 +869,7 @@ As a Pack-Manager user, I want a failed item to explain what happened and what t
 
 **Primary concern:** Product Behavior  
 **Dependencies:** UX-PB.3c; D30; AD-16 (interaction-required policy)  
-**Blocks:** UX-PB.4 and its affected evidence  
+**Blocks:** UX-PB.4a-4e  
 
 As a Pack-Manager user, I want `Interaction required` to appear only when a trusted classifier recognizes a real prompt so that Pack-Manager never invents prompt meaning from arbitrary output.
 
@@ -761,8 +890,8 @@ As a Pack-Manager user, I want `Interaction required` to appear only when a trus
 ### Story UX-PB.3g: Two labeled cancellation scopes
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.3d, UX-PB.2e; D30; AD-16 rules 8, 10  
-**Blocks:** Story 5.5 and its affected evidence; UX-PB.4  
+**Dependencies:** UX-PB.3d, UX-PB.2e; D30; AD-16 (attempt-scoped cancellation; `Skipped` marks only never-started work)  
+**Blocks:** UX-PB.4a-4e  
 
 As a Pack-Manager user, I want the primary cancel action to clearly stop the whole plan, with an Operation-only cancel reserved for a deliberate diagnostic, so that I always know the scope of what I am stopping.
 
@@ -783,8 +912,8 @@ As a Pack-Manager user, I want the primary cancel action to clearly stop the who
 ### Story UX-PB.4a: One immutable History row per confirmed attempt
 
 **Primary concern:** Product Behavior  
-**Dependencies:** D29; AD-16 rules 2 and 5; UX-PB.3 complete (PB.3a-g)  
-**Blocks:** UX-PB.4b, UX-PB.4e; Story 6.3 and its affected evidence  
+**Dependencies:** D29; AD-16 (durable `planAttemptId` identity; atomic all-or-none admission); AD-18; UX-PB.3 complete (PB.3a-g)  
+**Blocks:** UX-PB.4b, UX-PB.4e  
 
 As a Pack-Manager user, I want each plan I confirm to become exactly one immutable History entry so that every attempt has one durable record instead of scattered per-command rows.
 
@@ -806,8 +935,8 @@ As a Pack-Manager user, I want each plan I confirm to become exactly one immutab
 ### Story UX-PB.4b: Read-only Activity replay of a History row
 
 **Primary concern:** Product Behavior  
-**Dependencies:** D29-D30; AD-16; UX-PB.4a  
-**Blocks:** UX-PB.4c, UX-PB.4d; Story 6.4 and its affected evidence  
+**Dependencies:** D29-D30; AD-16; AD-24 (Retry derives its own intent; revealing the scope executes nothing); UX-PB.4a  
+**Blocks:** UX-PB.4c, UX-PB.4d  
 
 As a Pack-Manager user, I want opening a History row to route Activity into read-only replay so that I can inspect exactly what a prior attempt did instead of piecing together unrelated commands.
 
@@ -816,7 +945,7 @@ As a Pack-Manager user, I want opening a History row to route Activity into read
 **Given** a completed History row for a confirmed `planAttemptId`
 **When** I open it
 **Then** Activity enters a clearly labeled read-only replay that reconstructs the attempt's Manager groups, Package/version changes, Manager self-updates, exact commands, Operation outcomes, errors, timings, and retained output
-**And** no control in the replay can mutate, re-run, or execute anything.
+**And** no control in the replay can mutate, re-run, or execute anything, with exactly one carve-out: the non-executing `Retry` affordance UX-PB.4d offers from a History entry. Invoking it reveals the failed-item scope inline inside the replay and executes nothing; the replayed attempt and its records stay immutable, and any execution still goes only through `Create new plan`, the derived `RetryIntent`, and the ordinary preview and confirmation path.
 
 **Given** a History row whose persisted attempt is corrupted or missing
 **When** I try to open its replay
@@ -826,7 +955,7 @@ As a Pack-Manager user, I want opening a History row to route Activity into read
 
 **Primary concern:** Product Behavior  
 **Dependencies:** D30; UX-PB.4b  
-**Blocks:** No dependent sub-story or evidence Story (leaf of the UX-PB.4 spine)  
+**Blocks:** No dependent sub-story (leaf of the UX-PB.4 spine)  
 
 As a Pack-Manager user, I want a replay I open during a live upgrade to stay clearly secondary so that the one running attempt never looks paused or lost while I inspect a past one.
 
@@ -843,8 +972,8 @@ As a Pack-Manager user, I want a replay I open during a live upgrade to stay cle
 ### Story UX-PB.4d: Retry scope preview and linked new attempt
 
 **Primary concern:** Product Behavior  
-**Dependencies:** D29; AD-16 rule 5; UX-PB.4b, UX-PB.2b  
-**Blocks:** Story 6.5 and its affected evidence  
+**Dependencies:** D29; AD-16 (Retry mints a new linked `planAttemptId` and preserves the original failure); AD-24 (derived `RetryIntent`; the persistent draft has exactly one author); UX-PB.4b, UX-PB.2b  
+**Blocks:** Story 6.5  
 
 As a Pack-Manager user, I want Retry to first show the failed-item scope and then create a new linked attempt so that I can re-run only what failed while the original result stays untouched.
 
@@ -852,7 +981,7 @@ As a Pack-Manager user, I want Retry to first show the failed-item scope and the
 
 **Given** a terminal Results or History entry with failed items and Retry available
 **When** I invoke Retry
-**Then** it first reveals the proposed failed-item scope inline with `Cancel` and `Create new plan`; `Create new plan` rebuilds current canonical intent into a new reviewable draft, and confirming that draft creates a new attempt with a fresh `planAttemptId` linked by `retryOfPlanAttemptId` and a `Retry of plan from <time>` History entry
+**Then** it first reveals the proposed failed-item scope inline with `Cancel` and `Create new plan`; `Create new plan` composes a derived `RetryIntent` in Rust — the source attempt's reviewed intent restricted to its failed members, canonically rebuilt against current eligibility and argv — and takes that separate reviewable object straight to preview and confirmation without ever writing to, merging with, or emptying the one persistent draft, and confirming it creates a new attempt with a fresh `planAttemptId` linked by `retryOfPlanAttemptId` and a `Retry of plan from <time>` History entry
 **And** the original failed result stays immutable and reachable through `View previous result`.
 
 **Given** Retry has exposed the failed-item scope
@@ -866,7 +995,7 @@ As a Pack-Manager user, I want Retry to first show the failed-item scope and the
 ### Story UX-PB.4e: Legacy Operation History honest labeling
 
 **Primary concern:** Product Behavior  
-**Dependencies:** D29; AD-16 rule 9; UX-PB.4a, UX-PB.2f  
+**Dependencies:** D29; AD-16 (legacy honesty — no inferred plan grouping); AD-18; UX-PB.4a, UX-PB.2f  
 
 As a Pack-Manager user, I want legacy Operation records that predate plan attempts to stay honestly labeled so that older history remains readable without being faked into plans it never had.
 
@@ -913,8 +1042,8 @@ As a Pack-Manager user, I want the persistent Upgrade Plan to present one delibe
 ### Story UX-PB.5b: Dialog-only disable control with atomic `skipUpgradePlanConfirmation` persistence and Settings migration
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.5a; D28; FR-17; Settings migration  
-**Blocks:** UX-PB.5c; Stories 3.4 and 6.7 and their affected evidence  
+**Dependencies:** UX-PB.5a; D28; FR-17; AD-19; AD-21 (`skipUpgradePlanConfirmation` is declared plan-inert); AD-22 (admit, then persist the rider); Settings migration  
+**Blocks:** UX-PB.5c; Story 3.4  
 
 As a Pack-Manager user, I want to deliberately disable the final confirmation from the dialog and restore it from Settings so that I can remove friction without ever losing a safe default.
 
@@ -925,8 +1054,13 @@ As a Pack-Manager user, I want to deliberately disable the final confirmation fr
 **Then** only this dialog contains the `Disable upgrade plan command execution confirmation` control, its safety explanation, and Settings-restoration guidance, and the base plan never surfaces that control.
 
 **Given** the dialog with `Disable upgrade plan command execution confirmation` selected
-**When** I choose the final `Confirm N Updates`
-**Then** `skipUpgradePlanConfirmation: true` is written atomically, the new value takes effect only after persistence succeeds, and the plan is admitted.
+**When** I choose the final `Confirm N Updates` and admission succeeds
+**Then** the ordering is validate, admit through the scheduler's revision-checked transaction, then persist the rider once admission has returned — `skipUpgradePlanConfirmation: true` is written atomically only after the plan is admitted, and it becomes active only after that write succeeds
+**And** the opt-out never precedes the admission it rides on; if that atomic save then fails, the admitted attempt stands, the prior `false` preference is retained as both active and persisted state, and the failure is surfaced inline.
+
+**Given** the dialog with `Disable upgrade plan command execution confirmation` selected
+**When** I choose the final `Confirm N Updates` and admission is rejected
+**Then** nothing is persisted and nothing becomes active — the confirmation gate stays armed for a run I never got — and the dialog retains my selection so the choice is not silently lost.
 
 **Given** Settings
 **When** the confirmation preference renders
@@ -1022,6 +1156,7 @@ So that a slow or disabled step never creates misleading global state.
 
 - FR and requirement links: FR-3; FR-17
 - Required test level: Unit plus component
+- Governing invariants: AD-4, AD-25
 - Dependencies: deterministic adapters and fake time
 
 **Acceptance Criteria:**
@@ -1035,6 +1170,11 @@ So that a slow or disabled step never creates misleading global state.
 **When** controlled time reaches success, timeout, or error outcomes
 **Then** the correct Manager-specific terminal state and actionable detail appear
 **And** peers continue independently without real network access or wall-clock sleeps.
+
+**Given** a Manager that has already produced a successful snapshot, and a later refresh whose detection, parse, network, timeout, or persistence path fails
+**When** the failure resolves and recovered-parse output is available
+**Then** the failure stays contained to that Manager, its Last-good Snapshot is retained and labeled with its own timestamp and the exact failure alongside a `Retry refresh` affordance, and the recovered output **merges** into the inventory already parsed from the successful refresh outputs
+**And** the snapshot is never replaced by an empty one and never by an outdated-only overlay — which would make every up-to-date Package vanish — the merge never un-pins a row, and health and staleness presentation read from the snapshot's real timestamp with no invented or interpolated value substituted.
 
 ## Epic 3: Keep Package Choice, Plans, and Settings Exact and Understandable
 
@@ -1050,6 +1190,7 @@ So that I can understand what each Manager reports without losing Manager-specif
 
 - FR and requirement links: FR-2; FR-5; FR-6; FR-10; FR-11; FR-19
 - Required test level: Component
+- Governing invariants: AD-16, AD-17
 - Dependencies: representative all-state fixtures
 
 **Acceptance Criteria:**
@@ -1073,6 +1214,7 @@ So that no plan silently overrides a pin or includes default-excluded work.
 
 - FR and requirement links: FR-5; FR-6; FR-7
 - Required test level: Unit plus component
+- Governing invariants: AD-16, AD-17
 - Dependencies: Story 3.1; deterministic plan-builder and UI fixtures
 
 **Acceptance Criteria:**
@@ -1095,6 +1237,7 @@ So that configuration changes and environment evidence remain trustworthy.
 
 - FR and requirement links: FR-17
 - Required test level: Unit plus component
+- Governing invariants: AD-4, AD-5, AD-19
 - Dependencies: controlled persistence and clipboard seams
 
 **Acceptance Criteria:**
@@ -1119,6 +1262,7 @@ So that I can act efficiently without adding excluded or unrelated Packages to t
 
 - FR and requirement links: FR-6; FR-10; FR-13; FR-19
 - Required test level: Component plus browser E2E
+- Governing invariants: AD-16, AD-17
 - Dependencies: Stories 3.1 and 3.2; semantic keyboard/focus locators; deterministic bridge
 
 **Acceptance Criteria:**
@@ -1147,7 +1291,9 @@ So that support evidence is complete, inspectable, and actionable.
 **Story Contract:**
 
 - FR and requirement links: FR-18
-- Required test level: Real native Tauri E2E plus artifact inspection
+- Required test level: Real native Tauri E2E plus artifact inspection. Satisfiable as written — **AD-26** names a compliant shape and no renegotiation is needed.
+- Governing invariants: AD-3, AD-4, AD-5, AD-16, AD-18, AD-26
+- Harness constraint (AD-26): the native automation surface is excluded from release bits at **compile time**, never by a runtime selector, and the harness must drive the **production composition** — the same registered commands and events, the same handlers, the same serialization. No delivery coverage may be claimed from a fixture, from the browser double, or from a harness that introduces a test-only command, a second composition root, or a different registration set.
 - Dependencies: disposable logs/transcripts/journal
 
 **Acceptance Criteria:**

@@ -101,7 +101,7 @@ export function ManagerCard({ info }: ManagerCardProps) {
         <button
           type="button"
           onClick={view}
-          className="text-left text-[15px] font-semibold text-text-primary hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="text-left text-[15px] font-semibold text-text-primary hover:text-accent focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1"
         >
           {info.displayName}
         </button>

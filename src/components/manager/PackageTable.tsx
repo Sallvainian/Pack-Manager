@@ -107,7 +107,7 @@ export function PackageTable({
             aria-label="Select all visible packages"
             className={[
               "h-4 w-4 shrink-0 cursor-pointer rounded-[4px] border border-border-strong bg-bg-raised accent-accent",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-bg-surface",
+              "focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1",
               "disabled:cursor-not-allowed disabled:opacity-40",
             ].join(" ")}
           />
@@ -133,7 +133,7 @@ export function PackageTable({
             type="button"
             onClick={() => setGreedyOpen((o) => !o)}
             aria-expanded={greedyOpen}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-text-secondary hover:bg-bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-text-secondary hover:bg-bg-raised focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1"
           >
             <span aria-hidden="true" className="w-3 text-[10px] text-text-muted">
               {greedyOpen ? "▼" : "▶"}

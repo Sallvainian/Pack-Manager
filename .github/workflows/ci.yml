@@ -1,13 +1,16 @@
 # Pack-Manager CI (SPEC §7.6).
 #
-# rust (macos-14): fmt + clippy -D warnings + cargo test --locked — offline.
+# rust (macos-15): fmt + clippy -D warnings + cargo test --locked — offline.
 # web (ubuntu):    npm ci + tsc --noEmit + vitest run + npm run build — offline.
-# build-smoke (macos-14, main only): debug .app bundle, uploaded as artifact.
+# build-smoke (macos-15, main only): debug .app bundle, uploaded as artifact.
 #
 # No job touches the network beyond dependency install. Live smoke tests are
 # all #[ignore] and developer-run only — never here. Beta-OS-specific issues
-# are diagnosed on-machine by design (DECISIONS D20): runners stay on stable
-# macos-14.
+# are diagnosed on-machine by design (DECISIONS D20): runners stay on a stable
+# image, never a beta one. That was macos-14 until GitHub began deprecating it
+# on 2026-07-06 (fully unsupported 2026-11-02, with deliberate intermittent job
+# failures during the window). macos-15 is the current stable image and also
+# aligns the build SDK with the 15.0 deployment floor declared in D31.
 
 name: ci
 
@@ -22,7 +25,7 @@ concurrency:
 
 jobs:
   rust:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -64,7 +67,7 @@ jobs:
 
   build-smoke:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: macos-14
+    runs-on: macos-15
     needs: [rust, web]
     steps:
       - uses: actions/checkout@v7

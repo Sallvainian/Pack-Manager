@@ -96,7 +96,7 @@ export function PackageRow({
           aria-label={`Select ${pkg.name}`}
           className={[
             "h-4 w-4 shrink-0 cursor-pointer rounded-[4px] border border-border-strong bg-bg-raised accent-accent",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-bg-surface",
+            "focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1",
             "disabled:cursor-not-allowed disabled:opacity-40",
           ].join(" ")}
         />
@@ -112,7 +112,7 @@ export function PackageRow({
                 expanded ? `Collapse ${pkg.name}` : `Expand ${pkg.name}`
               }
               aria-expanded={expanded}
-              className="text-text-muted hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="text-text-muted hover:text-text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1"
             >
               <span aria-hidden="true" className="inline-block w-3 text-[10px]">
                 {expanded ? "▼" : "▶"}
@@ -181,7 +181,7 @@ export function PackageRow({
             className={[
               "inline-flex h-7 items-center rounded-control px-2.5 text-[12px] font-medium",
               "text-text-secondary hover:bg-bg-raised hover:text-text-primary",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+              "focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1",
             ].join(" ")}
           >
             Upgrade

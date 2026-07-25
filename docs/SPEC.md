@@ -155,33 +155,42 @@ macOS 27.0 beta, arm64 M4, 16GB. Xcode-beta toolchain. brew at `/opt/homebrew/bi
 ```css
 @theme {
   /* Surfaces — dark blue-graphite ramp */
-  --color-bg-base: #0b0e14; /* window background */
-  --color-bg-surface: #11151d; /* sidebar, cards, table header */
-  --color-bg-raised: #171c26; /* hover rows, drawer, inputs */
-  --color-bg-overlay: #1d2330; /* dialogs, sheets, popovers */
-  --color-bg-inset: #07090d; /* log viewer background */
-  --color-border: #232a36;
-  --color-border-strong: #303948;
+  --color-bg-base: #090c13; /* window background */
+  --color-bg-shell: #0f1420; /* window chrome, stable navigation surfaces */
+  --color-bg-surface: #151c2a; /* sidebar, cards, table header */
+  --color-bg-raised: #1b2434; /* hover rows, drawer, inputs */
+  --color-bg-overlay: #202a3c; /* dialogs, sheets, popovers */
+  --color-bg-inset: #070b12; /* log viewer background */
+  --color-border: #2a3548;
+  --color-border-strong: #465773; /* selected/emphasized boundaries — never focus */
+
+  /* Keyboard focus — a dedicated indicator, deliberately not the accent, so
+     focused and selected states stay distinguishable. */
+  --color-focus-ring: #f4f7fb;
 
   /* Text */
-  --color-text-primary: #e6e9ef;
-  --color-text-secondary: #9aa3b2;
-  --color-text-muted: #5c6675;
+  --color-text-primary: #f4f7fb;
+  --color-text-secondary: #aeb8c7;
+  --color-text-muted: #8d99aa;
 
   /* Accent + status */
-  --color-accent: #4f8cff; /* primary actions, focus, running */
-  --color-accent-hover: #6ba0ff;
-  --color-accent-subtle: #4f8cff1f; /* 12% — selected-row wash */
-  --color-success: #3fb96b;
-  --color-warning: #e5a53a;
-  --color-danger: #e5564f;
-  --color-info: #38bdf8;
+  --color-accent: #65a7ff; /* primary actions, active navigation, running */
+  --color-accent-hover: #7db3ff;
+  --color-accent-subtle: #172a46; /* selected-row / active-destination wash */
+  --color-on-accent: #07101d; /* text/icons on bright blue fills */
+  --color-success: #72e6a0;
+  --color-on-success: #07140d; /* text/icons on bright green fills */
+  --color-warning: #f1c875;
+  --color-danger: #ff8793;
+  --color-info: #62e7d8;
+  --color-violet: #b59cff; /* rare secondary accent; never a core status */
   /* Badges/banners use the status color at 12% alpha backgrounds. */
 
-  /* Version-delta severity (DISPLAY ONLY — never decides outdatedness) */
-  --color-sev-major: #e5564f;
-  --color-sev-minor: #e5a53a;
-  --color-sev-patch: #3fb96b;
+  /* Version-delta severity (DISPLAY ONLY — never decides outdatedness).
+     Deliberately mirrors danger/warning/success. */
+  --color-sev-major: #ff8793;
+  --color-sev-minor: #f1c875;
+  --color-sev-patch: #72e6a0;
 
   /* Shape */
   --radius-card: 10px;
@@ -194,7 +203,9 @@ macOS 27.0 beta, arm64 M4, 16GB. Xcode-beta toolchain. brew at `/opt/homebrew/bi
 }
 ```
 
-Dark-only in MVP; tokens live in one file so a light theme is a value swap. `prefers-reduced-motion` disables all transitions (default 150ms ease). Focus: 2px `--color-accent` ring, offset against surface, on every interactive element.
+Dark-only in MVP; tokens live in one file so a light theme is a value swap. Values are the approved "Aurora Control Deck" palette from the 2026-07-23 UX design (D35). `prefers-reduced-motion` disables all transitions (default 150ms ease).
+
+Focus: a real 2px `outline` in `--color-focus-ring` with `outline-offset`, on every interactive element — a dedicated indicator, never `--color-accent`. Use `outline-*`, **not** `ring-*`: Tailwind's `ring-*` compiles to `box-shadow`, and WebKit does not paint `box-shadow` on native-appearance form controls (`<input type="checkbox">`, `<select>`). This app ships in WKWebView, so a ring on those controls is invisible to the user even though `:focus-visible` matches. The limitation is specific to native-appearance form controls — WebKit paints `box-shadow` on a `<button>` normally — but the rule is uniform so no control can be given an invisible focus state by following its neighbours. Never add `outline-none` to a focusable element. See D35. `--color-border-strong` may indicate selection but never substitutes for focus; selected and focused states remain distinguishable.
 
 ### 4.2 Typography
 
@@ -791,7 +802,7 @@ Committed representative payload JSON per IPC type in `dev/fixtures/ipc/`. Rust 
 
 ### 7.6 CI (`.github/workflows/ci.yml`)
 
-rust (macos-14): `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test --locked`. web (ubuntu): `npm ci`, `tsc --noEmit`, `vitest run`, `npm run build`. build-smoke (macos-14, main only): `npm run tauri build -- --debug`, upload `.app`. Caches; no job touches the network beyond dependency install. Beta-OS-specific issues are diagnosed on-machine by design.
+rust (macos-15): `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test --locked`. web (ubuntu): `npm ci`, `tsc --noEmit`, `vitest run`, `npm run build`. build-smoke (macos-15, main only): `npm run tauri build -- --debug`, upload `.app`. Caches; no job touches the network beyond dependency install. Beta-OS-specific issues are diagnosed on-machine by design.
 
 ---
 

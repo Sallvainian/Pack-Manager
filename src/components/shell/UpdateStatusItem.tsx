@@ -18,7 +18,7 @@ import { Spinner } from "../primitives/Spinner";
 /** Compact control sized for the 28px status bar. */
 const CHIP =
   "inline-flex items-center gap-1.5 rounded-control px-2 h-5 text-[11px] font-medium " +
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+  "focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1";
 
 export function UpdateStatusItem() {
   const status = useAppUpdateStore((s) => s.status);

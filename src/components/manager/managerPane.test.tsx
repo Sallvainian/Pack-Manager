@@ -97,3 +97,24 @@ describe("search_filters_names_and_executables", () => {
     });
   });
 });
+
+describe("navigation_highlight_stays_accent_not_focus_ring", () => {
+  it("keeps the cross-manager highlight on the accent ring so it cannot read as focus", () => {
+    usePackagesStore.getState().setSnapshot("npm", npmSnapshot);
+    useUiStore.getState().setHighlight({
+      managerId: "npm",
+      packageId: "globalPackage:@google/gemini-cli",
+    });
+    render(<ManagerPane managerId="npm" />);
+
+    const highlighted = screen.getByTestId("row-globalPackage:@google/gemini-cli");
+    // D35: focus owns --color-focus-ring and is drawn as an outline; the
+    // join-navigation highlight keeps the accent ring so a navigated-to row is
+    // never mistaken for a focused one.
+    expect(highlighted.className).toContain("ring-accent");
+    expect(highlighted.className).not.toContain("outline-focus-ring");
+
+    const other = screen.getByTestId("row-globalPackage:@just-every/code");
+    expect(other.className).not.toContain("ring-accent");
+  });
+});

@@ -39,7 +39,7 @@ function ToastRow({ toast }: { toast: Toast }) {
           <button
             type="button"
             onClick={viewLog}
-            className="text-[12px] text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="text-[12px] text-accent hover:underline focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1"
           >
             View log
           </button>

@@ -25,7 +25,7 @@ function NavButton({
       onClick={onClick}
       className={[
         "relative flex w-full items-center rounded-control px-2.5 py-1.5 text-left text-[13px]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+        "focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1",
         active
           ? "bg-bg-raised text-text-primary before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full before:bg-accent"
           : "text-text-secondary hover:bg-bg-raised hover:text-text-primary",

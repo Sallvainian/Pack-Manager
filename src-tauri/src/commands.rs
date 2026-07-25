@@ -761,16 +761,53 @@ pub async fn check_for_app_update(
     Ok(())
 }
 
+/// Refuses an app update while any package Operation is queued or running.
+///
+/// Split out of `install_app_update` so it is reachable from a unit test — the
+/// command itself needs a `tauri::AppHandle`, which a test cannot build.
+///
+/// The status set matches `activeOps` in `src/store/operations.ts` exactly.
+/// Queued counts as active: admission has already committed to running it, and
+/// a restart would drop it without ever starting it.
+fn refuse_app_update_while_busy(records: &[crate::ipc::OperationRecord]) -> Result<(), IpcError> {
+    let active: Vec<&str> = records
+        .iter()
+        .filter(|record| {
+            matches!(
+                record.status,
+                crate::ipc::OpStatus::Queued | crate::ipc::OpStatus::Running
+            )
+        })
+        .map(|record| record.op_id.as_str())
+        .collect();
+    if active.is_empty() {
+        return Ok(());
+    }
+    Err(IpcError::from_code(
+        ErrorCode::SelfUpdateUnavailable,
+        "Finish or cancel the package operations still running, then install the update.",
+    )
+    .with_detail(format!(
+        "refused: {} package operation(s) queued or running ({})",
+        active.len(),
+        active.join(", ")
+    )))
+}
+
 /// Installs the downloaded update over the running bundle and relaunches.
 ///
-/// The frontend is responsible for cancelling in-flight operations first (it
-/// routes this through the quit guard); by the time this runs, restarting is
-/// already the user's decision. `restart` does not return.
+/// The frontend routes this through the quit guard, but that is convention, not
+/// enforcement: this command kills every child process via `shutdown()` and then
+/// `restart()`, so a caller that skips the guard destroys in-flight package work
+/// and its journal tail. The refusal below is the enforcement point — the
+/// frontend check stays as the path that explains itself to the user, and this
+/// one exists so no caller can bypass it. `restart` does not return.
 #[tauri::command]
 pub async fn install_app_update(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), IpcError> {
+    refuse_app_update_while_busy(&state.queue.records())?;
     state.app_update.install().map_err(|detail| {
         IpcError::from(PmError::Io {
             detail: format!("update install failed: {detail}"),
@@ -798,6 +835,70 @@ pub async fn install_app_update(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn record_with(op_id: &str, status: crate::ipc::OpStatus) -> crate::ipc::OperationRecord {
+        crate::ipc::OperationRecord {
+            op_id: op_id.to_string(),
+            kind: crate::ipc::OpKind::Upgrade,
+            executor: ManagerId::Brew,
+            subject: ManagerId::Brew,
+            status,
+            command_line: "brew upgrade dolt".to_string(),
+            package_ids: vec!["dolt".to_string()],
+            queued_at: "2026-07-25T00:00:00Z".to_string(),
+            started_at: None,
+            finished_at: None,
+            exit_code: None,
+            error: None,
+            log_path: String::new(),
+        }
+    }
+
+    #[test]
+    fn app_update_is_refused_while_an_operation_is_queued_or_running() {
+        use crate::ipc::OpStatus;
+
+        // Nothing in flight: the update proceeds.
+        assert!(refuse_app_update_while_busy(&[]).is_ok());
+        for terminal in [
+            OpStatus::Succeeded,
+            OpStatus::Failed,
+            OpStatus::Cancelled,
+            OpStatus::TimedOut,
+            OpStatus::Interrupted,
+        ] {
+            assert!(
+                refuse_app_update_while_busy(&[record_with("op-1", terminal)]).is_ok(),
+                "{terminal:?} is terminal and must not block an update"
+            );
+        }
+
+        // Queued counts as active even though it has not started: a restart
+        // would drop it without ever running it.
+        for active in [OpStatus::Queued, OpStatus::Running] {
+            let error = refuse_app_update_while_busy(&[record_with("op-1", active)])
+                .expect_err("an active operation must refuse the update");
+            assert_eq!(error.code, ErrorCode::SelfUpdateUnavailable);
+            assert!(
+                error.detail.as_deref().unwrap_or_default().contains("op-1"),
+                "the refusal must name the blocking operation, got {:?}",
+                error.detail
+            );
+        }
+
+        // A terminal record alongside an active one must not mask it.
+        let error = refuse_app_update_while_busy(&[
+            record_with("done", OpStatus::Succeeded),
+            record_with("live", OpStatus::Running),
+        ])
+        .expect_err("one active operation is enough to refuse");
+        let detail = error.detail.unwrap_or_default();
+        assert!(detail.contains("live"), "got {detail}");
+        assert!(
+            !detail.contains("done"),
+            "terminal op must not be listed: {detail}"
+        );
+    }
     use std::sync::{Arc, Mutex, RwLock};
 
     use crate::events::{AppEvent, VecSink};

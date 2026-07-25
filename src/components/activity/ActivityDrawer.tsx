@@ -80,7 +80,7 @@ export function ActivityDrawer() {
         onClick={toggle}
         aria-expanded={open}
         aria-label={open ? "Collapse activity drawer" : "Expand activity drawer"}
-        className="flex h-8 shrink-0 items-center gap-2 px-4 text-left text-[12px] text-text-secondary hover:bg-bg-raised"
+        className="flex h-8 shrink-0 items-center gap-2 px-4 text-left text-[12px] text-text-secondary hover:bg-bg-raised focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1"
       >
         <span
           className={[

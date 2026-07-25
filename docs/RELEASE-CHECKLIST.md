@@ -88,8 +88,13 @@ release; they cannot prevent one. Prevention lives in the automated checks above
    these die if the Edit and Window submenus aren't re-declared, per `DECISIONS.md` D25a.
    One VoiceOver pass over the Upgrade Plan announces state changes and completion.
 
-   Automated contrast (4.5:1) and reduced-motion checks run in the Playwright/Vitest lane
-   and need no manual step.
+   Reduced motion is covered automatically and needs no manual step — AUT-004 in
+   `tests/e2e/browser-style-contract.spec.ts` emulates `prefers-reduced-motion: reduce`
+   and asserts transitions and animations are removed. It runs in CI through `test.yml`.
+
+   Contrast (4.5:1) is **not** automated — check it by eye here. That same spec disclaims
+   it: "This is a browser DOM/CSS contract only. It does not claim measured contrast
+   compliance or validate the native Tauri package."
 
 ---
 

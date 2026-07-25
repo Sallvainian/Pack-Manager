@@ -51,7 +51,7 @@ export function StatusBar() {
         aria-label="Open logs folder"
         title="Open logs folder"
         onClick={() => void revealLogsDir()}
-        className="hover:text-text-secondary"
+        className="hover:text-text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1"
       >
         🗂
       </button>
@@ -60,7 +60,7 @@ export function StatusBar() {
         aria-label="Settings"
         title="Settings"
         onClick={() => navigate({ kind: "settings" })}
-        className="hover:text-text-secondary"
+        className="hover:text-text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1"
       >
         ⚙
       </button>

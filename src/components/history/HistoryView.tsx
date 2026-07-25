@@ -87,7 +87,7 @@ export function HistoryView() {
           aria-label="Filter by manager"
           value={managerFilter}
           onChange={(e) => setManagerFilter(e.target.value as ManagerFilter)}
-          className="h-8 rounded-control border border-border bg-bg-raised px-2 text-[13px] text-text-primary"
+          className="h-8 rounded-control border border-border bg-bg-raised px-2 text-[13px] text-text-primary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1"
         >
           <option value="all">All managers</option>
           {MANAGER_IDS.map((id) => (
@@ -100,7 +100,7 @@ export function HistoryView() {
           aria-label="Filter by status"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-          className="h-8 rounded-control border border-border bg-bg-raised px-2 text-[13px] text-text-primary"
+          className="h-8 rounded-control border border-border bg-bg-raised px-2 text-[13px] text-text-primary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1"
         >
           <option value="all">All statuses</option>
           {OP_STATUSES.map((s) => (
@@ -115,7 +115,7 @@ export function HistoryView() {
           placeholder="Search command or summary"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-8 w-60 rounded-control border border-border bg-bg-raised px-2.5 text-[13px] text-text-primary placeholder:text-text-muted"
+          className="h-8 w-60 rounded-control border border-border bg-bg-raised px-2.5 text-[13px] text-text-primary placeholder:text-text-muted focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1"
         />
       </div>
 

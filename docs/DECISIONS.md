@@ -363,3 +363,124 @@ infrastructure described above, which was never built and is disproportionate
 to a tool with 3 lifetime installs. Also rejected: leaving the gate documents
 in place as aspirational, since BMAD skill runs glob them back into the plan,
 re-entrenching what this record retires.
+
+## D34. CI and release build on `macos-15`; the `macos-14` pin is retired
+
+GitHub began deprecating the macOS 14 Sonoma runner images on **2026-07-06** and
+they are **fully unsupported after 2026-11-02**
+([actions/runner-images#13518](https://github.com/actions/runner-images/issues/13518)).
+During the window GitHub deliberately fails a sample of jobs on those labels to
+force migration, so the three pins — `ci.yml` `rust`, `ci.yml` `build-smoke`, and
+`release.yml` `build` — were already exposed to intermittent unexplained failures,
+and after 2026-11-02 no signed, notarized release could be cut at all.
+
+All three move to `macos-15`. D20's constraint is unchanged and still governs: the
+runner stays on a **stable** image, never a beta one, and beta-OS-specific issues
+are still diagnosed on-machine. Only which image is the stable one has changed.
+
+This also closes the question D31 left open. D31 recorded that a deployment target
+above the build SDK is a floor annotation rather than an SDK requirement, and that
+whether `notarytool` accepts `minos 15.0` against SDK 14.5 was OPEN. On `macos-15`
+the build SDK is no longer behind the declared 15.0 floor, so the mismatch that
+question was about no longer exists.
+
+**Rejected:** `macos-latest`. It floats, so a future GitHub default change would
+move the signing and notarization environment without a commit — the opposite of
+what D20 wants. Also rejected: waiting until closer to 2026-11-02, since the
+brownout failures are live now and would be diagnosed as flaky tests.
+
+## D35. The approved design palette is adopted and focus gets its own ring
+
+`src/styles/theme.css` was created on 2026-07-22 by `69f37b0` ("U1: IPC
+contract, foundation stubs, theme tokens, app icon"), and its colours were
+explicitly foundation stubs. The UX design ran the next day and produced
+`DESIGN.md`, `status: final`, carrying a different and approved palette. Then
+on 2026-07-24 `a13738d` added `tests/e2e/browser-style-contract.spec.ts`, which
+pinned the stub values in CI. So the shipping palette was never a decision
+anyone made: it was placeholder that predated the design and was afterwards
+held in place by a test.
+
+This adopts the `DESIGN.md` `colors:` block into the existing `--color-*`
+names. The variable names do not change — consumers across `src/` use them and
+renaming them is a separate concern from choosing values. Five tokens
+`DESIGN.md` defines had no equivalent in the theme and are added rather than
+dropped: `focusRing`, `shell`, `onAccent`, `onSuccess`, and `violet`. Stories
+UX-PB.1e and UX-PB.5d build from `DESIGN.md`, so omitting them would only force
+a second token change later. The three `--color-sev-*` tokens have no
+`DESIGN.md` counterpart, but their previous values were byte-identical to the
+danger/warning/success stubs; that mirror relationship is preserved under the
+new values so one table row cannot render two palettes.
+
+The focus mechanism is decided in the same change, because the two are
+entangled: `theme.css` previously commented accent as "primary actions, focus,
+running" and all 22 `focus-visible` sites drew focus in accent blue.
+`EXPERIENCE.md` is normative and requires the opposite — "Every interactive
+element uses a separate `{colors.focusRing}` indicator that is at least 2px
+wide and visible against every surface. `{colors.borderStrong}` may indicate
+selection but never substitutes for focus; selected and focused states remain
+distinguishable." Focus now resolves `--color-focus-ring` (`#F4F7FB`), and the
+CI assertion moved with it, including a negative guard that focus is not the
+accent.
+
+**Focus is drawn as a real `outline`, never `ring-*`.** This is the part most
+likely to be "modernised" back by someone who does not know why, so the reason
+is recorded here. Tailwind's `ring-*` utilities compile to `box-shadow`, and
+**WebKit does not paint `box-shadow` on a native-appearance form control** —
+`<input type="checkbox">`, `<select>`. Pack-Manager ships inside WKWebView,
+which is WebKit, so every checkbox in the app had an invisible focus state.
+Measured on the same element, same keyboard interaction: `:focus-visible`
+matched `true` in both engines, while the computed `box-shadow` was the full
+ring in Chromium and the literal string `"none"` in WebKit. Applying
+`appearance: none` to that same checkbox made the ring paint, which isolates
+the cause to native-appearance painting rather than to focus matching — but
+`appearance: none` also destroys the native checkmark, so it is not the fix.
+An `outline` paints correctly in both engines and preserves the checkmark.
+
+Scope the rule precisely: the limitation applies to native-appearance form
+controls, not to everything. WebKit paints `box-shadow` on a `<button>`
+normally, and AUT-004 asserted exactly that for months. The rule is
+nonetheless applied uniformly to all focusable elements, because a mixed
+codebase is a trap — the next person adding a checkbox copies the `ring-` from
+the button beside it and ships an invisible focus state that no test catches.
+One mechanism, `outline` + `outline-offset`, everywhere. `outline-offset` is
+also precisely what SPEC §4.1's "offset against surface" was already asking
+for, so this closed that gap rather than deferring it. Note that Tailwind v4's
+`outline-none` genuinely sets `outline-style: none` (v3's no-op was renamed
+`outline-hidden`), so `outline-none` on a focusable element actively suppresses
+the indicator and must never be added.
+
+A runtime audit of every focusable element across the Dashboard, Manager,
+Upgrade Plan sheet, History, and Settings views reports zero elements without a
+focus indicator on both Chromium and WebKit. That audit also caught nine
+controls that had never had any focus style at all — including two `<select>`
+filters in History and both Upgrade Plan sheet checkboxes — which a class-name
+grep does not find, because the absence of a class is invisible to grep.
+
+Exactly one `ring-accent` use deliberately survives, at
+`src/components/manager/PackageRow.tsx:85`. It is a cross-manager navigation
+highlight (`src/store/ui.ts:45`), not a focus state, and it has no
+`focus-visible:` prefix. Repointing it would have made a navigated-to row
+indistinguishable from a focused control, which is the exact confusion the
+accessibility floor forbids.
+
+**Rejected:** keeping the stub palette, which would leave the approved design
+unimplemented and both UX-PB stories blocked on an OPEN spine row. Rejected:
+drawing focus in accent, which `EXPERIENCE.md` forbids and which cannot be
+distinguished from accent-coloured selection. Rejected: changing the token
+values without moving the CI assertion in the same commit, which would simply
+turn the style-contract lane red — that lane is also what AD-11 relies on for
+reduced-motion coverage, so it must stay green on every push. Rejected:
+renaming the CSS variables to `DESIGN.md`'s names, which would touch every
+consumer in `src/` for no behavioural gain.
+
+On the focus mechanism specifically. **Rejected:** keeping `ring-*` and
+deferring the WebKit defect, which would have shipped a decision whose stated
+purpose is an indicator "visible against every surface" while it was invisible
+on the checkbox that controls plan membership. **Rejected:** converting only
+the form controls, which leaves two focus mechanisms in one codebase and makes
+the invisible-focus trap easy to walk back into. **Rejected:** `appearance:
+none` on the checkboxes, which does make `box-shadow` paint in WebKit but
+strips the native checkmark, trading an invisible focus state for an invisible
+checked state. **Rejected:** scoping the WebKit assertion to Chromium to get a
+green suite, which would have left CI silent about the only engine the app
+actually ships on.
