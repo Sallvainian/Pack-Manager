@@ -8,7 +8,7 @@ scope: Cross-cutting invariants governing Pack-Manager's product architecture
 status: final
 created: "2026-07-23"
 updated: "2026-07-25"
-artifact_revision: 8
+artifact_revision: 9
 binds:
   - Epic UX-PB (28 stories)
   - Stories 2.2, 3.1, 3.2, 3.4, 3.5, 6.5
@@ -31,6 +31,30 @@ companions: []
 
 # Architecture Spine — Pack-Manager
 
+> **Revision 9, 2026-07-25.** A reconciliation pass, not new architecture: five
+> Open rows close because the work they were waiting on landed, and each closure
+> was verified against the committed tree rather than against the report of it.
+> The `epics.md` divergence batch is **applied** (commit `8d36cdf`, all seven
+> items), the `macos-14` retirement is **done** (`macos-15`, D34 — which also
+> closes D31's `notarytool` residual), the canonical design-token set is
+> **decided** (D35), and the app-update safety guard now has a **Rust enforcement
+> point** (`7cc7b5f`), closing a rubric finding open since revision 6. One new
+> invariant, folded into AD-11 rather than given its own id: **a focus indicator
+> must be drawn by a mechanism the shipping engine actually paints, and proven in
+> WebKit rather than Chromium alone** — WKWebView does not paint `box-shadow` on
+> native-appearance form controls, so the style contract stayed green on both
+> engines while the native checkboxes had no visible focus at all. AD-11 also now
+> states what a release may claim from the lanes. The reviewer gate then found the
+> new rules were filed in the wrong place — AD-11 `Binds: release`, so the two
+> stories that will actually draw a focus indicator never read it — and that the
+> rule as first written was *weaker* than the D35 it should ratify. Both are fixed:
+> the focus rules are now **AD-27**, bound to every story that renders a control,
+> mandating one mechanism (`outline` + `outline-offset`, never `ring-*`, never
+> `outline-none`) and refusing the `appearance: none` escape D35 rejects by name.
+> AD-27 also records that CI's `webkit` project is Playwright's *Linux* WebKit, not
+> WKWebView, so it is a proxy and not proof about the packaged app. Change record:
+> `DRIFT-NOTE.md`.
+>
 > **Revision 8, 2026-07-25.** Closes the three CRITICAL Open rows revision 7
 > recorded but declined to fix, each a pair of stories that obey every existing
 > `AD` and still build incompatibly. Six new invariants: **AD-21** (only
@@ -277,16 +301,19 @@ completeness.
   user with no signal. Verification is Apple silicon only; Intel is best-effort
   and unverified (`docs/DECISIONS.md` D32).
 - **Rule:** Minimum supported macOS is 15.0 at
-  `bundle.macOS.minimumSystemVersion` (`docs/DECISIONS.md` D31). A deployment
-  target above the build SDK is a floor annotation, not an SDK requirement, which
-  is why CI has been able to build on `macos-14`. Whether `notarytool` accepts
-  `minos 15.0` against that SDK is still open and is settled by a manual Release
-  run, never by assertion. **`macos-14` is now on a retirement clock** — GitHub's
-  runner-images deprecation began 2026-07-06 and the images are "fully
-  unsupported by November 2nd, 2026", after which workflows using the label "will
-  be terminated with an error". `ci.yml` and `release.yml` both pin it, so the
-  runner move is release-blocking work with a deadline, and it changes the build
-  SDK underneath the open `notarytool` question rather than leaving it untouched.
+  `bundle.macOS.minimumSystemVersion` (`docs/DECISIONS.md` D31). CI and release
+  build on a **named stable runner image, never `macos-latest`** — a floating
+  label would move the signing and notarization environment without a commit
+  (`docs/DECISIONS.md` D20, D34). That image is `macos-15`, and all three pins
+  moved together: `ci.yml` `rust`, `ci.yml` `build-smoke`, and `release.yml`
+  `build`. A deployment target above the build SDK is a floor annotation rather
+  than an SDK requirement — that is what made the older pin tolerable — but it is
+  not a licence to let the image drift behind the declared floor. D31's one open
+  question, whether `notarytool` accepts `minos 15.0` against an older SDK, is
+  closed by the move rather than by assertion: on `macos-15` the build SDK is no
+  longer behind the floor, so the mismatch the question was about no longer
+  exists (`docs/DECISIONS.md` D34), and a manual Release run built, signed, and
+  notarized on the new image (commit `419dc32`).
 - **Rule:** Accessibility is product quality carried by the existing lanes, not a
   separate evidence lane. Both automated checks belong in the Playwright/Vitest
   lane, and they are at different stages — state which before scheduling work
@@ -295,13 +322,20 @@ completeness.
   `tests/e2e/browser-style-contract.spec.ts` emulates
   `{ reducedMotion: "reduce" }` and asserts transitions and animations resolve to
   `0s`, running in CI on every push and pull request to `main` via
-  `.github/workflows/test.yml`. **Automated 4.5:1 text contrast does not exist**;
-  that same spec disclaims it — "It does not claim measured contrast compliance
-  or validate the native Tauri package." Contrast is therefore an obligation on
-  whichever story adds it; reduced motion is a regression surface to preserve,
-  not a gap to schedule (AD-1). One manual VoiceOver pass and a by-eye contrast
-  check sit on the release checklist. Broader WCAG or legal compliance is not
-  implied (`docs/DECISIONS.md` D33, restating the former DR-2).
+  `.github/workflows/test.yml`. **The focus indicator is the dedicated
+  `--color-focus-ring` token and never `--color-accent`** (`docs/DECISIONS.md`
+  D35), and the same lane pins the token with a negative guard against the
+  accent. **Automated 4.5:1 text contrast does not exist**; that same spec
+  disclaims it — "It does not claim measured contrast compliance or validate the
+  native Tauri package." Contrast is therefore an obligation on whichever story
+  adds it; reduced motion and the focus token are regression surfaces to
+  preserve, not gaps to schedule (AD-1). One manual VoiceOver pass and a by-eye
+  contrast check sit on the release checklist. Broader WCAG or legal compliance
+  is not implied (`docs/DECISIONS.md` D33, restating the former DR-2).
+- **Rule:** The *mechanism* by which focus is drawn, and the limits of what the
+  style-contract lane proves about it, are **AD-27** — they bind every story
+  that renders a control, not the release. This AD keeps only the release-side
+  claim: what the lanes do and do not license a release to assert.
 
 ### AD-12 — [ADOPTED] release-please owns versions; `main` is the release trigger
 
@@ -862,6 +896,52 @@ stateDiagram-v2
   the remedy. If no compliant composition can be made to work, the remedy is a
   renegotiated test level for the story, decided at this altitude.
 
+### AD-27 — [ADOPTED] Keyboard focus uses one mechanism, and it is the one WKWebView paints
+
+- **Binds:** every story that renders an interactive control — all of Epic UX-PB,
+  Stories 3.1, 3.2, 3.5 — plus any change to `src/styles/theme.css` or the style
+  contract
+- **Prevents:** two stories each drawing focus their own way, and a control
+  shipping a focus state that matches `:focus-visible` but is invisible to the
+  user in the app they actually run
+- **Rule:** Focus is drawn as a real 2px `outline` in `--color-focus-ring` with
+  `outline-offset`, on every interactive element. **`ring-*` is forbidden, and
+  `outline-none` is never added to a focusable element** — under Tailwind 4
+  `outline-none` genuinely sets `outline-style: none` (the v3 no-op was renamed
+  `outline-hidden`), so it actively suppresses the indicator. One mechanism
+  everywhere (`docs/DECISIONS.md` D35, `docs/SPEC.md` §4.1).
+- **Rule:** The uniformity is the invariant, not a style preference. Tailwind's
+  `ring-*` compiles to `box-shadow`, and WebKit does not paint `box-shadow` on a
+  control still rendering with its **native appearance** — the discriminator is
+  `appearance`, not the element and not the property, which is why the same
+  utility paints correctly on a `<button>` and not at all on an
+  `<input type="checkbox">` or `<select>`. Pack-Manager ships in WKWebView, so a
+  ring on those controls is invisible to the user. A rule scoped to only the
+  affected controls is what makes this a trap: the next person adding a checkbox
+  copies the `ring-` from its neighbour. `appearance: none` would also make a
+  ring paint and is **rejected** — it destroys the native checkmark (D35).
+- **Rule:** Absence of a focus indicator is not detectable by searching the
+  source, because the defect is a *missing* class. It was found twice here by
+  walking the real tab order and reading computed style, and the first count was
+  wrong by a factor of three — three reported, **nine** actual. A story adding an
+  interactive control verifies that control's focus state at runtime; no grep,
+  and no green suite, substitutes for that.
+- **Rule:** The style contract proves the mechanism on **named samples, not a
+  sweep**: today a toolbar `<button>` and the package-row plan-membership
+  checkbox, chosen because they sit on opposite sides of the `appearance`
+  discriminator. It does not enumerate every interactive element and it does not
+  measure contrast. No story may read a green run as proof that the element *it*
+  added has a visible focus state — the same sample-versus-population limit AD-3
+  puts on the contract fixtures.
+- **Rule:** CI's `webkit` project is Playwright's **Linux** WebKit on
+  `ubuntu-latest`, not WKWebView. It is the closest available proxy and it did
+  catch this defect, but it is not evidence about the packaged macOS app, and no
+  story may describe it as such — the same substitution AD-3 and AD-26 refuse for
+  the browser double and the fixtures. Verification in the real WKWebView remains
+  the manual VoiceOver-and-keyboard pass on `docs/RELEASE-CHECKLIST.md` until a
+  native harness exists under AD-26.
+
+
 ## Consistency Conventions
 
 | Concern | Convention |
@@ -875,7 +955,7 @@ stateDiagram-v2
 | Runtime effects | Application and domain code depends on typed ports. Direct OS calls live only in production adapters; controlled adapters exist only in a non-distributable composition (AD-2, AD-4). |
 | Persistence | Application Support holds `settings.json` (atomic replace) plus append-only NDJSON journals compacted by temp file + fsync + rename. Unknown and retired fields are tolerated on read (AD-18, AD-19). |
 | Frontend state | Narrow Zustand selectors in components; the store's static accessor outside React. Objects and Sets are replaced immutably; cross-store derived state lives in `src/store/index.ts`. Per-manager phase is derived, never stored. |
-| Styling | Design tokens live in `src/styles/theme.css`; the product is dark-only and adds no hardcoded hex elsewhere. Color states always carry a text or icon equivalent. |
+| Styling | Design tokens live in `src/styles/theme.css`; the product is dark-only and adds no hardcoded hex elsewhere. Color states always carry a text or icon equivalent. The *values* are `DESIGN.md`'s, adopted under `docs/DECISIONS.md` D35 — a story proposing different ones is proposing a new decision, not implementing this one. Focus resolves `--color-focus-ring` and never `--color-accent`, so selection and focus stay distinguishable; the *mechanism* that draws it is **AD-27**, and it is not a free choice. |
 | Determinism | Default suites are offline and deterministic: `CommandRunner`/`FakeRunner`, `EventSink`/`VecSink`, `bridge.ts`/`fakeIpc`, paused Tokio or fake timers. No real processes, network, sleeps, or host state. |
 
 ## Stack
@@ -902,7 +982,7 @@ A brownfield seed, not a version policy — the lockfiles own this.
 | Vitest | 4.1.10 |
 | Playwright | 1.61.1 |
 | Node in CI | 24 |
-| CI runner images | macos-14 (ci.yml build/test, release.yml); ubuntu-latest (all other jobs) |
+| CI runner images | macos-15 (`ci.yml` rust, `ci.yml` build-smoke, `release.yml` build); ubuntu-latest (all other jobs) |
 | Minimum supported macOS | 15.0 |
 | Release automation | release-please action v5 + GitHub Actions |
 
@@ -926,31 +1006,32 @@ UX-PB stories must agree on.
 
 | Capability / area | Lives in | Governed by |
 | --- | --- | --- |
-| Draft Upgrade Plan and sidecar — persists across navigation, not across relaunch (UX-PB.1a–1e) | Rust plan services + Zustand projection + layout region | AD-16, AD-17, AD-23, AD-24 |
-| Plan attempts, admission, cancellation (UX-PB.2a–2f) | Rust queue/ops + plan-attempt store | AD-3, AD-4, AD-16, AD-18, AD-21, AD-22 |
-| Activity, live progress, Results, interaction classification (UX-PB.3a–3g) | Rust event dispatch + React attempt views | AD-4, AD-16, AD-25 |
-| History, replay, Retry, legacy labeling (UX-PB.4a–4e) | Plan-attempt journal + History views | AD-16, AD-18, AD-24 |
-| Confirmation gate and its setting (UX-PB.5a–5e) | `DialogHost` modal + settings persistence | AD-16, AD-17, AD-19, AD-21, AD-22 |
+| Draft Upgrade Plan and sidecar — persists across navigation, not across relaunch (UX-PB.1a–1e) | Rust plan services + Zustand projection + layout region | AD-16, AD-17, AD-23, AD-24, AD-27 |
+| Plan attempts, admission, cancellation (UX-PB.2a–2f) | Rust queue/ops + plan-attempt store | AD-3, AD-4, AD-16, AD-18, AD-21, AD-22, AD-27 |
+| Activity, live progress, Results, interaction classification (UX-PB.3a–3g) | Rust event dispatch + React attempt views | AD-4, AD-16, AD-25, AD-27 |
+| History, replay, Retry, legacy labeling (UX-PB.4a–4e) | Plan-attempt journal + History views | AD-16, AD-18, AD-24, AD-27 |
+| Confirmation gate and its setting (UX-PB.5a–5e) | `DialogHost` modal + settings persistence | AD-16, AD-17, AD-19, AD-21, AD-22, AD-27 |
 | Detection, refresh phases, timeouts (Story 2.2) | Manager adapters behind runtime ports | AD-4, AD-25 |
-| Package state, eligibility, keyboard selection (Stories 3.1, 3.2, 3.5) | React package views + Rust plan builder | AD-4, AD-16, AD-17, AD-23 |
+| Package state, eligibility, keyboard selection (Stories 3.1, 3.2, 3.5) | React package views + Rust plan builder | AD-4, AD-16, AD-17, AD-23, AD-27 |
 | Settings and Environment Report (Story 3.4) | Settings persistence + detection state | AD-19, AD-21 |
 | Diagnostics export (Story 6.5) | `diagnostics.rs` through the production native command | AD-5, AD-18, AD-26 |
+| Keyboard focus indicator on any control | `src/styles/theme.css` + every component that renders a control | **AD-27** (mechanism, sampling limits, WebKit-vs-WKWebView), AD-11 (what a release may claim) |
 | Packaged release, signing, updater | `release.yml` + `docs/RELEASE-CHECKLIST.md` | AD-11, AD-12 |
 
 ## Decision Status and Deferred Items
 
 | Item | Status | Note |
 | --- | --- | --- |
-| Canonical design-token set | **OPEN — needs an owner decision, blocks UX-PB.1e and UX-PB.5d** | Surfaced by `reviews/review-rubric-v8.md` H2; a real divergence pair this spine does not resolve, because choosing is a product call. The Styling convention fixes *where* tokens live and never says *which*. Verified conflict: `src/styles/theme.css` ships `--color-bg-base: #0B0E14` and `--color-accent: #4F8CFF` with **no** `focusRing` token, and `tests/e2e/browser-style-contract.spec.ts` asserts `rgb(11, 14, 20)` on every push and PR to `main`. `DESIGN.md` specifies `background #090C13`, `accent #65A7FF`, and a dedicated `focusRing #F4F7FB`, and `EXPERIENCE.md` makes the focus ring normative — "Every interactive element uses a separate `{colors.focusRing}` indicator", which `docs/SPEC.md`'s accent-coloured "2px `--color-accent` ring" contradicts. Both stories are bound to build from `DESIGN.md`/`EXPERIENCE.md`. Whichever lands first either rewrites the tokens and breaks the CI style contract on `main` — the same lane AD-11 now relies on for reduced motion — or keeps the shipping values and ships focus rings `EXPERIENCE.md` forbids. Decide the token set and the focus mechanism together, then the CI assertion moves with them in one change. |
-| `macos-14` runner retirement | **OPEN — dated, release-blocking** | Surfaced by `reviews/review-currency-v8.md`, not by this run's own scope. GitHub deprecated the `macos-14` image family on 2026-07-06 — nineteen days before this revision — and the images are "fully unsupported by November 2nd, 2026", after which workflows using the label "will be terminated with an error" (`actions/runner-images` #13518). `ci.yml` pins it twice and `release.yml` pins it for the signed, notarized build, so after that date Pack-Manager cannot cut a release at all. Not fixed here: this run was scoped to invariants, and the runner move is workflow work. It also perturbs the open `notarytool minos 15.0` residual below, because a newer image ships a newer SDK. |
-| Minimum supported macOS | **RESOLVED (one residual)** | 15.0 declared at `bundle.macOS.minimumSystemVersion` (`docs/DECISIONS.md` D31). Whether `notarytool` accepts `minos 15.0` against the CI SDK is OPEN and is settled by a manual Release run — D31 declines to assert it, and neither does this spine. |
+| Canonical design-token set | **RESOLVED** | Decided 2026-07-25 as `docs/DECISIONS.md` D35 (commit `be1f0e6`), and decided the way this row asked — token set and focus mechanism together, with the CI assertion moving in the same change. `DESIGN.md`'s values were adopted into the existing `--color-*` names rather than renamed: `src/styles/theme.css` now reads `--color-bg-base: #090C13` and `--color-accent: #65A7FF`, and the five tokens `DESIGN.md` defined with no theme equivalent were added rather than dropped — including the `--color-focus-ring: #F4F7FB` whose absence was half this row's conflict. All 22 `focus-visible` sites resolve `--color-focus-ring`, which is what `EXPERIENCE.md`'s "a separate `{colors.focusRing}` indicator … selected and focused states remain distinguishable" requires and what an accent-coloured ring could not satisfy; `docs/SPEC.md` §4.1 moved with them and now reads "a dedicated indicator, never `--color-accent`". The style-contract lane stayed green and gained a negative guard that focus is not the accent, so the mechanism cannot silently regress. One `ring-accent` survives deliberately at `src/components/manager/PackageRow.tsx` — a cross-manager navigation highlight with no `focus-visible:` prefix, kept distinct precisely so a navigated-to row cannot read as a focused control. UX-PB.1e and UX-PB.5d are unblocked. |
+| `macos-14` runner retirement | **RESOLVED** | Closed 2026-07-25 as `docs/DECISIONS.md` D34 (commit `419dc32`), well ahead of the 2026-11-02 deadline `reviews/review-currency-v8.md` raised. All three pins moved to `macos-15` — `ci.yml` `rust`, `ci.yml` `build-smoke`, `release.yml` `build` — and no `runs-on` in `.github/workflows/` names `macos-14` any more. `macos-latest` was considered and rejected: a floating label moves the signing and notarization environment without a commit, which is the opposite of what D20 wants. Signing and notarization on the new image were proven by a manual Release workflow run rather than asserted. This also closes the `notarytool` residual in the row below. See AD-11. **Caveat for a future currency check:** `docs/SPEC.md` §7.6 moved with the change, but `docs/development-guide.md`, `docs/index.md`, and `_bmad-output/project-context.md` still say `macos-14`. Those are generated workflow output — they need a `bmad-document-project` / `bmad-generate-project-context` regeneration, not a hand edit, and they are not evidence that this row reopened. |
+| Minimum supported macOS | **RESOLVED** | 15.0 declared at `bundle.macOS.minimumSystemVersion` (`docs/DECISIONS.md` D31). The residual this row carried — whether `notarytool` accepts `minos 15.0` against the CI SDK — is closed by D34, and closed the way D31 required, by a manual Release run rather than by assertion. On `macos-15` the build SDK is no longer behind the declared floor, so the mismatch the question was about no longer exists. Note D31's own text still reads "CI therefore stays on `macos-14`" and its OPEN paragraph is unedited: D34 supersedes D31 rather than rewriting it, so cite D34 for the closure and never D31 alone. |
 | Supported architectures | **RESOLVED** | Universal build retained; verification is Apple silicon only. `docs/DECISIONS.md` D32. |
 | Readiness gate policy | **RETIRED** | The 72-criterion gate, coverage percentages, scenario contracts, evidence manifests, and candidate-freeze machinery are dissolved. `docs/DECISIONS.md` D33. AD-6..AD-10 and AD-13..AD-15 are retired ids and are never reused. |
 | Boundary catalog file | **RETIRED** | `contracts/tauri-boundary/v1.json` is not created. The atomic-change obligation moved to AD-3's committed contract fixtures. |
 | ASR-01 / ASR-02 / ASR-03 enabler framing | **RETIRED** | The enabler register belonged to the retired gate. The surviving obligations are AD-2, AD-3, AD-4, and AD-5. |
 | Upgrade Plan redesign (D27–D30) | **IN BUILD** | Epic UX-PB is the primary build queue; AD-16 through AD-19 and AD-21 through AD-25 are its contract. |
 | Epics 1–6 | **RESCOPED** | Six stories survive — 2.2, 3.1, 3.2, 3.4, 3.5, 6.5 — carrying no inter-epic dependencies. Epics 1, 4, and 5 were removed; 31 stories archived. `docs/DECISIONS.md` D33. |
-| Native Tauri E2E harness and runner | **OPEN — owner Story 6.5; shape named, not yet adopted** | No longer a premise-free deferral. `tauri-driver` driven directly does not cover macOS, but `@wdio/tauri-service` does, by running an embedded WebDriver server (`tauri-plugin-wdio-webdriver`) **inside the app** — so the harness question is a trust-boundary question, which **AD-26** now governs. A compliant composition does exist: the plugin registered under `#[cfg(debug_assertions)]` is excluded from release bits at compile time, and this repo declares no `[profile.release]`, so the gate holds today. Story 6.5 is therefore buildable, contrary to what revision 7 recorded. What is still open is the adoption itself — a new plugin is an AD-20 security-reviewed change, and the CrabNebula fork alternative "requires a paid API key for macOS", which is a procurement decision this spine does not make. Was `reviews/review-rubric-v6.md` H1; premise corrected by `reviews/review-currency-v8.md`. |
+| Native Tauri E2E harness and runner | **OPEN — owner Story 6.5; shape named, not yet adopted** | No longer a premise-free deferral. `tauri-driver` driven directly does not cover macOS, but `@wdio/tauri-service` does, by running an embedded WebDriver server (`tauri-plugin-wdio-webdriver`) **inside the app** — so the harness question is a trust-boundary question, which **AD-26** now governs. A compliant composition does exist: the plugin registered under `#[cfg(debug_assertions)]` is excluded from release bits at compile time, and this repo declares no `[profile.release]`, so the gate holds today. Story 6.5 is therefore buildable, contrary to what revision 7 recorded. What is still open is the adoption itself — a new plugin is an AD-20 security-reviewed change, and the CrabNebula fork alternative carries a cost — `llms-full.txt` says it works on all platforms, "a paid API key is required for macOS" — which is a procurement decision this spine does not make. Was `reviews/review-rubric-v6.md` H1; premise corrected by `reviews/review-currency-v8.md`. |
 | Controlled child-helper language | **Deferred** | Any choice must satisfy AD-4 and cannot add a production shell-command surface. |
 | Crash/relaunch lifecycle controller | **Deferred (live consumers)** | UX-PB.1b, UX-PB.2f, UX-PB.4e, and Story 6.5 each assert crash, force-quit, or relaunch behavior, so the earlier "no live story requires one" premise was false. AD-5 binds whoever builds it; until it exists those stories own their own disposable-root setup and may not resolve a production directory by fallback. |
 | Plan-attempt file name and serde shape | **Deferred** | AD-18 fixes ownership, location, durability, and failure mode; the exact filename and field list belong to UX-PB.2c. |
@@ -961,7 +1042,11 @@ UX-PB stories must agree on.
 | `PlanIntent` member provenance | **RESOLVED** | Closed by **AD-23**: provenance moves onto the member as `Explicit \| Bulk { scope }`, removal writes a tombstone no bulk expansion re-adds, and the intent-level `kind` scalar is removed rather than reworded. Was `reviews/review-divergence-v6.md` C-2. |
 | Retry vs. the accumulating draft | **RESOLVED** | Closed by **AD-24**: the persistent draft has exactly one author, and Retry composes a derived `RetryIntent` that never routes through it. AD-17's visibility union gained the derived intent under review as a fourth member with explicit precedence, while the retry *scope* stays a content state inside Results. Was `reviews/review-divergence-v6.md` C-3. |
 | Per-Manager failure isolation and Last-good Snapshot retention | **RESOLVED** | Closed by **AD-25**, which is now the referent AD-16's verification rule cites. Carries the merge-not-replace rule for recovered-parse output, and extends containment to a failed verification refresh. Was `reviews/review-rubric-v6.md` H2. |
-| App-update safety guard enforcement point | **OPEN** | The rule that an update is refused while Package work is queued or running has no stated enforcement point, and the shipping guard is frontend convention only — `install_app_update` has no Rust guard. `reviews/review-rubric-v6.md` H4. |
+| App-update safety guard enforcement point | **RESOLVED** | Closed 2026-07-25 by commit `7cc7b5f`; raised as `reviews/review-rubric-v6.md` H4. The enforcement point is now Rust: `install_app_update` calls `refuse_app_update_while_busy(&state.queue.records())` before doing anything, and that helper refuses when any record is `Queued` or `Running`. Verified to match the frontend predicate exactly — `activeOps` in `src/store/operations.ts` filters `"queued" \|\| "running"` — so the guard the user sees and the guard that actually holds cannot drift apart, which was the defect. It is split into a free function rather than inlined so it is unit-testable, and the tests cover the empty case, all five terminal statuses, both active statuses, and a mixed set. It reuses `ErrorCode::SelfUpdateUnavailable` deliberately: a new `ErrorCode` variant is an AD-3 atomic boundary change across Rust, TypeScript, the guard map, and the committed fixtures, which is not worth spending on a refusal message. |
 | Reviewer-gate tail (revision 6) | **Open** | The four `*-v6` lenses returned 44 findings: 5 CRITICAL, 14 HIGH, 18 MEDIUM, 7 LOW. Revision 7 resolved 12 and promoted 5 to their own rows; revision 8 closed all three promoted CRITICALs (AD-21..AD-24), rubric H2 (AD-25), and rubric H1 from the tail (AD-26). The remaining tail is **6 HIGH, 15 MEDIUM, 5 LOW** across `reviews/review-divergence-v6.md`, `review-rubric-v6.md`, `review-reconcile-epics-v6.md`, and `review-currency-v6.md`. Each finding names its own affected stories. |
-| `epics.md` divergence batch for `bmad-correct-course` | **OPEN — owner runs this once, after revision 8** | Recorded here rather than edited, by owner instruction. (a) **UX-PB.1b** — the crash/relaunch recovery criterion still permits the draft-reconstruction branch AD-17 forbids (carried from revision 7). (b) **UX-PB.1c** — one criterion reads "**Given** a draft seeded by `Update Everything` as an `AllEligible` intent **When** I remove any item **Then** the draft converts to an `Explicit` intent of the surviving PackageRefs …". Both halves need work, not just the conversion: the *seed* clause treats `AllEligible` as a live-predicate intent, which AD-16's frozen-expansion rule already forbade, and the *conversion* clause is the whole-intent kind AD-23 removes. Only the conversion half's observable outcome survives; restate the seed as a frozen bulk expansion and the conversion as member removal plus a tombstone. (c) **UX-PB.4d** — "`Create new plan` rebuilds current canonical intent into a new reviewable draft" must be read as AD-24's derived `RetryIntent`, never the one persistent draft; the indefinite article currently carries that whole distinction. (d) **Story 6.5 / native harness** — **four** locations still frame the harness as simply Deferred and cite only AD-2 and AD-3, all of which should cite AD-26: the `DEFERRED` register row; the narrative line attributing the deferral to *this spine* ("The native Tauri harness is Deferred **there**, with Story 6.5 as its only live consumer"); Story 6.5's own contract lines; and the Governance and Risks row "Suites green while the real command/event boundary is broken … delivery coverage explicitly unproven and **awaiting the deferred native harness**". The `Real native Tauri E2E plus artifact inspection` test level needs no renegotiation after all — AD-26 names a compliant shape, so it is satisfiable as written. (e) **UX-PB.5b** — not merely a missing case: its criterion states the *reverse* of AD-22's fixed ordering ("written atomically, the new value takes effect only after persistence succeeds, and the plan is admitted" — persist, activate, admit). AD-22 deliberately overrides it to admit-then-persist, because a preference saved against a refused run disarms the gate for a run the user never got. The criterion must be restated, and the rejected-admission case added. (f) **`epics.md` accessibility claim, in two places** — it carries the same factual error AD-11 just fixed. The D33 restatement: "Neither automated check exists yet, so this is an obligation on whichever story adds them, not a description of current coverage." And the Implementation-Entry Register's DR-2 row: "An obligation on whichever story adds the two automated checks, **which do not exist yet**." Reduced motion exists and runs in CI; only contrast is outstanding. (g) **UX-PB.4b ↔ UX-PB.4d contradict each other on Retry from History.** UX-PB.4d offers Retry from "a terminal Results **or History entry**", while UX-PB.4b's replay criterion says "**no control in the replay can mutate, re-run, or execute anything**". This spine takes UX-PB.4d's side — revealing a retry scope executes nothing, and any execution still goes through the ordinary preview and confirmation path — so UX-PB.4b needs an explicit carve-out for the non-executing Retry affordance, or UX-PB.4d's History origin has to go. Taking a side is this spine's job; recording it is too. |
-| `epics.md` retired register | **RESOLVED** | Reconciled 2026-07-25 under `sprint-change-proposal-2026-07-25.md`. TIR-1..TIR-8, RE-1..RE-11, ASR-01..ASR-05, the register's own AD-1..AD-15, the 72-criterion controls, the Candidate Identity Manifest, the Evidence Registrar, `contracts/readiness/v1/contract-lock.json`, and the `contracts/tauri-boundary/v1.json` set-equality requirement appear only as retirement records. No `AD-n` id in `epics.md` asserts a rule differing from this spine's under that id, and all twelve live AD ids are now cited there. The `R-001`..`R-008` register was retired with them — its ids were defined only in archived gate artifacts and its `Required mitigation` column *was* the retired machinery, so asserting it survived re-imported ASR-01 set-equality and D32's dropped physical-Intel obligation by reference. Residual: UX-PB.1b `epics.md` UX-PB.1b's recovery criterion still offers the draft-reconstruction branch AD-17 forbids. |
+| `epics.md` divergence batch for `bmad-correct-course` | **RESOLVED** | Applied 2026-07-25 in commit `8d36cdf` under `sprint-change-proposal-2026-07-25-spine-rev8.md`. All seven items (a)-(g) landed, and each landed by removing the offending text rather than annotating it — verified against the committed file rather than against the proposal's account of itself. (a) **UX-PB.1b** now offers only AD-17's fail-to-empty branch — "the draft is session-scoped and never written to disk, so membership is never reconstructed, never partially restored, and never fabricated". (b) **UX-PB.1c** restates the seed as a frozen bulk expansion carrying `Bulk { scope: Everything }` provenance and the removal as a tombstone, ending "no whole-intent `kind` is stored or converted"; `AllEligible` now survives in `epics.md` exactly once, as that negation. (c) **UX-PB.4d** names AD-24's derived `RetryIntent` explicitly, "without ever writing to, merging with, or emptying the one persistent draft". (d) all four **native-harness** locations cite AD-26, and none still calls the harness simply Deferred. (e) **UX-PB.5b** states AD-22's admit-then-persist ordering and gains the rejected-admission case. (f) both **accessibility** passages are corrected. (g) **UX-PB.4b** carries an explicit carve-out for the non-executing Retry affordance. Three follow-ups landed with them: AD-25 went from zero citations to four, Story 3.2 was restored to the surviving-story list, and the design-token blocker row was added. Every live `AD` id as of that commit is cited at least once; AD-7/8/9/14 appear nowhere, and AD-6/10/13/15 only inside the retired-id collision block. **AD-27 is the exception, and unavoidably so** — this revision created it after the batch landed, so `epics.md` cannot yet cite it; that is tracked as a residual below rather than counted as a failure of the batch. Residuals are tracked in their own row. |
+| `epics.md` retired register | **RESOLVED** | Reconciled 2026-07-25 under `sprint-change-proposal-2026-07-25.md`. TIR-1..TIR-8, RE-1..RE-11, ASR-01..ASR-05, the register's own AD-1..AD-15, the 72-criterion controls, the Candidate Identity Manifest, the Evidence Registrar, `contracts/readiness/v1/contract-lock.json`, and the `contracts/tauri-boundary/v1.json` set-equality requirement appear only as retirement records. No `AD-n` id in `epics.md` asserts a rule differing from this spine's under that id, and every live `AD` id is cited there. The `R-001`..`R-008` register was retired with them — its ids were defined only in archived gate artifacts and its `Required mitigation` column *was* the retired machinery, so asserting it survived re-imported ASR-01 set-equality and D32's dropped physical-Intel obligation by reference. |
+| `epics.md` residuals for the next `bmad-correct-course` run | **OPEN — record only; do not edit `epics.md` here** | Five items, in three classes. **Left by the revision-8 batch:** (1) **UX-PB.3d cites AD-25 but never states it** — its Dependencies line carries AD-25, yet its verification-failure criterion says only that the item "stays `Verifying` until it resolves, then reports verification failure with its evidence, and is never colored successful on the strength of the exit code alone". AD-25's rule for that path — a failed or timed-out verification *leaves the Last-good Snapshot in place* — appears nowhere the builder reads. (2) **AD-21's substance never reaches criterion text**, surviving only as a parenthetical on UX-PB.5b's Dependencies line, while AD-22's and AD-23's substance *is* restated in criterion prose. **Created by this revision's own closures — the more urgent class, because these now contradict rows above:** (3) `epics.md`'s Implementation-Entry register still lists the canonical design-token set as `OPEN` and **"Blocks UX-PB.1e and UX-PB.5d"**, which D35 closed; those two stories are unblocked and `epics.md` says otherwise. (4) the same register still records the `notarytool minos 15.0` question as OPEN, which D34 closed. (5) **AD-27 is cited nowhere**, because this revision created it — every story that renders a control needs it on its Dependencies line, and per the spine's own standing instruction the citation is by `AD` id and subject, never by rule ordinal. Both cite this spine by **line number**, and those citations have already drifted — the same positional-reference failure this run folder has now hit three times (rule ordinals, `epics.md` line numbers, and now spine line numbers). The next correct-course run should repoint them to `AD` ids and row titles, never line numbers. |
+| Transient selection has no owning invariant | **OPEN — new architecture, not this run's scope** | Surfaced by `reviews/review-divergence-v9.md` C-1 and judged real. No `AD` models the relationship between transient row selection and `PlanIntent` membership, and the two driving sources answer it oppositely: `docs/SPEC.md` F5 has Esc "clears the transient selection", while `EXPERIENCE.md` has selection "immediately adds/removes Upgrade Plan membership". `src/store/packages.ts` ships a live `selection` set that `PlanIntent` cannot represent. Under the `EXPERIENCE.md` reading, Esc would mass-write AD-23 tombstones; under the `SPEC.md` reading it writes nothing. Story 3.5 (keyboard selection) and UX-PB.1a (staging) can each obey every existing `AD` and still build opposite models. Closing this means writing a new invariant, which is new architecture rather than the reconciliation this run was authorized for — so it goes to the owner as a decision. |
+| Plan-attempt journal: writer identity and record cardinality | **OPEN — new architecture, not this run's scope** | Surfaced by `reviews/review-divergence-v9.md` C-6. AD-18 fixes the journal's *home*, format, and durability discipline but names no single writer and no record cardinality per attempt. UX-PB.3d and UX-PB.4a both own a terminal durable write, and append-only NDJSON guarantees at least two records for one attempt with no stated fold rule, so History could replay an attempt twice or replay a superseded record as current. Same disposition as the row above: it needs a new invariant, not a reworded one. |
+| Focus-indicator remediation | **RESOLVED** | Closed 2026-07-25 by commit `22ed41e`, which landed while this revision was being written — the row is kept rather than deleted because it records why AD-11's focus-paint rule exists. Every focus site now draws with `outline` plus `outline-offset`: 31 sites, with zero `ring-focus-ring`, zero `ring-offset-*`, and zero `outline-none` remaining, and exactly one `ring-accent` survivor at `src/components/manager/PackageRow.tsx` — the cross-manager navigation highlight, which is deliberately not a focus state. Verified across both engines: vitest 134/134, `tsc --noEmit` clean, Playwright 14/14 including the WebKit case that previously failed. It closes both accessibility entries in `_bmad-output/implementation-artifacts/deferred-work.md` rather than deferring them. **One number in this row was wrong before the fix and is worth keeping:** the defect was first reported as three controls rendering no focus indicator; a runtime audit of the real tab order found **nine**. The six extra were invisible to `grep` because the defect is the *absence* of a class, which no text search can find — corroborated by the site count going from 22 to 31. That is the same sample-versus-population failure AD-11's second new rule names, arriving a second time by a different route, and it is why that rule says an element gaining an affordance is verified by the story that adds it. |

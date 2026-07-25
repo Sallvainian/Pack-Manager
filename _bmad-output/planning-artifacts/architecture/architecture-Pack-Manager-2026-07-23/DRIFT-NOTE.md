@@ -1,11 +1,12 @@
-# Drift note — ARCHITECTURE-SPINE.md revision 3 → 8
+# Drift note — ARCHITECTURE-SPINE.md revision 3 → 9
 
 **Date:** 2026-07-25 · **Intent:** update · **Run folder:** this directory ·
-**Memlog:** `.memlog.md` (136 entries by `grep -c '^- ('`; entry 86 opens the
-revision 7 run and entry 103 opens revision 8, so 86–102 are revision 7 and
-103–136 are revision 8) · **Reviews:** `reviews/` — six lenses against
-revision 4, four `*-v6.md` lenses against revision 6, four `*-v8.md` lenses
-against revision 8
+**Memlog:** `.memlog.md` (148 entries by `grep -c '^- ('`; entry 86 opens the
+revision 7 run, entry 103 opens revision 8, and entry 137 opens revision 9, so
+86–102 are revision 7, 103–136 are revision 8, and 137–148 are revision 9) ·
+**Reviews:** `reviews/` — six lenses against revision 4, four `*-v6.md` lenses
+against revision 6, four `*-v8.md` lenses against revision 8, four `*-v9.md`
+lenses against revision 9
 
 Why this file exists: revision 3 removed most of the readiness-gate apparatus
 `docs/DECISIONS.md` D33 retired, but left enough behind that a builder following
@@ -476,14 +477,22 @@ Both were taken, but only one was the shape the owner described.
 ### What revision 8 did NOT do
 
 `epics.md` was not touched, by owner instruction — a single `bmad-correct-course`
-run will batch it after this revision lands. Five divergences are recorded for it in
-the spine's Decision Status table rather than fixed here: UX-PB.1b's crash/relaunch
-criterion (carried from revision 7), UX-PB.1c's `AllEligible` → `Explicit`
-conversion criterion (which AD-23 removes the mechanism for, though the observable
-outcome survives), UX-PB.4d's "a new reviewable draft" (which must be read as AD-24's
-derived intent, and currently rests the whole distinction on an indefinite article),
-Story 6.5's test level and the register row that still cites only AD-2 and AD-3, and
-UX-PB.5b's missing rejected-admission case.
+run will batch it after this revision lands. **Seven** divergences are recorded for it
+in the spine's Decision Status table rather than fixed here: UX-PB.1b's crash/relaunch
+criterion (carried from revision 7), UX-PB.1c's `AllEligible` seed *and* `Explicit`
+conversion criteria (AD-16 already forbade the live-predicate seed, and AD-23 removes
+the mechanism the conversion names, though the observable outcome survives), UX-PB.4d's
+"a new reviewable draft" (which must be read as AD-24's derived intent, and currently
+rests the whole distinction on an indefinite article), Story 6.5's register row and
+three further locations that still cite only AD-2 and AD-3, UX-PB.5b's criterion
+stating the *reverse* of AD-22's ordering, the accessibility claim in two places, and
+UX-PB.4b ↔ UX-PB.4d contradicting each other on Retry from History.
+
+*(This paragraph said "Five" until revision 9. The batch was extended to six by the
+reconcile lens and to seven by the verification pass — memlog entries 135 and 142 —
+and the count here was never brought forward. Corrected as a record-accuracy fix, the
+same class as the stale entry count and the rotted line citations before it. All seven
+were applied in commit `8d36cdf`; see section 2f.)*
 
 Still open and untouched: the app-update safety guard has no stated enforcement point
 while the shipping `install_app_update` has no Rust guard (rubric H4), and the
@@ -580,3 +589,186 @@ perturbs the still-open `notarytool minos 15.0` residual, since a newer image sh
 newer SDK.
 
 AD ids unchanged. Nothing was renumbered or retired in this revision.
+
+---
+
+## 2f. Revision 9 — five Open rows close, and one invariant comes out of a shipped defect
+
+Revision 9 is a **reconciliation pass, not new architecture.** Revisions 7 and 8
+recorded work the spine could not do itself and handed it to other runs; four of those
+runs landed on 2026-07-25, and this revision folds the results back in. The governing
+discipline was that **every closure is verified against the committed tree, not against
+the report of it** — each item below was checked by reading the files and the commits,
+and in two cases the check changed what was written.
+
+### What closed, and what proved it
+
+| Row | Closed by | What was actually verified |
+| --- | --- | --- |
+| `macos-14` runner retirement | `419dc32`, `docs/DECISIONS.md` D34 | All three pins read `runs-on: macos-15` — `ci.yml` `rust`, `ci.yml` `build-smoke`, `release.yml` `build`. No `runs-on` in `.github/workflows/` names `macos-14`. |
+| Minimum supported macOS (residual) | D34 | D34 states the closure in its own words: on `macos-15` "the build SDK is no longer behind the declared 15.0 floor, so the mismatch that question was about no longer exists." |
+| Canonical design-token set | `be1f0e6`, D35 | `theme.css` carries `DESIGN.md`'s values, and the token whose absence was half the conflict now exists as `--color-focus-ring`. |
+| App-update safety guard enforcement point | `7cc7b5f` | `install_app_update` calls `refuse_app_update_while_busy` before acting, and its refusal set matches `activeOps` in `src/store/operations.ts` exactly. Open since revision 6 (rubric H4). |
+| `epics.md` divergence batch | `8d36cdf` | All seven items verified individually against the committed file. Each landed by *removing* the offending text: `AllEligible` now appears once, as a negation, and "reconstructed into the sidecar" appears zero times. |
+
+### The one new invariant, and why it is one
+
+`tokens-dev` found — and it was confirmed by driving both engines — that **WKWebView
+does not paint `box-shadow` on a control still rendering with its native
+appearance.** The discriminator is `appearance`, not the element and not the property:
+the same Tailwind `ring-*` utility paints correctly on a `button` and not at all on a
+checkbox. Tailwind's `ring-*` compiles to `box-shadow`. Tauri ships WKWebView. So the
+dedicated focus ring D35 had just adopted was **invisible on all six native checkboxes
+in the shipping app**, including the package-row plan-membership control.
+
+The reason this is an invariant and not a bug report is what the test lane was doing
+while it happened. `tests/e2e/browser-style-contract.spec.ts` asserts focus on a
+`button` — `page.getByRole("button", …)`, then `expect(focusTreatment.boxShadow).not.toBe("none")`.
+WebKit *does* paint `box-shadow` on a button. So the suite ran green on both engines
+while the checkboxes had no focus state at all: **the lane's sample did not represent
+its population.** That is precisely the limit AD-3 already states for the contract
+fixtures and the browser double, and nothing had generalized it to the style lane.
+
+Two rules were added to AD-11 rather than a new `AD`, because they complete a rule
+AD-11 already owned:
+
+1. **The focus indicator must be drawn by a mechanism the shipping engine actually
+   paints, and proven in WebKit rather than Chromium alone.** The rule names
+   `appearance` as the discriminator rather than listing affected elements, because a
+   rule pinned to "checkbox, radio, select" silently fails on the next native-appearance
+   control someone adds, and a rule pinned to "box-shadow" would forbid the button ring
+   that demonstrably works. `outline` with `outline-offset` is named as what satisfies
+   it everywhere; the requirement is deliberately stated as *painted where the user runs
+   it* rather than as a CSS property — see below.
+2. **The style-contract lane asserts the values a focus indicator resolves to *where
+   one already exists*.** It does not assert that an element has one, does not assert
+   offset, does not measure contrast. No story may read a green run as evidence of
+   those three.
+
+### Why rule 1 is phrased the way it is
+
+This is the **third** time AD-11's accessibility rule has been rewritten. Revision 5
+corrected a false present-tense claim that both automated checks existed. Revision 8
+corrected the overcorrection that neither did. Both failures were the same shape: a
+rule pinned to a *state of the tree* rather than to a *decision*, written at a moment
+when that state was about to change.
+
+The remediation — converting every focus site from `ring-*` to `outline` and giving
+the three indicator-less controls one — was **in the working tree and uncommitted**
+while this revision was being written. A rule reading "focus is an outline" would have
+been a false present tense the moment it was typed, for the third time. So the rule
+states the durable requirement and names the current mechanism as an example of
+satisfying it, and the conversion itself is tracked as an Open row that says plainly
+it is not committed yet.
+
+The same discipline applied to the runner rule: AD-11 now fixes **"a named stable
+runner image, never `macos-latest`"** as the invariant, with `macos-15` as its current
+value. Pinning the image *name* as the invariant is what made the row go stale the
+first time.
+
+### What revision 9 did NOT do
+
+`epics.md` was not edited — the owner's instruction stood, and it was the right one,
+since a `bmad-correct-course` run committed the reconciliation independently while this
+revision was in progress. **Two residuals the batch left are recorded as a new Open
+row rather than fixed**: UX-PB.3d cites AD-25 but its verification-failure criterion
+never states the snapshot-preservation rule the citation points at, and AD-21's
+substance reaches only a parenthetical on UX-PB.5b's Dependencies line, never criterion
+prose. Both are for the next correct-course run.
+
+Two source documents are left knowingly inconsistent, because they are not this
+spine's to edit. `docs/DECISIONS.md` D31 still reads "CI therefore stays on `macos-14`"
+and still carries its OPEN `notarytool` paragraph — D34 supersedes rather than rewrites
+it, so the spine records that and cites D34 for the closure, never D31 alone. And
+`docs/development-guide.md`, `docs/index.md`, and `_bmad-output/project-context.md`
+all still say `macos-14`; those are generated workflow output needing a regeneration
+pass, and the spine's row says explicitly that they are **not** evidence the question
+reopened.
+
+AD ids unchanged. Nothing was renumbered or retired in this revision.
+
+### The revision 9 reviewer gate
+
+Four lenses ran — rubric walker, currency/reality, adversarial divergence, input
+reconciliation. Rubric verdict: **READY WITH FIXES**. Taking each lens's own tally:
+rubric 1/5/7/5, currency 0/2/5/2, divergence 6/8/9/4, reconcile 2/5/7/4 —
+**9 CRITICAL, 20 HIGH, 28 MEDIUM, 15 LOW**. Currency checked 138 claims and verified
+130 exactly.
+
+**Every CRITICAL was in revision 9's own new material**, not in the inputs — the same
+pattern as revision 8. Two of them were the substance of this revision, and both were
+mine:
+
+1. **The new rules bound nobody who could violate them.** All four lenses found this
+   independently. AD-11 reads `Binds: release`, and the Capability Map routed it to the
+   release row only, so the focus rules were invisible to UX-PB.1e and UX-PB.5d — the
+   two stories this very revision declared unblocked. The divergence lens confirmed by
+   `grep` that no story cites AD-11 at all. All four proposed the same remedy
+   independently, and it is the one taken: **AD-27**, bound to every story that renders
+   a control, plus a Capability Map row of its own and AD-27 added to all six UI rows.
+
+   I flagged this exact risk to the owner *before* the gate ran and then let
+   amend-in-place stand anyway. The owner had ratified amend-in-place for the
+   coverage-claim half, which was right; I over-applied it to the mechanism half, which
+   is a frontend invariant with no business under a release AD.
+
+2. **The rule was weaker than the decision it should have ratified.** Three lenses.
+   I wrote that the requirement is "not that any particular property is used" and
+   offered `appearance: none` as an escape route. `docs/DECISIONS.md` D35 mandates
+   "One mechanism, `outline` + `outline-offset`, everywhere" and rejects
+   `appearance: none` **by name** — it destroys the native checkmark. `docs/SPEC.md`
+   §4.1 adds "Never add `outline-none`". D35's stated reason for uniformity is the
+   argument I had talked past: a scoped rule "is a trap — the next person adding a
+   checkbox copies the `ring-` from its neighbour."
+
+   The lesson is that **durability and convergence are different axes.** Pinning a rule
+   to a *snapshot of the tree* is what made AD-11 wrong in revisions 5 and 8. Pinning it
+   to a *decision* is not the same mistake, and D35 is a decision. Optimizing against
+   the first failure walked me into its opposite.
+
+Also applied: **"proven in WebKit" was not what I claimed** (all four lenses) —
+`test.yml` runs every job on `ubuntu-latest`, so the `webkit` project is Playwright's
+Linux build, not WKWebView, and native form-control painting is exactly where WebKit
+ports diverge. AD-3 and AD-26 already refuse this substitution for the browser double
+and the fixtures; my rule licensed it. AD-27 now says so and leaves real-WKWebView
+verification on the manual checklist. The currency lens also *strengthened* the
+mechanism claim: WebKit discards the `box-shadow` declaration at style resolution
+rather than merely failing to paint it, so computed style reads a literal `"none"` —
+which is what makes AD-27's named-sample assertion enforceable rather than aspirational.
+
+And **AD-26 had a paraphrase inside quotation marks** — "requires a paid API key for
+macOS" where the source says "a paid API key is required for macOS". Re-verified
+against the live file this run. This is the same failure the currency lens caught in
+revision 8, recurring in a throwaway clause, which is the argument for checking every
+quotation rather than only the load-bearing ones.
+
+### What revision 9 recorded rather than decided
+
+Two CRITICALs from the divergence lens are **real and are not fixed here**, because
+closing them means writing new invariants — new architecture, not the reconciliation
+this run was authorized for. Both have their own Open row:
+
+- **Transient selection has no owning invariant.** `docs/SPEC.md` F5 says Esc "clears
+  the transient selection"; `EXPERIENCE.md` says selection "immediately adds/removes
+  Upgrade Plan membership". `src/store/packages.ts` ships a live `selection` set that
+  `PlanIntent` cannot represent. Under one reading Esc mass-writes AD-23 tombstones;
+  under the other it writes nothing. Story 3.5 and UX-PB.1a can each obey every `AD`
+  and build opposite models.
+- **AD-18 fixes the journal's home but not its writer or record cardinality.**
+  UX-PB.3d and UX-PB.4a both own a terminal durable write, append-only NDJSON
+  guarantees at least two records per attempt, and no fold rule exists.
+
+The `epics.md` residuals row also grew from two items to **four**, and the two new ones
+are a different class: this revision's own closures made `epics.md` contradict the
+spine. Its register still lists the design-token set as `OPEN` and "**Blocks UX-PB.1e
+and UX-PB.5d**", and still carries the `notarytool` question as open — both closed
+above. A closure that silently invalidates a downstream document is a divergence the
+closing run *creates*, so recording it is part of closing. Both citations point at
+spine **line numbers** and have already drifted: the third positional-reference failure
+in this run folder, after AD-16's rule ordinals and the `epics.md` line numbers.
+
+**One new `AD` this revision: AD-27.** AD-6..AD-10 and AD-13..AD-15 remain retired and
+were not reused; AD-27 is the next free id. Nothing was renumbered. Note that AD-27 is
+cited **nowhere** in `epics.md`, and unavoidably so — it was created after the
+reconciliation batch committed. That is the fifth item on the residuals row, not a gap
+in the batch.
