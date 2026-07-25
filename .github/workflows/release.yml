@@ -5,8 +5,13 @@ name: Release
 #
 # - Called by release-please.yml (the normal path): builds and attaches the
 #   artifacts to the GitHub Release release-please just published.
-# - Run manually (Actions -> Release -> Run workflow): builds and uploads the
-#   artifacts to the workflow run only; never touches a Release. Use to test.
+# - Run manually (Actions -> Release -> Run workflow) with attach_to_tag EMPTY:
+#   builds and uploads the artifacts to the workflow run only; never touches a
+#   Release. Use to test.
+# - Run manually with attach_to_tag set to an existing tag: repairs a release
+#   whose build failed after release-please already cut the tag. The workflow
+#   logic comes from the dispatched ref, but the SOURCE is checked out at the
+#   tag, so the rebuilt artifacts match what that version actually shipped.
 #
 # Signing/notarization degrade gracefully when the secrets are absent (e.g. on
 # a fork): the build stays unsigned and un-notarized, and the job still
@@ -34,6 +39,12 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      attach_to_tag:
+        description: 'Attach the build to this existing release tag (e.g. v1.0.0). Leave EMPTY to test — an empty value publishes nothing.'
+        type: string
+        required: false
+        default: ''
   workflow_call:
     inputs:
       attach_to_tag:
@@ -290,10 +301,21 @@ jobs:
           # client then fails verification and stops updating. app_update.rs
           # logs that failure at WARN so offline laptops do not nag every six
           # hours, which means nobody is ever told.
+          #
+          # Trap: Tauri writes <file>.sig as BASE64 OF THE ENTIRE minisign
+          # signature file, not as the signature file itself. latest.json
+          # carries that wrapper verbatim (see SIGNATURE below) because
+          # tauri-plugin-updater base64-decodes it client-side. minisign's -x
+          # expects a real .minisig, so handing it the wrapper makes it read
+          # the single base64 line as a comment and die with "Untrusted
+          # signature comment too long" — which is exactly how v1.0.0 shipped
+          # with zero assets. Decode before verifying; keep latest.json on the
+          # undecoded blob.
+          base64 -d < "$UPDATER_TGZ.sig" > "$RUNNER_TEMP/updater.minisig"
           jq -r '.plugins.updater.pubkey' src-tauri/tauri.conf.json | base64 -d > "$RUNNER_TEMP/updater.pub"
           brew list minisign >/dev/null 2>&1 || brew install minisign
           command -v minisign >/dev/null || { echo "::error::minisign unavailable"; exit 1; }
-          minisign -V -p "$RUNNER_TEMP/updater.pub" -x "$UPDATER_TGZ.sig" -m "$UPDATER_TGZ" \
+          minisign -V -p "$RUNNER_TEMP/updater.pub" -x "$RUNNER_TEMP/updater.minisig" -m "$UPDATER_TGZ" \
             || { echo "::error::updater signature does not verify against the configured pubkey"; exit 1; }
 
           # latest.json — the updater endpoint. Both darwin targets point at
