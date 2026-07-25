@@ -4,11 +4,13 @@ export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md";
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: "bg-accent text-white hover:bg-accent-hover disabled:bg-accent/40",
+  primary: "bg-accent text-on-accent hover:bg-accent-hover disabled:bg-accent/40",
   secondary:
     "bg-bg-raised text-text-primary border border-border-strong hover:bg-bg-overlay disabled:opacity-50",
   ghost: "bg-transparent text-text-secondary hover:bg-bg-raised hover:text-text-primary disabled:opacity-40",
-  danger: "bg-danger text-white hover:brightness-110 disabled:opacity-50",
+  // --color-on-accent is the palette's dark ink for bright fills; on --color-danger
+  // it measures 8.30:1. White measured 2.30:1 here and failed the 4.5:1 floor.
+  danger: "bg-danger text-on-accent hover:brightness-110 disabled:opacity-50",
 };
 
 const SIZES: Record<ButtonSize, string> = {

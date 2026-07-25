@@ -60,7 +60,7 @@ export function UpdateStatusItem() {
         type="button"
         onClick={install}
         title={state.notes ?? undefined}
-        className={`${CHIP} bg-accent text-white hover:bg-accent-hover`}
+        className={`${CHIP} bg-accent text-on-accent hover:bg-accent-hover`}
       >
         ↑ Restart to update {state.version}
       </button>

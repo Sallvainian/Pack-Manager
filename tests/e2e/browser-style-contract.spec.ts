@@ -222,4 +222,102 @@ test.describe("browser-rendered style contract", () => {
       expect(focus.outlineColor).not.toBe("rgb(23, 42, 70)");
     });
   });
+
+  test("[P0] paints bright accent fills with ink that clears the 4.5:1 contrast floor", async ({
+    page,
+    factories,
+    tauriIpc,
+  }) => {
+    const gemini = factories.createPackage({
+      id: "globalPackage:@google/gemini-cli",
+      name: "@google/gemini-cli",
+      kind: "globalPackage",
+      installed: "0.2.0",
+      latest: "0.3.0",
+      outdated: true,
+      pinned: false,
+    });
+    const npm = factories.createManagerInfo({
+      id: "npm",
+      displayName: "npm",
+      status: "present",
+      binaryPath: "/test/bin/npm",
+      canonicalPath: "/test/bin/npm",
+      version: "11.0.0",
+      managedBy: "standalone",
+      selfUpdate: {
+        kind: "inBand",
+        commandPreview: "npm install -g npm@latest",
+      },
+    });
+    const appState = factories.createAppState({
+      detection: factories.createDetectionReport({ managers: [npm] }),
+      snapshots: [
+        factories.createManagerSnapshot({
+          managerId: "npm",
+          packages: [gemini],
+          selfStatus: {
+            installed: "11.0.0",
+            latest: "11.0.0",
+            updateAvailable: false,
+          },
+          health: [],
+        }),
+      ],
+      operations: [],
+      settings: factories.createSettings({ autoRefreshOnLaunch: false }),
+    });
+
+    await test.step("Given one outdated package, so the primary action is enabled", async () => {
+      await givenPackManagerState(tauriIpc, appState);
+      await openPackManager(page);
+      const pm = createPackManagerPage(page);
+      await expect(pm.dashboardHeading).toBeVisible();
+    });
+
+    await test.step("Then the enabled primary button measures at or above 4.5:1", async () => {
+      const updateEverything = page.getByRole("button", {
+        name: /^Update Everything \(/,
+      });
+      await expect(updateEverything).toBeEnabled();
+
+      const measured = await updateEverything.evaluate((el) => {
+        const channels = (value: string): number[] => {
+          const parts = value.match(/-?\d+(\.\d+)?/g);
+          return parts ? parts.slice(0, 3).map(Number) : [0, 0, 0];
+        };
+        // WCAG 2.1 relative luminance, then the (L1+0.05)/(L2+0.05) ratio.
+        const luminance = (rgb: number[]): number => {
+          const linear = (raw: number): number => {
+            const c = raw / 255;
+            return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+          };
+          return (
+            0.2126 * linear(rgb[0]) +
+            0.7152 * linear(rgb[1]) +
+            0.0722 * linear(rgb[2])
+          );
+        };
+        const style = window.getComputedStyle(el);
+        const [lighter, darker] = [
+          luminance(channels(style.color)),
+          luminance(channels(style.backgroundColor)),
+        ].sort((a, b) => b - a);
+        return {
+          color: style.color,
+          backgroundColor: style.backgroundColor,
+          ratio: (lighter + 0.05) / (darker + 0.05),
+        };
+      });
+
+      // --color-accent #65A7FF filled with --color-on-accent #07101D.
+      expect(measured.backgroundColor).toBe("rgb(101, 167, 255)");
+      expect(measured.color).toBe("rgb(7, 16, 29)");
+      // The regression this guards: text-white on this fill measures 2.46:1.
+      // The on-accent/on-success tokens exist precisely to prevent it, and
+      // release-time contrast is otherwise a by-eye check that missed it.
+      expect(measured.color).not.toBe("rgb(255, 255, 255)");
+      expect(measured.ratio).toBeGreaterThanOrEqual(4.5);
+    });
+  });
 });
