@@ -241,3 +241,125 @@ inventing prompt meaning from arbitrary output.
 **Supersedes:** D18's flat Manager navigation and drawer-only Activity model.
 D13 remains valid for immediate cancellation mechanics, but the primary
 user-facing action is now `Cancel plan` when the whole attempt is affected.
+
+## D31. Minimum supported macOS is 15.0
+
+Resolved 2026-07-24 through the approved Correct Course proposal. Closes
+`DR-1` ("Minimum supported macOS version — OPEN, implementation-entry
+blocker"), which lived in the retired PRD gate-governance register.
+
+`src-tauri/tauri.conf.json` now declares `bundle.macOS.minimumSystemVersion`
+= `"15.0"`. Until now the repo declared no floor anywhere and inherited
+Tauri's documented default of `10.13`. That is why shipped v0.2.9 carries
+`LSMinimumSystemVersion 10.13` while its arm64 slice is compiled `minos
+11.0` — arm64 macOS did not exist before Big Sur, so 11.0 is a hard rustc
+floor and every universal Tauri build on defaults produces this same split.
+Declaring the floor replaces an inherited default nobody chose with a chosen
+one, and removes the plist/binary inconsistency regardless of value.
+
+15.0 clears the arm64 11.0 clamp and, as of 2026-07, sits inside Apple's
+security-update window and is Homebrew Tier 1 — which matters because this
+app is primarily a Homebrew GUI. Both are external vendor facts, sourced from
+documentation rather than this repo, and both will age. The floor moves when
+Apple drops security support for it, not on a fixed schedule.
+
+A deployment target above the build SDK is a floor annotation, not an SDK
+requirement: measured `rc=0` with the expected `minos` for targets 15.0,
+26.0, and 30.0 against SDK 27.0, via both clang and rustc. CI therefore stays
+on `macos-14`.
+
+**One question remains OPEN at the time of writing:** whether `notarytool`
+accepts `minos 15.0` against SDK 14.5. Nothing here asserts that it does. It
+is settled by a manual Release workflow run — which builds, signs, and
+notarizes, and uploads to the workflow run only, never touching a GitHub
+Release. If notarization rejects the floor, this record changes rather than
+the pipeline absorbing a surprise later.
+
+**Rejected:** leaving the floor undeclared (ships an inherited default and
+keeps the plist/binary mismatch); 11.0 (matches the arm64 clamp but sits
+outside Apple's security-update window).
+
+## D32. The universal build is retained; verification is Apple silicon only
+
+Resolved 2026-07-24 through the approved Correct Course proposal. Narrows
+`DR-3` ("Intel execution evidence — APPROVED"), which lived in the retired
+PRD gate-governance register.
+
+`release.yml` is unchanged. It continues to build `universal-apple-darwin`
+and to publish both `darwin-aarch64` and `darwin-x86_64` in `latest.json`,
+both pointing at the single universal archive. One archive, one signature,
+both keys already resolve against it — so retaining Intel costs nothing and
+strands nobody.
+
+What is dropped is the obligation to physically verify on Intel hardware.
+DR-3 required a physical Intel fresh-install, Finder/Dock launch, and
+prior-public-version update run, and held that universal-binary inspection
+could not substitute. The maintainer does not own an Intel Mac and does not
+intend to acquire one, so that obligation could never be discharged; it
+blocked 3 stories directly and 11 more transitively.
+
+The promise is narrowed to match what is actually verified: the release
+builds universal; verification is Apple silicon only. Intel remains
+best-effort and unverified.
+
+**Rejected:** dropping the x86_64 slice (the updater resolves its target from
+`cfg!(target_arch)`, so removing the `darwin-x86_64` key would strand any
+installed Intel user with no signal); keeping the physical-Intel requirement
+(unsatisfiable, and permanently blocking).
+
+## D33. The formal readiness gate is retired; the plan is rescoped
+
+Resolved 2026-07-24 through the approved Correct Course proposal. Dissolves
+`DR-4` ("P1 gate policy — PROPOSED, gate-approval blocker") and restates
+`DR-2` ("Packaged accessibility evidence — APPROVED"). Both lived in the
+retired PRD gate-governance register.
+
+Pack-Manager is a personal, open-source macOS utility, not a commercial
+product. Observable evidence: 1 star, 0 forks, 12 releases inside a 48-hour
+window, and 3 lifetime `.dmg` downloads. The other 27 of the 30 recorded
+downloads are the app's own updater traffic — 17 × `latest.json` polling and
+10 × `.app.tar.gz` payloads, both automatic under D25.
+
+The planning stack built for it did not match that reality. 83 planned
+stories split into 28 real product stories (the D27–D30 Upgrade Plan
+redesign) and 55 evidence-production stories carrying exactly one versioned
+scenario contract each — all 55 unassigned, against a `contracts/` directory
+that does not exist and that no story creates. The evidence schema bound even
+manual scenarios to GitHub Actions run provenance, which nothing in the plan
+provisioned.
+
+Retired: the 72-criterion P0 gate, all P0/P1/overall coverage percentages,
+the 55 scenario contracts, the evidence-manifest and candidate-freeze
+machinery, the multi-host environment requirements, and Epics 7–8. They are
+replaced by `docs/RELEASE-CHECKLIST.md` plus two automated checks added to
+`release.yml`: the updater's detached signature is verified against the
+public key the shipping app embeds, and the published `latest.json` is
+asserted reachable and coherent after upload.
+
+DR-2's substance survives without its gate framing. Automated 4.5:1 contrast
+and reduced-motion checks belong in the existing Playwright/Vitest lane; one
+manual VoiceOver pass joins the release checklist. Accessibility here is
+product quality, not evidence ceremony.
+
+One habit survives from the retired gate: before scheduling work described as
+a test gap, verify whether the behavior is already present in the shipping
+code. The Epics 1–6 triage found most of it was — an adversarial pass
+overturned 14 of 20 initial keeps for exactly that reason. That triage is
+recorded per story, with rationale and `epics.md` citations, in
+`_bmad-output/planning-artifacts/story-triage-2026-07-24.md`: 6 keep, 19
+merge, 12 retire across the 37 stories. Read it before rescheduling any of
+them.
+
+Retired planning artifacts are archived under
+`_bmad-output/archive/2026-07-24-scope-recalibration/`, not deleted.
+
+**Rejected:** completing the gate. Its two rules fail for different reasons,
+and conflating them obscures both. The legacy P1 rule fails by construction:
+5 of its 8 rows are declared out of scope, capping achievable coverage at
+3/8 = 37.5% against an 80% minimum, so no amount of work can pass it. The
+72-criterion P0 rule is achievable in principle — 100% of criteria you intend
+to deliver is just work — but discharging it requires the evidence
+infrastructure described above, which was never built and is disproportionate
+to a tool with 3 lifetime installs. Also rejected: leaving the gate documents
+in place as aspirational, since BMAD skill runs glob them back into the plan,
+re-entrenching what this record retires.
