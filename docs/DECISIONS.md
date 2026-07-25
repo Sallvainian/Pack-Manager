@@ -344,7 +344,11 @@ product quality, not evidence ceremony.
 One habit survives from the retired gate: before scheduling work described as
 a test gap, verify whether the behavior is already present in the shipping
 code. The Epics 1–6 triage found most of it was — an adversarial pass
-overturned 14 of 20 initial keeps for exactly that reason.
+overturned 14 of 20 initial keeps for exactly that reason. That triage is
+recorded per story, with rationale and `epics.md` citations, in
+`_bmad-output/planning-artifacts/story-triage-2026-07-24.md`: 6 keep, 19
+merge, 12 retire across the 37 stories. Read it before rescheduling any of
+them.
 
 Retired planning artifacts are archived under
 `_bmad-output/archive/2026-07-24-scope-recalibration/`, not deleted.

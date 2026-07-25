@@ -50,6 +50,8 @@
 # as evidence production for the retired readiness gate; most of the behavior
 # they describe is already implemented and tested in the shipping code.
 # 'backlog' here does NOT mean queued.
+# Per-story verdicts and rationale:
+#   _bmad-output/planning-artifacts/story-triage-2026-07-24.md
 #
 # NOTE ON epics 7-8: retired. Release readiness is docs/RELEASE-CHECKLIST.md
 # plus two automated checks in release.yml. See DECISIONS D33.
