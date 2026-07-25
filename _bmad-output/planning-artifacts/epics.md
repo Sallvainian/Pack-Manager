@@ -824,7 +824,7 @@ As a Pack-Manager user, I want each Package and Manager item to show its own hon
 ### Story UX-PB.3d: Verification-gated Results with outcome taxonomy
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.3c; D29-D30; AD-16 (verification-gated success; post-exit fresh acquisition); AD-18 (UX-PB.4a owns the single durable terminal write; this story renders Results and never writes the record); AD-25 (a failed verification refresh leaves the Last-good Snapshot in place); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** UX-PB.3c; D29-D30; AD-16 (verification-gated success; post-exit fresh acquisition); AD-18 (the plan-attempt journal's home, format and durability — note AD-18 does not itself name a writer or a record cardinality, so the terminal-write ownership below is stated here and belongs in AD-18 when it is next amended); UX-PB.4a owns the single durable terminal write and this story never writes one; AD-25 (a failed verification refresh leaves the Last-good Snapshot in place); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.3e, UX-PB.3g; Story 6.5
 
 As a Pack-Manager user, I want the plan to become Results only after affected state is verified so that success is earned, not assumed from a process exit.
@@ -846,7 +846,7 @@ As a Pack-Manager user, I want the plan to become Results only after affected st
 
 **Given** an attempt reaching terminal state (Results persistence failure)
 **When** the single durable terminal write owned by UX-PB.4a fails
-**Then** the failure to persist is surfaced honestly, the visible Results are not presented as durably recorded, and no fabricated success is shown. This story renders and announces Results; it never writes the durable record itself. Exactly one durable record exists per `planAttemptId` and UX-PB.4a writes it (AD-18) — a second write here would append a duplicate to an append-only journal with no rule for which record is authoritative.
+**Then** the failure to persist is surfaced honestly, the visible Results are not presented as durably recorded, and no fabricated success is shown. This story renders and announces Results; it never writes a durable record itself. An attempt accumulates several append-only records — UX-PB.2c writes the admission record at mint — but exactly one **terminal** record exists per `planAttemptId` and UX-PB.4a writes it, folding the attempt's records into the single immutable History row. A second terminal write here would append a duplicate with no rule for which record is authoritative.
 
 ### Story UX-PB.3e: Failure guidance and safe next step before Retry
 
@@ -932,6 +932,11 @@ As a Pack-Manager user, I want each plan I confirm to become exactly one immutab
 **Given** a confirmed attempt was admitted but the app crashed or relaunched before the attempt reached a terminal row
 **When** History reconciles on the next launch
 **Then** the in-flight attempt is reconciled from its durable `planAttemptId` records into one honest row, an attempt that never reached terminal is shown as interrupted, and no completed outcome is fabricated for work that did not finish.
+
+**Given** an attempt whose admission record is present but whose terminal record is absent, unparseable, or skipped by the read (AD-19)
+**When** History folds that `planAttemptId`'s records into its row
+**Then** the row is presented as `Interrupted` **only when the absence is genuine** — a terminal record that exists but failed to parse is reported as unreadable evidence rather than silently reclassifying a finished attempt as unfinished, and the fold states which it was.
+**And** the direction holds both ways: a missing terminal record never fabricates a completed outcome, and an unreadable one never erases a completed attempt.
 
 ### Story UX-PB.4b: Read-only Activity replay of a History row
 
