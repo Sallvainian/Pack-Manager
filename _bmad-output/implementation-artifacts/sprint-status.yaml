@@ -1,0 +1,173 @@
+# generated: 2026-07-24T16:47:19
+# last_updated: 2026-07-24T16:47:19
+# project: Pack-Manager
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: {project-root}/_bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog -> in-progress: Automatically when first story is created (via create-story)
+#   - in-progress -> done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; sprint-status surfaces open ones
+#
+# NOTE ON ux-pb: The 'Product Behavior Prerequisite' (UX-PB) is approved product
+# work that must complete before affected Stories in Epics 3-7 can enter evidence
+# implementation. It is tracked here as group 'epic-ux-pb' so all 28 sub-stories
+# are visible; the epics.md notes it is not a ninth closure batch.
+
+generated: 2026-07-24T16:47:19
+last_updated: 2026-07-24T16:47:19
+project: Pack-Manager
+project_key: NOKEY
+tracking_system: file-system
+story_location: "{project-root}/_bmad-output/implementation-artifacts"
+
+development_status:
+  # epic-ux-pb: Product Behavior Prerequisite (UX-PB): Finalize the Upgrade Plan lifecycle
+  epic-ux-pb: backlog
+  ux-pb-1a-persistent-draft-domain-with-single-entry-membership-and-rust-rebuild: backlog
+  ux-pb-1b-sidecar-lifecycle-and-navigation-persistent-visibility: backlog
+  ux-pb-1c-remaining-draft-entry-points-as-independent-removable-items: backlog
+  ux-pb-1d-ineligible-control-inertness-with-keyboard-pointer-and-voiceover-explanation: backlog
+  ux-pb-1e-standardized-manager-workspace-presentation: backlog
+  ux-pb-2a-distinct-one-use-preview-planid-and-durable-planattemptid-identity-types: backlog
+  ux-pb-2b-atomic-admission-mints-one-planattemptid-and-fails-a-second-attempt-closed: backlog
+  ux-pb-2c-persist-reviewed-intent-and-the-exact-command-snapshot-durably: backlog
+  ux-pb-2d-correlate-every-operation-event-and-durable-record-by-planattemptid: backlog
+  ux-pb-2e-plan-level-cancellation-that-skips-unstarted-work-and-escalates-running-process-groups: backlog
+  ux-pb-2f-keep-legacy-operations-honest-without-inferred-plan-grouping: backlog
+  ux-pb-3a-confirmed-sidecar-as-the-single-active-plan-summary: backlog
+  ux-pb-3b-full-activity-as-detailed-view-of-the-same-attempt: backlog
+  ux-pb-3c-per-item-live-progress-states: backlog
+  ux-pb-3d-verification-gated-results-with-outcome-taxonomy: backlog
+  ux-pb-3e-failure-guidance-and-safe-next-step-before-retry: backlog
+  ux-pb-3f-trusted-interaction-required-classifier: backlog
+  ux-pb-3g-two-labeled-cancellation-scopes: backlog
+  ux-pb-4a-one-immutable-history-row-per-confirmed-attempt: backlog
+  ux-pb-4b-read-only-activity-replay-of-a-history-row: backlog
+  ux-pb-4c-live-and-replay-coexistence-with-the-live-attempt-primary: backlog
+  ux-pb-4d-retry-scope-preview-and-linked-new-attempt: backlog
+  ux-pb-4e-legacy-operation-history-honest-labeling: backlog
+  ux-pb-5a-separate-final-confirmation-gate-with-the-confirm-n-updates-action-and-proceed-with-upgrade-plan-dialog: backlog
+  ux-pb-5b-dialog-only-disable-control-with-atomic-skipupgradeplanconfirmation-persistence-and-settings-migration: backlog
+  ux-pb-5c-confirmation-disabled-bypass-with-expanded-commands-and-native-rebuild-stale-validation-gated-run: backlog
+  ux-pb-5d-accessibility-and-responsiveness-of-the-confirmation-and-safety-surfaces: backlog
+  ux-pb-5e-application-update-presentation-kept-separate-from-package-plans-and-history: backlog
+  epic-ux-pb-retrospective: optional
+
+  # epic-1: Restore Trustworthy mas and Target-Mac Truth
+  epic-1: backlog
+  1-1-restore-current-mas-and-release-truth: backlog
+  1-2-qualify-the-initial-split-evidence-lanes: backlog
+  1-3-verify-the-live-six-manager-target-mac-topology: backlog
+  1-4-capture-the-real-mas-correctness-oracle: backlog
+  1-5-enforce-mas-provenance-and-fixture-honesty: backlog
+  epic-1-retrospective: optional
+
+  # epic-2: Make Detection and Refresh Fail Independently and Recover Usefully
+  epic-2: backlog
+  2-1-preserve-honest-absence-and-complete-environment-evidence: backlog
+  2-2-prove-refresh-phases-and-per-manager-timeouts: backlog
+  2-3-keep-offline-failures-isolated: backlog
+  2-4-revalidate-stable-detection-and-refresh-state-truth: backlog
+  epic-2-retrospective: optional
+
+  # epic-3: Keep Package Choice, Plans, and Settings Exact and Understandable
+  epic-3: backlog
+  3-1-present-complete-package-state-and-manager-detail: backlog
+  3-2-enforce-pinned-and-greedy-eligibility: backlog
+  3-3-build-plans-from-every-user-entry-point: backlog
+  3-4-validate-every-settings-control-and-environment-report: backlog
+  3-5-preserve-exact-keyboard-selection-and-row-plan-actions: backlog
+  3-6-revalidate-version-truth-mise-consequences-and-plan-defaults: backlog
+  epic-3-retrospective: optional
+
+  # epic-4: Prove the Real Desktop Command-and-Event Boundary
+  epic-4: backlog
+  4-1-establish-the-versioned-production-boundary-contract: backlog
+  4-2-deliver-the-deterministic-process-control-core: backlog
+  4-3-cross-native-startup-detection-and-re-detect: backlog
+  4-4-cross-all-six-native-refresh-ordering: backlog
+  4-5-revalidate-native-refresh-and-contract-equality: backlog
+  4-6-revalidate-reviewed-plans-and-native-admission: backlog
+  epic-4-retrospective: optional
+
+  # epic-5: Make Manager Updates and Process Lifecycles Safe and Honest
+  epic-5: backlog
+  5-1-refresh-every-routed-subject-and-executor: backlog
+  5-2-prove-dynamic-self-update-routes-and-manager-header-card-plan-state: backlog
+  5-3-reject-unsafe-spawns-and-hold-complete-locks: backlog
+  5-4-preserve-native-output-and-activity-boundaries: backlog
+  5-5-cancel-stall-time-out-and-shut-down-honestly: backlog
+  5-6-repair-only-the-allowlisted-unterminated-mas-notice: backlog
+  5-7-prove-the-d26-rule-cannot-become-heuristic: backlog
+  5-8-revalidate-preview-bytes-against-spawned-bytes: backlog
+  5-9-revalidate-scheduler-locks-parallelism-and-capacity: backlog
+  epic-5-retrospective: optional
+
+  # epic-6: Preserve State, Evidence, and Privacy Across Failure and Relaunch
+  epic-6: backlog
+  6-1-deliver-asr-02-filesystem-and-native-utility-extensions: backlog
+  6-2-deliver-the-disposable-lifecycle-environment: backlog
+  6-3-preserve-real-transcripts-and-atomic-journals: backlog
+  6-4-reconstruct-interrupted-work-without-signaling-history: backlog
+  6-5-export-exact-native-diagnostics-and-visible-outcomes: backlog
+  6-6-reject-hostile-or-private-diagnostic-inputs: backlog
+  6-7-preserve-settings-and-native-utility-actions-across-failure: backlog
+  epic-6-retrospective: optional
+
+  # epic-7: Validate the Installed Accessible App and Explicit Updater Journey
+  epic-7: backlog
+  7-1-deliver-asr-02-updater-control-extensions: backlog
+  7-2-accept-the-locked-evidence-contract-and-append-transport: backlog
+  7-3-freeze-the-criterion-acceptance-profile: backlog
+  7-4-freeze-one-immutable-signed-candidate: backlog
+  7-5-qualify-the-candidate-release-lane: backlog
+  7-6-validate-packaged-accessibility-and-bounded-presentation: backlog
+  7-7-validate-real-updater-state-and-authorized-download: backlog
+  7-8-validate-explicit-update-active-operation-refusal-and-relaunch: backlog
+  7-9-refuse-privileged-installation-on-a-non-writable-bundle: backlog
+  7-10-validate-application-update-triggers-and-state-continuity: backlog
+  7-11-validate-standard-macos-menu-behavior: backlog
+  epic-7-retrospective: optional
+
+  # epic-8: Attest the Unchanged Release and Produce a Reproducible Evidence Handoff
+  epic-8: backlog
+  8-1-attest-icon-source-and-packaged-resources: backlog
+  8-2-prove-fresh-install-and-finder-dock-launch-on-both-architectures: backlog
+  8-3-attest-universal-signed-notarized-stapled-updater-complete-trust: backlog
+  8-4-retain-the-first-clean-forced-offline-quality-run: backlog
+  8-5-prove-default-test-isolation-beyond-browser-fetch: backlog
+  8-6-attest-cross-asset-authenticity-and-keep-no-sign-smoke-separate: backlog
+  8-7-complete-and-replay-the-evidence-ledger-for-trace-handoff: backlog
+  epic-8-retrospective: optional
