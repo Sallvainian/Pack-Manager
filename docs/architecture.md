@@ -33,6 +33,17 @@ Decisions D27-D30 and Architecture Spine AD-16 require:
 The Product Behavior Prerequisite UX-PB.1..UX-PB.5 must implement that target
 before this document's current Activity drawer, direct self-update,
 Operation-History, or settings mechanics are rewritten as implemented truth.
+`_bmad-output/implementation-artifacts/sprint-status.yaml` lists those 28
+stories as the primary build queue; the 37 Epic 1-6 entries in the same file
+are UNSCHEDULED, not queued.
+
+Decisions D31-D33 then recalibrated scope around that target: the supported
+macOS floor is declared (D31), the universal build is retained with Apple
+silicon-only verification (D32), and the 72-criterion readiness gate,
+its 55 scenario contracts, and Epics 7-8 are retired in favor of
+[RELEASE-CHECKLIST.md](./RELEASE-CHECKLIST.md) plus two automated checks in
+`release.yml` (D33). None of that changes the architecture below; it changes
+what must be produced before shipping it.
 
 ## Architectural Invariants
 
@@ -57,11 +68,11 @@ These constraints shape the architecture and should be treated as correctness re
 | Serialization        | Serde / serde_json              | 1.0.229 / 1.0.151                            | camelCase IPC and JSON persistence/contracts.                                      |
 | Native observability | tracing                         | 0.1.44                                       | Structured logs and correlated operation diagnostics.                              |
 | Interface            | React / React DOM               | 19.2.8                                       | Store-driven component interface.                                                  |
-| Interface language   | TypeScript                      | 5.8.3                                        | Strict static types and runtime IPC guards.                                        |
-| Frontend build       | Vite                            | 7.3.6                                        | Development server and production webview bundle.                                  |
+| Interface language   | TypeScript                      | 7.0.2                                        | Strict static types and runtime IPC guards.                                        |
+| Frontend build       | Vite                            | 8.1.5 (`@vitejs/plugin-react` 6.0.4)         | Development server and production webview bundle.                                  |
 | Styling              | Tailwind CSS                    | 4.3.3                                        | Dark-only tokenized visual system.                                                 |
 | Frontend state       | Zustand                         | 5.0.14                                       | Domain-specific session stores.                                                    |
-| Large-list rendering | TanStack React Virtual          | 3.14.7                                       | Package and live-output virtualization.                                            |
+| Large-list rendering | TanStack React Virtual          | 3.14.8                                       | Package and live-output virtualization.                                            |
 | Frontend tests       | Vitest + Testing Library        | Vitest 4.1.10                                | jsdom component, store, and contract behavior.                                     |
 | Browser tests        | Playwright                      | Playwright 1.61.1                            | Chromium/WebKit journeys over the React interface and fake Tauri boundary.         |
 | Native tests         | Cargo test                      | Rust toolchain                               | Unit, fixture, paused-time, lifecycle, persistence, and ignored live smoke tests.  |
@@ -299,6 +310,7 @@ The frontend centralizes copy in `src/lib/errors.ts` and turns operation transit
 - Main-window permissions are scoped in `src-tauri/capabilities/default.json` to Tauri core and opener defaults.
 - `tauri.conf.json` currently sets CSP to `null`; this is an existing security constraint for changes involving external/web content.
 - Signing secrets remain encrypted through fnox locally and GitHub Secrets in CI.
+- `release.yml` and `test.yml` pin every third-party action by commit SHA. `release.yml` is the workflow that imports the Developer ID certificate, App Store Connect key, and minisign private key into the runner, so a floating action ref there is an exposure; `ci.yml` handles no secrets and is deliberately left floating.
 
 ## Testing Strategy
 
@@ -323,9 +335,9 @@ Playwright adds Chromium and WebKit browser journeys over the real React interfa
 
 ## Deployment Architecture
 
-Both layers build into one universal macOS application. Release-please owns versioning and creates a reviewed release PR. Merging it creates the version tag/GitHub Release and invokes the reusable macOS build.
+Both layers build into one universal macOS application with a declared macOS floor of `15.0`. Release-please owns versioning and creates a reviewed release PR. Merging it creates the version tag/GitHub Release and invokes the reusable macOS build.
 
-The release workflow builds arm64 and x86_64 targets, combines them, optionally signs/notarizes/staples with Apple credentials, signs updater artifacts, verifies output, and publishes DMG, ZIP, updater archive/signature, and `latest.json`.
+The release workflow builds arm64 and x86_64 targets, combines them, optionally signs/notarizes/staples with Apple credentials, signs updater artifacts, verifies output, and publishes DMG, ZIP, updater archive/signature, and `latest.json`. Two checks gate publication: the updater's detached signature is verified against the public key the shipping app embeds (after base64-decoding the wrapper Tauri writes), and the published `latest.json` is re-fetched and asserted to name this version and point at a reachable asset. Both address failure modes that are silent at build time and simultaneous across every installed client.
 
 See [deployment-guide.md](./deployment-guide.md) for the operational sequence and credential boundaries.
 
@@ -349,6 +361,7 @@ See [source-tree-analysis.md](./source-tree-analysis.md) for the annotated tree 
 - Node 24 is pinned through `.nvmrc`; stable Rust is used in CI without a repository `rust-toolchain.toml` pin.
 - There is no configured frontend lint/format command. Playwright provides deterministic browser journeys across Chromium and WebKit.
 - The application is English-only and has no localization framework.
+- The declared macOS floor is `15.0`. Whether `notarytool` accepts `minos 15.0` against the CI runner's SDK is recorded as OPEN in `DECISIONS.md` D31 and is settled by a manual Release run, not by a real release.
 - Current production registration has 20 commands and six events; some older comments/tests still say 17 commands or five events.
 - Fixture/spec history contains conflicting older statements about mas availability/verification. Treat current code and current captured fixtures as implementation evidence and reconcile authoritative prose before relying on a machine-specific mas status.
 - CSP is explicitly `null`; external-content features need a deliberate security design.

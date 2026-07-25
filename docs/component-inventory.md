@@ -28,7 +28,10 @@ responsibilities around:
   `autoOpenDrawer`.
 
 Until that work exists, the component and store descriptions below are current
-mechanics only. Do not report the approved target as implemented.
+mechanics only. Do not report the approved target as implemented. The 28 UX-PB
+stories are tracked in
+`_bmad-output/implementation-artifacts/sprint-status.yaml`; every one is still
+`backlog`.
 
 ## Application Shell
 
@@ -153,9 +156,9 @@ Frontend coverage uses these important test seams:
 - `src/test/fakeIpc.ts` for command calls, listeners, event emission, and listener-leak checks.
 - `src/test/fixtures.ts` for realistic typed manager/application state.
 - Shared `dev/fixtures/ipc/*.json` payloads for Rust–TypeScript contract drift detection.
-- Vitest, jsdom, React Testing Library, and fake timers for component, store, keyboard, dialog, updater, history, and operation behavior.
+- Vitest, jsdom, React Testing Library, and fake timers for component, store, keyboard, dialog, updater, history, and operation behavior. The suite currently runs 23 files and 133 tests.
 
-Playwright adds Chromium/WebKit browser journeys over the real React interface with a deterministic in-browser Tauri transport. Machine-dependent smoke tests remain separate, ignored Rust integration tests.
+Playwright adds Chromium/WebKit browser journeys over the real React interface with a deterministic in-browser Tauri transport: four specs under `tests/e2e/` with page objects, faker-backed factories, and the IPC double in `tests/support/`. Machine-dependent smoke tests remain separate, ignored Rust integration tests.
 
 ## Extension Guidance
 

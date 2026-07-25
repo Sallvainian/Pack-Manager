@@ -1,7 +1,13 @@
 # Pack-Manager Deployment Guide
 
 - **Date:** 2026-07-24
-- **Target:** Universal macOS application (`arm64` + `x86_64`)
+- **Target:** Universal macOS application (`arm64` + `x86_64`), minimum macOS `15.0`
+
+## Supported Target
+
+`src-tauri/tauri.conf.json` declares `bundle.macOS.minimumSystemVersion` `15.0`. Before that declaration the repository set no floor and inherited Tauri's `10.13` default, which is why v0.2.9 shipped an `LSMinimumSystemVersion` of `10.13` against an arm64 slice compiled `minos 11.0`. `DECISIONS.md` D31 records the reasoning and leaves one question open: whether `notarytool` accepts `minos 15.0` against the runner SDK. Settle it with a manual Release run, not with a real release.
+
+The build stays universal and `latest.json` still publishes both `darwin-aarch64` and `darwin-x86_64` pointing at the one archive, but verification is Apple silicon only. Intel is best-effort and unverified (`DECISIONS.md` D32).
 
 ## Release Model
 
@@ -66,8 +72,21 @@ The macOS 14 build job:
 5. Signs with Developer ID credentials when available.
 6. Notarizes and staples the application and DMG when Apple credentials are available.
 7. Creates the installer, archive, updater payload/signature, and updater metadata.
-8. Runs Gatekeeper/signature checks for signed output.
-9. Attaches assets to the existing GitHub Release.
+8. Verifies the updater signature against the public key the shipping app embeds.
+9. Runs Gatekeeper/signature checks for signed output.
+10. Attaches assets to the existing GitHub Release.
+11. Re-fetches the published `latest.json` and asserts it names this version and points at a reachable asset.
+
+### 4. Automated release checks
+
+Two steps in `release.yml` exist because their failure modes are silent, hit every installed client at once, and are invisible on the Release page. They replaced the retired formal readiness gate (`DECISIONS.md` D33); the surviving manual pass is [RELEASE-CHECKLIST.md](./RELEASE-CHECKLIST.md).
+
+- **Updater signature verification.** Tauri writes `<file>.sig` as base64 of the *entire* minisign signature file, not as a `.minisig`. The step therefore decodes it to `$RUNNER_TEMP/updater.minisig` before `minisign -V`; `latest.json` keeps the undecoded blob because `tauri-plugin-updater` decodes client-side. Passing the wrapper straight to `minisign -x` produces a false negative — that is exactly how v1.0.0's tag and Release were published with zero assets.
+- **Published endpoint verification.** `latest.json` is written before the asset it references is uploaded, so this step re-downloads the published endpoint, checks `.version` against the release version, and confirms the `darwin-aarch64` URL resolves. It is skipped on manual runs, which publish nothing.
+
+### 5. Supply-chain pinning
+
+Every third-party action in `release.yml` is pinned by commit SHA, including `dtolnay/rust-toolchain` (whose `action.yml` declares `toolchain: {default: stable}` at the pinned SHA, so pinning freezes the action code without changing which Rust is installed). `release.yml` is the only workflow that handles the Developer ID certificate, the App Store Connect key, and the minisign private key. `test.yml` pins its actions the same way. `ci.yml` is deliberately left floating because it handles no secrets.
 
 ## Release Artifacts
 
@@ -95,14 +114,16 @@ The workflow imports the Developer ID certificate into a temporary keychain so b
 
 ## Test the Build Pipeline Without Releasing
 
-Use GitHub Actions → **Release** → **Run workflow**.
+Use GitHub Actions → **Release** → **Run workflow**, leaving the `attach_to_tag` input **empty**.
 
-A manual run:
+A manual run with `attach_to_tag` empty:
 
 - Builds the same universal application path.
 - Uploads DMG and ZIP files to the workflow run.
 - Does not create or modify a GitHub Release.
 - Does not create a version tag.
+
+Setting `attach_to_tag` to an existing tag switches the run into repair mode: it checks the source out at that tag while taking workflow logic from the dispatched ref, then attaches the rebuilt artifacts to that release. Use it when release-please already cut a tag but the build failed afterwards — the v1.0.0 signature-verification failure is the case it was added for. It is the only manual mode that publishes anything.
 
 For a local unsigned smoke build:
 
@@ -118,6 +139,8 @@ fnox exec -- npm run tauri build
 ```
 
 ## Pre-Release Verification
+
+[RELEASE-CHECKLIST.md](./RELEASE-CHECKLIST.md) is the operative manual pass — roughly fifteen minutes, six preventive items before the release PR merges and three post-publish smoke tests. Everything preventive must happen before the merge, because publication after it is automatic and unattended.
 
 Before merging a release PR, confirm the current `main` checks are green:
 

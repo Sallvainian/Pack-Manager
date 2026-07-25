@@ -1,23 +1,87 @@
 {
   "workflow_version": "1.2.0",
-  "timestamps": {"started": "2026-07-24T07:13:35-04:00", "last_updated": "2026-07-24T07:13:35-04:00", "completed": "2026-07-24T07:13:35-04:00"},
+  "timestamps": {
+    "started": "2026-07-24T23:31:32-0400",
+    "last_updated": "2026-07-24T23:43:07-0400",
+    "completed": "2026-07-24T23:43:07-0400"
+  },
   "mode": "full_rescan",
   "scan_level": "deep",
   "project_root": "/Users/sallvain/Projects/Pack-Manager",
   "project_knowledge": "/Users/sallvain/Projects/Pack-Manager/docs",
   "completed_steps": [
-    {"step": "step_1", "status": "completed", "timestamp": "2026-07-24T07:13:35-04:00", "summary": "Re-classified Pack-Manager as a monolith desktop app (1 part); matched desktop key files package.json/Cargo.toml/tauri.conf.json; no client/server/packages split"},
-    {"step": "step_2", "status": "completed", "timestamp": "2026-07-24T07:13:35-04:00", "summary": "Existing docs already partially updated for the Playwright e2e layer and Node pin; identified new inputs since 2026-07-22: tests/ e2e suite, playwright.config.ts, .nvmrc, .env.example, test.yml workflow"},
-    {"step": "step_3", "status": "completed", "timestamp": "2026-07-24T07:13:35-04:00", "summary": "Tech stack re-grounded from manifests+lockfiles: app 0.2.9; Tauri crate 2.11.5, tokio 1.53.1, updater 2.10.1, opener 2.5.4; React 19.2.8, TS 5.8.3, Vite 7.3.6, Vitest 4.1.10, Zustand 5.0.14, react-virtual 3.14.7, Tailwind 4.3.3, Tauri JS API 2.11.1/CLI 2.11.4; NEW Playwright 1.61.1 + faker 10.5.0"},
-    {"step": "step_4", "status": "completed", "timestamp": "2026-07-24T07:13:35-04:00", "summary": "Conditional analysis re-verified against source: 37 production TSX components, 5 Zustand stores + derived index, 20 registered IPC commands, 6 event channels, 17 packaging icons; component-inventory.md confirmed current"},
-    {"step": "step_5", "status": "completed", "timestamp": "2026-07-24T07:13:35-04:00", "summary": "source-tree-analysis.md verified current: annotated tree already reflects tests/, playwright.config.ts, test.yml, .nvmrc, .env.example; refreshed date only"},
-    {"step": "step_6", "status": "completed", "timestamp": "2026-07-24T07:13:35-04:00", "summary": "Dev/deploy/contribution guides verified; fixed development-guide toolchain-pin drift (Node 24 pinned via .nvmrc locally+CI; Rust unpinned)"},
-    {"step": "step_8", "status": "completed", "timestamp": "2026-07-24T07:13:35-04:00", "summary": "architecture.md verified current (20 commands, 6 events, stack versions, Playwright CI gate, null CSP, Correct Course target section); refreshed date only"},
-    {"step": "step_9", "status": "completed", "timestamp": "2026-07-24T07:13:35-04:00", "summary": "Supporting docs verified; fixed project-overview Current Constraints drift (toolchain pin + browser e2e now configured); refreshed dates across all 8 generated docs"},
-    {"step": "step_10", "status": "completed", "timestamp": "2026-07-24T07:13:35-04:00", "summary": "index.md verified current: 25 relative links all resolve, no incomplete markers, Last updated bumped to 2026-07-24"},
-    {"step": "step_11_iteration", "status": "completed", "timestamp": "2026-07-24T07:13:35-04:00", "summary": "Doc validation passed (8 files present, no incomplete markers, no trailing whitespace, all links resolve) and all code gates passed"},
-    {"step": "step_11", "status": "completed", "timestamp": "2026-07-24T07:13:35-04:00", "summary": "Validation and review complete; no incomplete documentation remained and no further revisions requested"},
-    {"step": "step_12", "status": "completed", "timestamp": "2026-07-24T07:13:35-04:00", "summary": "Full rescan complete; finalized resumable state and confirmed docs/index.md as the primary AI development entry point"}
+    {
+      "step": "step_1",
+      "status": "completed",
+      "timestamp": "2026-07-24T23:33:15-0400",
+      "summary": "Re-detected desktop type from key_file_patterns (package.json + src-tauri/Cargo.toml + src-tauri/tauri.conf.json all present; no client/server/packages split, no workspace config). User confirmed monolith, 1 part 'pack-manager', project_type_id=desktop"
+    },
+    {
+      "step": "step_2",
+      "status": "completed",
+      "timestamp": "2026-07-24T23:33:15-0400",
+      "summary": "Inventoried existing docs: 8 generated in docs/, plus README/AGENTS/CLAUDE/SPEC/DECISIONS/IMPL_PLAN/RELEASE-CHECKLIST/ci.md/ci-secrets-checklist/dev-fixtures README/tests README, 7 workflows, 45 _bmad-output markdown files. User directed: fold in _bmad-output/planning-artifacts (D31-D33 recalibration) and link RELEASE-CHECKLIST.md, tests/README.md, AGENTS.md + planning artifacts from index.md"
+    },
+    {
+      "step": "step_3",
+      "status": "completed",
+      "timestamp": "2026-07-24T23:34:32-0400",
+      "summary": "Tech stack re-grounded from package-lock.json (lockfileVersion 3) and src-tauri/Cargo.lock (488 locked crates): app 1.0.0 (was 0.2.9); TypeScript 7.0.2 (was 5.8.3), Vite 8.1.5 (was 7.3.6), @vitejs/plugin-react 6.0.4, @tanstack/react-virtual 3.14.8; React/react-dom 19.2.8, Zustand 5.0.14, Tailwind 4.3.3, Vitest 4.1.10, jsdom 29.1.1, RTL 16.3.2, Playwright 1.61.1, faker 10.5.0, @tauri-apps/api 2.11.1, cli 2.11.4; Rust unchanged: tauri 2.11.5, tauri-build 2.6.3, tokio 1.53.1, updater 2.10.1, opener 2.5.4, nix 0.31.3, uuid 1.24.0. New: tauri.conf.json bundle.macOS.minimumSystemVersion=15.0. Architecture pattern unchanged: React component/store UI over command+event-driven Rust core"
+    },
+    {
+      "step": "step_4",
+      "status": "completed",
+      "timestamp": "2026-07-24T23:35:33-0400",
+      "summary": "Conditional analysis per desktop row (requires_api_scan=false, requires_data_models=false, requires_state_management=true, requires_ui_components=true, requires_deployment_config=true, requires_asset_inventory=true, requires_hardware_docs=false). Re-verified against source: 37 production TSX components, 5 Zustand stores + store/index.ts derived selectors, 20 registered commands (lib.rs:233-252), 6 event constants (events.rs:77-82), 17 packaging icons + dev/icon source PNG and generator, 26 parser fixtures + 15 ipc contract fixtures, 22 Vitest files, 259 Rust #[test]/#[tokio::test] attributes, 4 Playwright specs, no i18n framework (English-only). No src/ or src-tauri/src/ file changed since the prior scan, so behavioral documentation carries forward"
+    },
+    {
+      "step": "step_5",
+      "status": "completed",
+      "timestamp": "2026-07-24T23:40:28-0400",
+      "summary": "source-tree-analysis.md updated: added .github/dependabot.yml and the expanded .github/ subtree, docs/RELEASE-CHECKLIST.md, .env.example, and the _bmad-output planning/implementation/archive split; config table gained playwright.config.ts, tests/tsconfig.json, .env.example, and dependabot.yml. Annotated tree, entry points, asset counts (17 icons + dev/icon) re-verified as current"
+    },
+    {
+      "step": "step_6",
+      "status": "completed",
+      "timestamp": "2026-07-24T23:40:28-0400",
+      "summary": "development-guide.md: macOS 15.0 floor vs macos-14 CI runner, .env.example clarification, npm run test:rust, and a Dependabot caveat naming the TS 7.0.2 / Vite 8.1.5 jumps. deployment-guide.md: new Supported Target section (D31 floor, D32 Apple-silicon-only verification), release steps 8-11, new sections 4 (two automated checks incl. the base64 .sig decode that cost v1.0.0 its assets) and 5 (SHA pinning), attach_to_tag repair mode, RELEASE-CHECKLIST pointer. contribution-guide.md: decision-supersedence order, AGENTS.md authority, the D33 verify-before-scheduling rule, e2e commands, and an action-pinning review hotspot"
+    },
+    {
+      "step": "step_8",
+      "status": "completed",
+      "timestamp": "2026-07-24T23:40:28-0400",
+      "summary": "architecture.md updated: TypeScript 5.8.3->7.0.2, Vite 7.3.6->8.1.5 (+plugin-react 6.0.4), react-virtual 3.14.7->3.14.8; target-course-correction section now cites sprint-status.yaml and D31-D33; deployment section documents the 15.0 floor and the two publication-gating checks; security section documents SHA pinning of secret-handling workflows; constraints record the OPEN notarytool question. 20 commands / 6 events re-verified at lib.rs:233-252 and events.rs:77-82"
+    },
+    {
+      "step": "step_9",
+      "status": "completed",
+      "timestamp": "2026-07-24T23:40:28-0400",
+      "summary": "project-overview.md: stack versions corrected, distribution line records the 15.0 floor and Apple-silicon-only verification, new Planning State section (28 UX-PB stories queued but unimplemented; 37 Epic 1-6 entries UNSCHEDULED), RELEASE-CHECKLIST link, test:rust. component-inventory.md: sprint-status pointer, Vitest 23 files/133 tests, Playwright 4 specs. 37 components and 17 icons re-verified"
+    },
+    {
+      "step": "step_10",
+      "status": "completed",
+      "timestamp": "2026-07-24T23:40:28-0400",
+      "summary": "index.md regenerated: stack versions corrected, test counts added, macOS 15.0 in Quick Reference and Prerequisites, and the previously-unlinked sources now linked - RELEASE-CHECKLIST.md, tests/README.md, AGENTS.md, CLAUDE.md, project-context.md, epics.md, ARCHITECTURE-SPINE.md, story-triage-2026-07-24.md, sprint-status.yaml, DESIGN.md, EXPERIENCE.md, and the archive README. Two caveats added: D27-D30 decided-not-implemented, and Epic 1-6 backlog != queued"
+    },
+    {
+      "step": "step_11_iteration",
+      "status": "completed",
+      "timestamp": "2026-07-24T23:40:28-0400",
+      "summary": "Doc validation passed (8/8 files present, 0 incomplete markers strict+fuzzy, 69 relative links all resolve, 0 trailing whitespace) and all code gates passed"
+    },
+    {
+      "step": "step_11",
+      "status": "completed",
+      "timestamp": "2026-07-24T23:43:07-0400",
+      "summary": "Validation and review complete; no incomplete documentation remained and the user requested no further revisions"
+    },
+    {
+      "step": "step_12",
+      "status": "completed",
+      "timestamp": "2026-07-24T23:43:07-0400",
+      "summary": "Full rescan (deep) complete; finalized resumable state and confirmed docs/index.md as the primary AI development entry point"
+    }
   ],
   "current_step": "completed",
   "findings": {
@@ -27,37 +91,39 @@
       "primary_language": "Rust and TypeScript",
       "architecture_type": "Integrated Tauri desktop application",
       "primary_technology": "Tauri 2 desktop app with a React 19 + TypeScript interface and a Rust native core",
-      "architecture_summary": "Single bundled application with React and Rust layers connected through local Tauri IPC (20 commands) and events (6 channels)"
+      "architecture_summary": "Single bundled application; React and Rust layers connected through local Tauri IPC commands and events"
     },
+    "user_context": "Standard deep scan; fold in _bmad-output/planning-artifacts; link previously-unlinked existing docs from index.md",
     "technology_stack": [
-      {"part_id": "pack-manager", "tech_summary": "app 0.2.9; Tauri 2.11.5 + Rust 2021 native core; React 19.2.8, TypeScript 5.8.3, Vite 7.3.6, Tailwind 4.3.3, Zustand 5.0.14, TanStack React Virtual 3.14.7; tests: Vitest 4.1.10, React Testing Library, Playwright 1.61.1, cargo tests"}
+      {
+        "part_id": "pack-manager",
+        "tech_summary": "app 1.0.0; Tauri 2.11.5 + Rust 2021 native core; React 19.2.8, TypeScript 7.0.2, Vite 8.1.5, Tailwind 4.3.3, Zustand 5.0.14, TanStack React Virtual 3.14.8; tests: Vitest 4.1.10, RTL 16.3.2, Playwright 1.61.1, cargo tests; macOS floor 15.0"
+      }
     ],
     "conditional_analysis": {
-      "state_management": "5 Zustand stores (managers, packages, operations, ui, appUpdate) plus store/index.ts derived selectors, Rust AppState, file-backed settings/journal",
-      "ui_components": "37 production TSX component modules (unchanged count)",
+      "state_management": "5 Zustand stores (managers, packages, operations, ui, appUpdate) plus store/index.ts derived selectors; Rust AppState; file-backed settings/journal",
+      "ui_components": "37 production TSX component modules (unchanged)",
       "ipc_surface": "20 registered #[tauri::command] handlers; 6 event channels (detection:updated, snapshot:updated, op:status, op:output, op:stalled, appUpdate:status)",
-      "assets": "17 generated packaging icons + 1 source image and Python generator",
-      "localization": "English-only; no localization framework",
-      "e2e": "NEW since prior scan: Playwright browser suite in tests/ (4 specs) over a deterministic in-browser Tauri transport; test.yml CI workflow"
+      "assets": "17 packaging icons under src-tauri/icons + dev/icon/icon-1024.png and generate_icon.py",
+      "localization": "English-only; no i18n framework",
+      "deployment_config": "6 workflows under .github/workflows plus dependabot.yml; release.yml now SHA-pins all third-party actions and adds attach_to_tag repair input"
     },
     "changes_since_last_scan": {
-      "released_versions": "0.2.5 -> 0.2.9",
-      "new_capabilities": "Playwright browser e2e quality gates (tests/, playwright.config.ts, test.yml); .nvmrc pins Node 24; .env.example (e2e-only config)",
-      "fixes": "uv outdated parser handles populated output; command trust boundaries hardened (#18); package-row checkbox syncs with store; post-update focus no longer depends on hardcoded window label; removed duplicate Refresh All / Update Everything; Dependabot configured",
-      "workflow_count": "CI workflows now 6 (added test.yml)",
-      "doc_drift_fixed": "project-overview.md and development-guide.md trailing constraint/caveat sections contradicted their own updated bodies re: toolchain pinning and e2e availability"
+      "released_versions": "0.2.9 -> 1.0.0 (release-please PR #31)",
+      "new_config": "tauri.conf.json bundle.macOS.minimumSystemVersion = 15.0 (D31)",
+      "toolchain": "TypeScript 5.8.3 -> 7.0.2; Vite 7.3.6 -> 8.1.5; @vitejs/plugin-react -> 6.0.4; @tanstack/react-virtual 3.14.7 -> 3.14.8",
+      "ci": "actions/checkout, setup-node, upload-artifact 4->7 across ci.yml and release.yml; release.yml third-party actions pinned by commit SHA; updater .sig base64-decoded before minisign -V; workflow_dispatch attach_to_tag input added; published latest.json verified after upload",
+      "planning": "D31/D32/D33 recorded; readiness gate retired; Epics 7-8 retired; Epics 1-6 triaged (6 keep, 19 merge, 12 retire); retired artifacts archived under _bmad-output/archive/2026-07-24-scope-recalibration/; docs/RELEASE-CHECKLIST.md added",
+      "code": "no file under src/ or src-tauri/src/ changed since the 2026-07-24T07:13 scan"
     },
     "final_summary": {
       "generated_files": 8,
       "primary_entry_point": "docs/index.md",
-      "verification_summary": "Vitest 23 files/133 tests passed; tsc --noEmit passed; Vite build passed (92 modules); cargo fmt --check passed; clippy --all-targets -D warnings passed; cargo test --locked 248 passed, 0 failed, 11 ignored; doc validation passed",
-      "open_risks": "Rust toolchain unpinned (no rust-toolchain.toml); Tauri CSP null; older prose/comments retain pre-updater 17-command/5-event counts and conflicting historical mas status",
-      "next_checks": "Run cargo test -- --ignored for real-machine detection/Homebrew behavior; run npm run test:e2e for browser journeys; reconcile authoritative historical prose before relying on machine-specific mas status"
+      "verification_summary": "Vitest 23 files/133 tests passed; tsc --noEmit passed; Vite build passed (92 modules); test:e2e:typecheck passed; cargo fmt --check passed; cargo clippy --all-targets -D warnings passed; cargo test --locked 248 passed, 0 failed, 11 ignored; doc validation passed",
+      "open_risks": "notarytool acceptance of minos 15.0 against the CI SDK is OPEN (D31) and is settled by a manual Release run; Rust toolchain unpinned (no rust-toolchain.toml); Tauri CSP null; D27-D30 decided but unimplemented; older prose retains pre-updater 17-command/5-event counts and conflicting historical mas status",
+      "next_checks": "Run the manual Release workflow with attach_to_tag EMPTY to settle the notarization question before the next real release; run npm run test:e2e for browser journeys; run cargo test -- --ignored for real-machine detection/Homebrew behavior; verify v1.0.0's GitHub Release now carries its four assets"
     }
   },
-  "project_types": [
-    {"part_id": "pack-manager", "project_type_id": "desktop", "display_name": "Pack-Manager Desktop Application", "root_path": "/Users/sallvain/Projects/Pack-Manager"}
-  ],
   "outputs_generated": [
     "project-scan-report.json",
     "index.md",
@@ -69,26 +135,36 @@
     "deployment-guide.md",
     "contribution-guide.md"
   ],
-  "resume_instructions": "Full rescan (deep) complete on 2026-07-24; begin future brownfield planning from docs/index.md",
+  "resume_instructions": "Full rescan (deep) complete on 2026-07-24 at 23:4x; begin future brownfield planning from docs/index.md. Prior scan state archived at docs/.archive/project-scan-report-2026-07-24T071335.json",
+  "project_types": [
+    {
+      "part_id": "pack-manager",
+      "project_type_id": "desktop",
+      "display_name": "Pack-Manager Desktop Application",
+      "root_path": "/Users/sallvain/Projects/Pack-Manager"
+    }
+  ],
   "validation_status": {
-    "last_validated": "2026-07-24T07:13:35-04:00",
+    "last_validated": "2026-07-24T23:40:28-0400",
     "validation_errors": [],
     "checks_passed": [
       "All 8 generated docs plus project-scan-report.json exist",
-      "All 25 index.md relative links resolve",
+      "69 relative links across all 8 docs resolve",
       "No incomplete-documentation markers remain (strict or fuzzy)",
       "No trailing whitespace in generated docs",
-      "No residual 2026-07-22 dates in generated docs",
       "Vitest: 23 files and 133 tests passed",
-      "TypeScript no-emit check passed",
-      "Vite production build passed (92 modules)",
+      "TypeScript no-emit check passed under TypeScript 7.0.2",
+      "Vite production build passed (92 modules) under Vite 8.1.5",
+      "Playwright TypeScript project check passed",
       "cargo fmt --check passed",
       "cargo clippy --all-targets with warnings denied passed",
       "cargo test --locked: 248 passed, 0 failed, 11 ignored"
     ],
     "documented_risks": [
+      "notarytool acceptance of the declared minos 15.0 floor is OPEN (DECISIONS D31)",
       "Rust toolchain is not repository-pinned (no rust-toolchain.toml); Node is pinned to 24 via .nvmrc",
       "Tauri CSP is null",
+      "The D27-D30 upgrade experience is decided but not implemented",
       "Older comments/prose retain pre-updater 17-command/5-event counts and conflicting historical mas availability statements"
     ]
   }

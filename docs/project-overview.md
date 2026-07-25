@@ -16,7 +16,7 @@ The product emphasizes safe local automation: manager ownership and self-update 
 - **Project type:** Desktop (`desktop` in the BMad documentation taxonomy).
 - **Primary languages:** Rust and TypeScript/TSX.
 - **Architecture pattern:** Component/store frontend over a command- and event-driven native core.
-- **Distribution:** Universal macOS app, DMG, ZIP, and signed Tauri updater artifacts.
+- **Distribution:** Universal macOS app (minimum macOS `15.0`), DMG, ZIP, and signed Tauri updater artifacts. Both updater platform keys are published; verification is Apple silicon only.
 - **External services:** None required at runtime beyond network access used by package managers and GitHub update checks.
 - **Database:** None; settings, operation history, logs, and transcripts are file-backed.
 
@@ -28,10 +28,10 @@ The `src/` and `src-tauri/` folders are internal layers, not separately deployed
 | --- | --- |
 | Desktop runtime | Tauri 2.11.5 (Rust crate), Tauri JS API 2.11.1 |
 | Native core | Rust 2021, Tokio 1.53.1, Serde, tracing |
-| Interface | React 19.2.8, TypeScript 5.8.3 |
-| Build/styling | Vite 7.3.6, Tailwind CSS 4.3.3 |
-| State/rendering | Zustand 5.0.14, TanStack React Virtual 3.14.7 |
-| Tests | Cargo test, Vitest 4.1.10, React Testing Library, Playwright |
+| Interface | React 19.2.8, TypeScript 7.0.2 |
+| Build/styling | Vite 8.1.5, Tailwind CSS 4.3.3 |
+| State/rendering | Zustand 5.0.14, TanStack React Virtual 3.14.8 |
+| Tests | Cargo test, Vitest 4.1.10, React Testing Library 16.3.2, Playwright 1.61.1 |
 | Secrets | fnox with age-encrypted local values; GitHub Secrets in CI |
 | Delivery | release-please and GitHub Actions |
 
@@ -92,7 +92,7 @@ npm run tauri dev
 - **Browser tests:** `npm run test:e2e:typecheck && npm run test:e2e`
 - **Typecheck:** `npx tsc --noEmit`
 - **Frontend production build:** `npm run build`
-- **Native checks:** `cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test --locked`
+- **Native checks:** `cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test --locked` (or `npm run test:rust` for the locked suite alone)
 - **Ignored live smoke:** `cd src-tauri && cargo test -- --ignored`
 - **Signed app build:** `fnox exec -- npm run tauri build`
 - **Unsigned smoke build:** `npm run tauri build -- --no-sign`
@@ -127,15 +127,23 @@ Existing authoritative/historical sources:
 
 - [SPEC.md](./SPEC.md) — product and technical contract.
 - [DECISIONS.md](./DECISIONS.md) — decisions and rejected alternatives.
+- [RELEASE-CHECKLIST.md](./RELEASE-CHECKLIST.md) — the manual release pass and the automated checks that replaced the retired gate.
 - [IMPL_PLAN.md](./IMPL_PLAN.md) — original dependency-ordered implementation plan.
 - [README.md](../README.md) — current project overview and commands.
+
+## Planning State
+
+The 28 `UX-PB` stories implementing Decisions D27–D30 (persistent Upgrade Plan, durable plan attempts, verification-gated Results/History, separate confirmation gate) are the primary build queue in `_bmad-output/implementation-artifacts/sprint-status.yaml`. That decided model is **not yet implemented** in the shipping code — `planAttemptId`, a `Verifying` status, and `InteractionRequired` do not exist in the current source.
+
+The 37 Epic 1–6 entries in the same file read `backlog` but are UNSCHEDULED, not queued: they were authored as evidence production for a readiness gate that `DECISIONS.md` D33 retired. Triage recorded 6 keep, 19 merge, 12 retire in `_bmad-output/planning-artifacts/story-triage-2026-07-24.md`. Read it before rescheduling any of them — most of the behavior they describe already ships and is already tested.
 
 ## Current Constraints
 
 - Node 24 is pinned through `.nvmrc` for local development and CI; the Rust toolchain runs from stable in CI without a repository `rust-toolchain.toml` pin.
-- No frontend lint/format command is configured; a Playwright browser end-to-end suite (Chromium/WebKit) is now configured.
+- No frontend lint/format command is configured; a Playwright browser end-to-end suite (Chromium/WebKit) is configured and runs as a separate CI gate.
 - The interface is English-only.
 - Tauri CSP is currently `null`.
+- Minimum supported macOS is `15.0`; `notarytool` acceptance of that floor against the CI SDK is recorded OPEN in `DECISIONS.md` D31.
 - Some older comments/spec text still reflect the pre-updater count of 17 commands/five events and conflicting historical mas status; use production registration and current fixtures as current implementation evidence.
 
 ---

@@ -83,17 +83,25 @@ Pack-Manager/
 ├── docs/
 │   ├── SPEC.md                        # Authoritative product/technical contract
 │   ├── DECISIONS.md                   # Architecture decisions and rejected alternatives
+│   ├── RELEASE-CHECKLIST.md           # Manual release pass that replaced the retired gate
 │   ├── IMPL_PLAN.md                   # Historical dependency-ordered implementation plan
 │   └── *.md                           # Generated brownfield documentation
-├── .github/workflows/
-│   ├── ci.yml                         # Rust/web checks and unsigned bundle smoke
-│   ├── test.yml                       # Playwright shards, burn-in, and reports
-│   ├── release-please.yml             # Version PR, tag, release orchestration
-│   ├── release.yml                    # Universal signed/notarized macOS artifacts
-│   ├── claude.yml                     # Mention-triggered GitHub agent workflow
-│   └── claude-code-review.yml         # Human-authored PR review workflow
+├── .github/
+│   ├── dependabot.yml                 # Weekly npm, cargo, and github-actions updates
+│   └── workflows/
+│       ├── ci.yml                     # Rust/web checks and unsigned bundle smoke
+│       ├── test.yml                   # Playwright shards, burn-in, and reports
+│       ├── release-please.yml         # Version PR, tag, release orchestration
+│       ├── release.yml                # Universal signed/notarized macOS artifacts
+│       ├── claude.yml                 # Mention-triggered GitHub agent workflow
+│       └── claude-code-review.yml     # Human-authored PR review workflow
 ├── .agents/ / .claude/ / .codex/     # Local agent configuration and installed skills
-├── _bmad/ / _bmad-output/             # BMad workflow installation and generated artifacts
+├── _bmad/                             # BMad workflow installation (untracked)
+├── _bmad-output/
+│   ├── planning-artifacts/            # Active epics, architecture spine, UX, story triage
+│   ├── implementation-artifacts/      # Sprint status and per-change specs
+│   ├── archive/                       # Retired planning artifacts, kept not deleted
+│   └── project-context.md             # Condensed agent rules generated from this tree
 ├── index.html                         # Vite HTML entry
 ├── package.json / package-lock.json   # Frontend scripts and locked dependencies
 ├── vite.config.ts                     # Tauri-aware Vite server/build configuration
@@ -101,6 +109,7 @@ Pack-Manager/
 ├── playwright.config.ts               # Chromium/WebKit browser-test configuration
 ├── tests/                              # Browser journeys and deterministic Tauri fixtures
 ├── .nvmrc                              # Node 24 local/CI toolchain pin
+├── .env.example                        # Playwright-only local variables; never secrets
 ├── tsconfig*.json                     # Strict TypeScript configuration
 ├── fnox.toml                          # Age-encrypted updater-signing secret references
 ├── release-please-config.json         # Automated release/version policy
@@ -211,9 +220,13 @@ The React interface has no `public/` directory, web-font assets, or imported ima
 | `src-tauri/capabilities/default.json` | Main-window Tauri permission set. |
 | `vite.config.ts` | React/Tailwind plugins and fixed Tauri dev/HMR ports. |
 | `vitest.config.ts` | React-enabled jsdom test environment. |
-| `tsconfig.json` | Strict ES2020 no-emit TypeScript checks. |
+| `playwright.config.ts` | Chromium/WebKit projects, dev-server startup, loopback `BASE_URL` guard. |
+| `tsconfig.json` | Strict ES2020 no-emit TypeScript checks over `src`. |
+| `tests/tsconfig.json` | Separate type check for the Playwright suite. |
+| `.env.example` | Playwright-only local variables (`TEST_ENV`, `BASE_URL`, `ALLOW_REMOTE_E2E`); explicitly not a secret store. |
 | `fnox.toml` | Encrypted local updater-signing secret references. |
 | `release-please-config.json` | Conventional-commit release automation. |
+| `.github/dependabot.yml` | Weekly npm, cargo, and github-actions update PRs with `chore(deps)`/`ci(deps)` prefixes. |
 
 ## Development Notes
 

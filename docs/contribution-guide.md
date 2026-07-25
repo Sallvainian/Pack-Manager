@@ -9,10 +9,12 @@ Pack-Manager does not currently have a standalone `CONTRIBUTING.md`. This guide 
 For product behavior:
 
 1. `docs/SPEC.md` is the authoritative contract.
-2. `docs/DECISIONS.md` explains the accepted design and rejected alternatives.
+2. `docs/DECISIONS.md` explains the accepted design and rejected alternatives. A later explicit entry overrides an earlier one: D23a supersedes D23, D25 supersedes D20, D27–D30 define the target update experience, and D31–D33 recalibrate scope.
 3. If both are silent, choose the smallest behavior that fits existing patterns and record the decision when it is consequential.
 
-Use `README.md` for current developer/operator commands and this generated documentation for codebase navigation. Treat `docs/IMPL_PLAN.md` as implementation history; some of its pre-implementation facts can be stale.
+`AGENTS.md` governs workflow rules; `docs/SPEC.md` governs product behavior. Use `README.md` for current developer/operator commands, `docs/RELEASE-CHECKLIST.md` for what must hold before a release, and this generated documentation for codebase navigation. Treat `docs/IMPL_PLAN.md` as implementation history; some of its pre-implementation facts can be stale.
+
+**Before scheduling work described as a test or coverage gap, check whether the behavior already ships.** This is the one habit that survived the retired readiness gate (`DECISIONS.md` D33). The Epics 1–6 triage applied it to 37 stories and an adversarial pass overturned 14 of 20 initial keeps, because the Rust/TypeScript already implemented the behavior and the existing suite already tested it. Per-story verdicts are in `_bmad-output/planning-artifacts/story-triage-2026-07-24.md`.
 
 ## Before Editing
 
@@ -56,6 +58,13 @@ Frontend:
 npm test
 npx tsc --noEmit
 npm run build
+```
+
+Browser journeys, when the change touches the interface:
+
+```sh
+npm run test:e2e:typecheck
+npm run test:e2e
 ```
 
 Native core:
@@ -144,3 +153,4 @@ Give extra scrutiny to changes that affect:
 - IPC serialization and runtime guards.
 - Atomic settings/journal writes and diagnostics symlink filtering.
 - Updater signature checks, writable-bundle handling, restart guards, signing, or notarization.
+- Action references in `release.yml` and `test.yml`. Both pin third-party actions by commit SHA because `release.yml` imports the Developer ID certificate, the App Store Connect key, and the minisign private key into the runner. Do not replace a pinned SHA with a floating tag; Dependabot's `ci(deps)` PRs update the SHA and keep the trailing version comment.

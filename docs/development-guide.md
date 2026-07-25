@@ -6,13 +6,13 @@
 
 Pack-Manager is developed as one Tauri application with two toolchains:
 
-- macOS for the supported desktop target and real package-manager smoke tests.
+- macOS for the supported desktop target and real package-manager smoke tests. The shipped bundle declares `bundle.macOS.minimumSystemVersion` `15.0` (`DECISIONS.md` D31); CI builds on `macos-14` because a deployment target above the build SDK is a floor annotation, not an SDK requirement.
 - Node.js and npm. `.nvmrc` pins Node 24 for local development and CI.
 - Stable Rust with Cargo. The crate uses Rust edition 2021; the repository does not include `rust-toolchain.toml`.
 - Tauri's macOS build prerequisites, including the Apple command-line build tools.
 - `fnox` through `mise` when producing updater-signed local builds.
 
-No database, local service, container, or `.env` file is required.
+No database, local service, or container is required. The only `.env` input is the optional Playwright-scoped `.env.example` template, which is explicitly not a secret store.
 
 ## Install
 
@@ -118,6 +118,8 @@ cargo clippy --all-targets -- -D warnings
 cargo test --locked
 ```
 
+`npm run test:rust` runs the same locked test suite from the repository root without changing directory.
+
 The Rust tests cover manager parsers/adapters, detection and routing, scheduling, process lifecycle, cancellation, journaling, transcripts, settings, diagnostics, IPC serialization, and the updater state machine.
 
 ### Real-Machine Smoke Tests
@@ -222,3 +224,4 @@ Diagnostics export creates a timestamped ZIP on the Desktop containing a report,
 - Node 24 is pinned for local development and CI through `.nvmrc`; the Rust toolchain is standardized in CI but not repository-pinned (no `rust-toolchain.toml`).
 - `tauri.conf.json` currently sets the content security policy to `null`; changes affecting loaded content should account for that existing security posture.
 - The source currently registers 20 native commands and six events. A few older comments/tests still refer to 17 commands or five events; treat the registered production surface as authoritative.
+- Dependabot opens weekly npm, cargo, and github-actions PRs. Major toolchain jumps arrive that way — TypeScript `7.0.2` and Vite `8.1.5` are both currently in place — so run the full frontend gate set after merging one rather than assuming a dependency bump is inert.
