@@ -61,8 +61,10 @@ export function Sidebar() {
 
   return (
     <nav className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-bg-surface">
-      <div className="px-3 pb-2 pt-[38px]" data-tauri-drag-region>
-        <div className="flex items-center gap-2 px-1" data-tauri-drag-region>
+      {/* "deep" so the logo and wordmark drag too: a bare data-tauri-drag-region
+          only fires on a direct hit, so child spans would swallow the mousedown. */}
+      <div className="px-3 pb-2 pt-[38px]" data-tauri-drag-region="deep">
+        <div className="flex items-center gap-2 px-1">
           <span
             aria-hidden="true"
             className="flex h-6 w-6 items-center justify-center rounded bg-accent/20 text-[13px] text-accent"

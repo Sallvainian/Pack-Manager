@@ -30,6 +30,11 @@ export function AppLayout() {
       <div className="flex min-h-0 flex-1">
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
+          {/* Reserves the overlay title bar strip the Sidebar already reserves
+              with pt-[38px], and gives the rest of the window top a drag
+              surface — titleBarStyle "Overlay" puts the webview under the
+              title bar, so only data-tauri-drag-region elements move it. */}
+          <div className="h-[38px] shrink-0" data-tauri-drag-region />
           <main className="min-h-0 flex-1 overflow-hidden">
             <MainView />
           </main>
