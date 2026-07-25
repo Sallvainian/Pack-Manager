@@ -266,10 +266,14 @@ Apple drops security support for it, not on a fixed schedule.
 A deployment target above the build SDK is a floor annotation, not an SDK
 requirement: measured `rc=0` with the expected `minos` for targets 15.0,
 26.0, and 30.0 against SDK 27.0, via both clang and rustc. CI therefore stays
-on `macos-14`. One question is settled by the first manual Release workflow
-run rather than by argument — whether `notarytool` accepts `minos 15.0`
-against SDK 14.5. That run uploads to the workflow run only and never touches
-a GitHub Release.
+on `macos-14`.
+
+**One question remains OPEN at the time of writing:** whether `notarytool`
+accepts `minos 15.0` against SDK 14.5. Nothing here asserts that it does. It
+is settled by a manual Release workflow run — which builds, signs, and
+notarizes, and uploads to the workflow run only, never touching a GitHub
+Release. If notarization rejects the floor, this record changes rather than
+the pipeline absorbing a surprise later.
 
 **Rejected:** leaving the floor undeclared (ships an inherited default and
 keeps the plist/binary mismatch); 11.0 (matches the arm64 clamp but sits

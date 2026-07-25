@@ -7,7 +7,7 @@ with dynamically-derived self-update routing, live streaming output,
 cancellation, and byte-faithful transcripts.
 
 Authoritative design docs: `docs/SPEC.md`, `docs/DECISIONS.md`,
-`docs/IMPL_PLAN.md`.
+`docs/IMPL_PLAN.md`, `docs/RELEASE-CHECKLIST.md`.
 
 ## Features
 

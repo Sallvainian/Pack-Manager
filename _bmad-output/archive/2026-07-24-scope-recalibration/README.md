@@ -37,6 +37,7 @@ two failures are different and D33 keeps them separate.
 | `planning/prds/` | The full PRD family (16 files). `prd.md` is the gate document — it is not a product PRD with gate machinery attached. Includes `readiness-coverage-map.md`, the 72-row map. |
 | `planning/implementation-readiness-report-*.md` | Three readiness reports asserting a FAIL baseline computed from the retired gate. |
 | `planning/epics-7-8-retired.md` | The 18 evidence stories of Epics 7–8, 789 lines. Replaced by `docs/RELEASE-CHECKLIST.md`. |
+| `planning/sprint-change-proposal-2026-07-24.md` | The approved change proposal for the *previous* correction, earlier the same day — the one that finalized the D27–D30 UX contract. Its planning changes were applied and its substance survives in D27–D30 and Epic UX-PB. It is archived because its readiness claims (`planning baseline: FAIL`, `14/72 P0 criteria FULL`) are computed from the gate D33 retires, and are now void. Superseded by D33. |
 | `architecture/ARCHITECTURE-SPINE-original.md` | The 969-line spine before the split. The live spine keeps its product architecture; this is the complete original including the retired evidence apparatus. |
 | `architecture/reviews/` | Three architecture reviews. Every finding in all three concerns the evidence contract that D33 dissolves; none is a product-architecture finding. |
 | `test-artifacts-gate/` | Gate paperwork: the 149 KB traceability matrix, the trace summary, the gate decision, the test-design set, and progress logs. |
