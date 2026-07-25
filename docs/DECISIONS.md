@@ -484,3 +484,83 @@ strips the native checkmark, trading an invisible focus state for an invisible
 checked state. **Rejected:** scoping the WebKit assertion to Chromium to get a
 green suite, which would have left CI silent about the only engine the app
 actually ships on.
+
+## D36. Bright fills use the palette's dark ink; D35's on-fill tokens get consumers
+
+D35 added `--color-on-accent` (`#07101D`) and `--color-on-success` (`#07140D`)
+for text sitting on bright accent and success fills, and then never pointed
+anything at them. `grep -rn "on-accent\|on-success" src/` matched only
+`theme.css` itself. Three shipped components kept painting `text-white`:
+`src/components/primitives/Button.tsx:7` (primary), `:11` (danger), and
+`src/components/shell/UpdateStatusItem.tsx:63` (the restart-to-update chip).
+
+Measured with the WCAG 2.1 relative-luminance formula: white on
+`--color-accent #65A7FF` is **2.46:1**, on `--color-accent-hover #7DB3FF`
+**2.15:1**, on `--color-danger #FF8793` **2.30:1**. All three fail the 4.5:1
+floor and also fail 3:1. `--color-on-accent` on those same fills measures
+**7.74:1**, **8.87:1**, and **8.30:1**.
+
+All three sites move to `text-on-accent`; no `text-white` remains in `src/`.
+`danger` uses `on-accent` rather than a new `onDanger` token — it is the
+palette's dark ink and measures 8.30:1 there. Naming a dedicated `onDanger` in
+`DESIGN.md` is a UX-spine concern, not a blocker for the fix.
+
+This shipped in 1.0.1 and was invisible to review because release-time contrast
+was a by-eye check, and white on light blue reads as fine. So the fix carries a
+guard: `tests/e2e/browser-style-contract.spec.ts` now reads the rendered primary
+button's real computed foreground and background, applies the luminance formula,
+and fails below 4.5:1, plus a negative assertion against `text-white` returning.
+Green on Chromium and WebKit.
+
+**Rejected:** darkening `--color-accent` until white passes. The accent is the
+approved palette value adopted by D35 and used for selection, running state, and
+navigation; changing it to rescue one text pair would move every other surface.
+
+## D37. Keyboard navigation and screen-reader support are not release criteria
+
+Pack-Manager is a personal, single-user macOS utility operated with a mouse.
+D33 already established the scale that governs this — 1 star, 0 forks, 3 lifetime
+`.dmg` downloads — and retired an enterprise readiness apparatus on exactly that
+basis. The accessibility obligations it kept were not re-examined against the
+same standard at the time. They are now.
+
+Removed as release criteria: the `docs/RELEASE-CHECKLIST.md` step requiring
+"Tab and arrow navigation reach every control", and the manual VoiceOver pass
+over the Upgrade Plan. Both were roughly 3–5 minutes of every release, verifying
+affordances for users this project does not have.
+
+**Supersedes:** D33's clause "one manual VoiceOver pass joins the release
+checklist" (`docs/DECISIONS.md:341`). D33's reduced-motion and contrast
+positions are unaffected.
+
+This is a decision about **release gates and unbuilt scope**, not a licence to
+strip shipped behavior. Three things stay, and none of them is kept as an
+accessibility obligation:
+
+- **The focus outline (D35, AD-27).** Merged across 31 sites and asserted in CI.
+  Deleting the rule would remove no work and would only un-guard working code
+  against the next `ring-*`, which is the exact trap D35 documents.
+- **⌘X / ⌘C / ⌘V / ⌘A and the ⌘R/⌘A/⌘L keyboard map.** Copy, paste and refresh
+  are things a mouse user does constantly. Per D25a these break silently if the
+  Edit and Window submenus are not re-declared — a functional regression in
+  copy/paste, not an accessibility check.
+- **Contrast.** D36's guard stays. It caught text that was unreadable to anyone
+  looking at the button, which is product quality rather than accommodation.
+
+A future `bmad-document-project` or `bmad-generate-project-context` regeneration,
+or any review pass, must not reinstate the removed criteria or report their
+absence as a gap. The equivalent mistake was live this morning: a stale
+`project-context.md` line instructing agents not to bump the CI runner image,
+against a fix already merged and verified.
+
+**Not yet applied:** `epics.md` (10 mentions, including FR-19, NFR-6, and Story
+UX-PB.1d), `ARCHITECTURE-SPINE.md` (3), and `EXPERIENCE.md` (4) still carry the
+removed obligations. Those are workflow-owned and come out through
+`bmad-correct-course`, a `bmad-architecture` Update, and a `bmad-ux` Update
+respectively — never a hand edit. **Story UX-PB.1d is not to be deleted**: its
+pointer-hover explanation of why a Package is ineligible is mouse-facing
+behavior, and only its keyboard and VoiceOver limbs are in scope here.
+
+**Rejected:** deleting the shipped focus and ARIA affordances from `src/`. They
+cost nothing to keep, and removing working code to satisfy a scope decision
+about *plans* would be a regression bought for no saving.

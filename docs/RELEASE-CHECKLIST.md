@@ -46,9 +46,16 @@ and unattended.
    binary and refresh. That manager reports its failure and keeps its prior snapshot; the
    other five are unaffected.
 
-5. **Nothing executes without explicit confirmation.** Row checkboxes, Manager headers,
-   and Update Everything all stage into the draft plan. Only the confirmation gate runs
-   anything.
+5. **The bulk paths do not execute without explicit confirmation.** Row checkboxes,
+   Manager headers, and Update Everything all stage into the draft plan and reach the
+   confirmation gate — verify each still does.
+
+   Two paths deliberately **bypass** the gate today and must not be reported as failures:
+   a row's own `Update Package` action (`src/components/manager/ManagerPane.tsx:145`,
+   commented "Single-package plan executes immediately — no sheet (SPEC §F5)") and a
+   Manager's self-update button (`src/components/manager/SelfUpdateCard.tsx:116`). Both
+   run one known command against one named target. D27–D30 routes them through the plan
+   too, but Epic UX-PB is unbuilt, so that is target state — not something to check here.
 
 6. **An update run shows real output and fails without corrupting state.** Live output
    streams as the process runs. Cancel one mid-flight and relaunch: the interrupted
@@ -80,21 +87,38 @@ release; they cannot prevent one. Prevention lives in the automated checks above
      this branch is otherwise never exercised.
 
    - **8b. An update is refused while an operation is running.** *(~45 s)* Start a package
-     upgrade, then click Restart-to-update. It must be refused. This is currently enforced
-     by frontend convention only; the Rust command has no guard.
+     upgrade, then click Restart-to-update. It must be refused, and the refusal must name
+     the running work rather than failing silently. Enforced in both layers: the frontend
+     quit guard is the path that explains itself to the user, and `install_app_update`
+     refuses independently (`src-tauri/src/commands.rs:810`) so a caller that skips the
+     guard cannot destroy in-flight package work. Queued counts as running — admission has
+     already committed to the operation, and a restart would drop it unstarted.
 
-9. **Keyboard and accessibility pass.** Tab and arrow navigation reach every control.
-   ⌘X / ⌘C / ⌘V / ⌘A work in the package search field and in every `CopyableCommand` —
-   these die if the Edit and Window submenus aren't re-declared, per `DECISIONS.md` D25a.
-   One VoiceOver pass over the Upgrade Plan announces state changes and completion.
+9. **Clipboard and menus still work.** ⌘X / ⌘C / ⌘V / ⌘A work in the package search field
+   and in every `CopyableCommand`. These die if the Edit and Window submenus aren't
+   re-declared, per `DECISIONS.md` D25a — that is a functional regression in copy/paste,
+   not an accessibility check, and it is why this step survives.
+
+   **Keyboard navigation and screen-reader support are explicitly not release criteria.**
+   Pack-Manager is a personal, single-user, mouse-driven utility. The former "Tab and arrow
+   navigation reach every control" pass and the VoiceOver pass over the Upgrade Plan were
+   removed deliberately on 2026-07-25 — they are not oversights, and a future
+   regeneration or review should not reinstate them. Do not report their absence as a gap.
+
+   This does not license *removing* what already ships. The focus outline is merged, costs
+   nothing to keep, and is asserted in CI — see the note below. Deleting that guard would
+   not save work, only allow silent regression.
 
    Reduced motion is covered automatically and needs no manual step — AUT-004 in
    `tests/e2e/browser-style-contract.spec.ts` emulates `prefers-reduced-motion: reduce`
    and asserts transitions and animations are removed. It runs in CI through `test.yml`.
+   The same spec pins the focus outline and measures the primary button's real computed
+   contrast, failing below 4.5:1. Those are automated and free; nothing to do here.
 
-   Contrast (4.5:1) is **not** automated — check it by eye here. That same spec disclaims
-   it: "This is a browser DOM/CSS contract only. It does not claim measured contrast
-   compliance or validate the native Tauri package."
+   That contrast check exists because white on `--color-accent` measured **2.46:1** and
+   shipped — a defect visible to anyone looking at the primary button, mouse or not. It is
+   kept for that reason, not as an accessibility obligation. No by-eye contrast sweep is
+   required at release.
 
 ---
 
