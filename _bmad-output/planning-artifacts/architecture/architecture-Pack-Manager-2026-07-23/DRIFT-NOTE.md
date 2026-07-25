@@ -1,12 +1,19 @@
-# Drift note — ARCHITECTURE-SPINE.md revision 3 → 9
+# Drift note — ARCHITECTURE-SPINE.md revision 3 → 10
 
 **Date:** 2026-07-25 · **Intent:** update · **Run folder:** this directory ·
-**Memlog:** `.memlog.md` (148 entries by `grep -c '^- ('`; entry 86 opens the
-revision 7 run, entry 103 opens revision 8, and entry 137 opens revision 9, so
-86–102 are revision 7, 103–136 are revision 8, and 137–148 are revision 9) ·
-**Reviews:** `reviews/` — six lenses against revision 4, four `*-v6.md` lenses
-against revision 6, four `*-v8.md` lenses against revision 8, four `*-v9.md`
-lenses against revision 9
+**Memlog:** `.memlog.md`. Each run's entries are bounded by its own
+`(event) Revision N run opened …` line — **find them by that text, not by index.**
+The previous version of this header carried a bare entry count and three fixed
+indices, and the count was stale by eight before the revision it was written in
+even closed — one of the **five** reference-rot instances §2g now lists. So the
+count is deliberately not restated here: run `grep -c '^- ('` for it. The run
+openers sat at entries 47 (revision 4), 86 (7), 103 (8), 137 (9) and 157 (10) when
+revision 10 closed, and those are stable because no entry is ever rewritten — but
+find them by the opener text regardless. ·
+**Reviews:** `reviews/` — six lenses against revision 4, four `*-v6.md` against
+revision 6, four `*-v8.md` against revision 8, four `*-v9.md` against revision 9,
+a full Validate pass in `VALIDATION-REPORT-2026-07-25.md` against revision 9, and
+this revision's reconcilers and gate lenses
 
 Why this file exists: revision 3 removed most of the readiness-gate apparatus
 `docs/DECISIONS.md` D33 retired, but left enough behind that a builder following
@@ -204,7 +211,19 @@ away from meaning disk.
 
 AD ids unchanged. AD-17 was amended in place.
 
-## 4. Open items and the remaining tail
+## 4. Open items and the remaining tail — *as of revision 5; superseded*
+
+> **Read the spine's own Decision Status table instead.** This section is
+> revision-4/5-era content and it sits physically *above* the revision 7, 8, 9 and
+> 10 sections, so a reader working top-down reaches it before any of them. It is
+> kept for the record and is **not** the live inventory. One clause in it is now
+> outright false: item 3 below names "five design-token names absent from
+> `src/styles/theme.css`", and all five are present —
+> `grep -c -- '--color-bg-shell\|--color-focus-ring\|--color-on-accent\|--color-on-success\|--color-violet' src/styles/theme.css`
+> → `5`. D35 added them (commit `be1f0e6`), and D36 then gave two of them
+> consumers (`a201fb0`). That clause contradicted the spine's own RESOLVED row,
+> which is why the spine's designated change record could not be left as it stood
+> (`reviews/VALIDATION-REPORT-2026-07-25.md` F4).
 
 **The tail that was not applied.** The six reviews carry roughly forty findings
 between them. Every critical and every high was applied. What remains is medium
@@ -772,3 +791,212 @@ were not reused; AD-27 is the next free id. Nothing was renumbered. Note that AD
 cited **nowhere** in `epics.md`, and unavoidably so — it was created after the
 reconciliation batch committed. That is the fifth item on the residuals row, not a gap
 in the batch.
+
+## 2g. Revision 10 — Phase 2 has an owner again, and two Open rows become invariants
+
+Revision 10 is the first revision since 3 with a **separable requirements authority**
+above it. `prds/prd-Pack-Manager-2026-07-25/prd.md` (status `final`) restores
+FR-1…FR-22, RP-1/RP-2 and NFR-1…NFR-8 as Phase 2 content that had been living inside
+`epics.md`, and it declares itself the authority this spine is reconciled *against*.
+Two rows revision 9 routed to the owner as *new architecture* came back with decisions
+and closed here as **AD-28** and **AD-29**. D37 and D36 landed with them.
+
+`epics.md` was untouched throughout, per owner instruction. Nothing was committed or
+staged.
+
+### What closed, and what the decision was
+
+| Row | Closed by | The decision |
+| --- | --- | --- |
+| Transient selection has no owning invariant | **AD-28** | `EXPERIENCE.md`'s model wins: the checkbox **is** membership; the transient selection and `Add Selected` layer are eliminated; a range or filter-wide interaction is **one batched operation**. `docs/SPEC.md` F5 stays the stale side by design. |
+| Plan-attempt journal: writer identity and cardinality | **AD-29** | One append authority; **exactly two records** per attempt, admission and terminal, never per transition; an attempt is a **fold**, with the missing-record direction stated. |
+| Keyboard-navigation and screen-reader release criteria | **RETIRED** (D37) | Removed as criteria; the focus indicator, the `⌘X`/`⌘C`/`⌘V`/`⌘A` map and the contrast floor survive **by name**. |
+| Requirements authority | **RESOLVED** | The PRD; `epics.md` stays the *story* authority, `docs/DECISIONS.md` the decision record. |
+
+### The two things D37 removed that were load-bearing
+
+D37 is scope reduction, and twice the removal took a mechanism with it. Recording both,
+because the pattern is the interesting part: **deleting a criterion can expose an
+invariant that was hiding behind it.**
+
+1. **AD-17's announcement channel** carried the stall handoff and `Interaction required`
+   at assertive priority — speech was the mechanism that reached a user looking
+   elsewhere. D37 removes screen-reader support, so the obligation and its priority
+   machinery go. What had to be *added* is the requirement they were serving: a
+   safety-critical state reaches the user through a **visible** surface and never
+   depends on an announcement channel. The convergence half survives as a conditional:
+   if a story builds a channel there is exactly one.
+2. **AD-27's real-WKWebView verification** named the manual keyboard-and-VoiceOver pass
+   as its fallback. D37 deleted that pass, so no release-time step exercises focus
+   painting in the engine that ships. Attaching it to the surviving mouse-driven steps
+   was considered and rejected — `:focus-visible` is precisely the state a pointer click
+   does not reliably produce on a checkbox, so the step would look like coverage and
+   provide none. What replaces it is the per-story runtime check AD-27 already mandates.
+   The knock-on is that D37 **promoted the CI proxy**: Playwright's Linux WebKit was a
+   supplement to a manual pass, and with the pass gone it is the only automated guard
+   between a `ring-*` on a native control and a release.
+
+### One live decision is overridden, and only a maintainer can record it
+
+`docs/DECISIONS.md` **D15** specifies pinned formulae as a "Disabled checkbox + tooltip
+with the `brew unpin` command". AD-16's corrected inertness rule forbids native
+`disabled`, because a natively disabled control cannot receive the pointer interaction
+the explanation requires (`prd.md` FR-5). D15 is named once in the decision record — its
+own heading — so nothing supersedes it, and the shipping row is D15 implemented
+literally rather than drift. D15's **substance** stands untouched. Its **mechanism**
+clause is overridden. A spine cannot supersede a decision, so the record is a maintainer
+edit, and until it happens a reviewer checking UX-PB.1d against D15 reads the removal of
+`disabled` as a regression.
+
+### The gate, and where the findings landed
+
+Six independent lenses: three reconcilers (PRD, `docs/DECISIONS.md`, currency against
+the tree) and three gate lenses (rubric walker, currency/reality, adversarial
+divergence) — plus `reviews/VALIDATION-REPORT-2026-07-25.md`, a Validate pass against
+revision 9 found in this folder mid-run, whose F1, F2, F3, F7 and F8 this revision
+resolved and whose F10, F11 and F12 it recorded.
+
+Counts from each lens's own tally: reconcile-PRD 1/4/2/3, reconcile-DECISIONS 0/2/6/3,
+reconcile-currency 3/3/4/3, gate-rubric 1/4/5/2, gate-currency 0/0/4/4 (94 claims
+examined, 86 verified exactly), gate-divergence 2/5/3/4 — 68 findings, of which a
+per-finding audit (`reviews/review-completeness-rev10.md`) puts **54 applied, 14
+recorded in a row, and 0 untracked.**
+
+**Every CRITICAL was in revision 10's own new material**, which is the fourth
+consecutive revision with that pattern:
+
+- **`Cancelling`** — the spine mandated a durable `OpStatus` variant `prd.md` FR-13
+  forbids by name. Revision 8 added it by symmetry with `Verifying`; the PRD settles it
+  the better way, by removing the state so the durability question never arises. AD-16
+  now agrees with its own cancellation rule instead of carrying both models.
+- **`Cancelling`'s story attribution** — filed against UX-PB.2f and UX-PB.4c, which
+  contain the word nowhere. It is UX-PB.2e and UX-PB.3g. Since `epics.md` is unedited,
+  the residuals row is the *only* channel to the stories, and it says "scope by named
+  heading" — so a run following it literally would have opened two clean stories and
+  left both defective ones.
+- **AD-28's removal taxonomy was not total** — two classes named, four shapes outside
+  them (range uncheck, `Clear`, an `Everything`-scope removal, `⌘A` on an all-staged
+  view). Now a closed three-way taxonomy, on the principle the first version missed:
+  **batching is a transport requirement and never changes a removal's class.**
+- **AD-28's all-or-none against AD-16's narrowing rebuild** — opposite answers for one
+  input, because no rule said which side of the IPC boundary owns the one predicate.
+  The tri-state control wedged permanently at `mixed` with no user-reachable exit. Now
+  all-or-none *in application*, narrowing *in resolution*, with the predicate owned by
+  Rust and projected with a snapshot token.
+
+Three HIGHs are worth reading as a set, because each falsified something this revision
+had just written as a fix:
+
+- **AD-29's terminal append** was assigned to UX-PB.4a because `epics.md` says so — and
+  UX-PB.4a depends on all of UX-PB.3a–3g while UX-PB.2e ships in wave 2, so every
+  attempt terminating in between persists admission-only and the fold must read it
+  `Interrupted`. The append moves to the terminal transition inside the store.
+- **`PlanAttempt.state`** had no durable home: normative in AD-16, unrepresentable in
+  AD-29 for two of its four values. Now derived, never persisted.
+- **AD-17's new visible-surface rule** is false below 720 CSS pixels, where the owning
+  surface can sit behind a replay and take the stall handoff with it — while the channel
+  that used to carry it is now optional *because this revision made it optional*. Closed
+  with a non-occludable indicator that routes to the surface.
+
+### What revision 10 recorded rather than decided
+
+Four rows, all outside the scope the owner set, all with the fix named:
+
+- **`⌘L` and `Esc`'s second rung** — AD-17 retires the `ActivityDrawer` and both keys
+  point at it. The row now **gates**: no story may retire the drawer until both sinks
+  are named. Deciding where they point is the owner's; not silently breaking them
+  meanwhile is the spine's.
+- **AD-12's file-scoped "never hand-edited"** — release-please's ownership is
+  field-scoped, so read literally the rule leaves the updater key with no rotation
+  mechanism and makes AD-11 unimplementable.
+- **Quit-with-work-in-flight** has no enforcement point where its app-update sibling
+  has two, and `prd.md` §9 leaves part of it an open product question.
+- **The post-publish operational envelope** was wholly silent; now Deferred with a
+  revisit condition rather than a retraction protocol invented for a one-user product.
+
+Plus **"Maintainer edits this spine cannot make"** — a new row, because the spine had
+routes for workflow-owned divergences and nowhere for the rest: D15's supersession,
+D37's unmeasured counts, D36's title, `RELEASE-CHECKLIST` step 5's target-state
+vocabulary, RP-2's missing accelerator validation, and SPEC's F5 and §4.11 omissions.
+
+### The reference-rot lesson, now written down
+
+Positional and numeric references have rotted **five** times in this folder: AD-16's
+rule ordinals, `epics.md` line numbers (twice), this spine's own line numbers, a count
+that went stale inside the revision that wrote it, and now commit hashes — six of the
+seven the spine cites resolve locally but sit on no branch after a squash merge. There
+is a **Citations convention** for it now: cite by decision id, story id plus quoted
+criterion, row title, or `AD` id plus subject. This revision broke the rule twice more
+while writing it (the `Cancelling` story ids, the `epics.md` residual count) and the
+gate caught both.
+
+### Owner decisions taken after the gate
+
+Four of the rows revision 10 recorded rather than decided came back with decisions in
+the same session, so they closed here rather than waiting for revision 11. Every code
+claim in them was re-verified before it was acted on.
+
+| Row | Closed as | The decision |
+| --- | --- | --- |
+| AD-12's file-scoped "never hand-edited" | **RESOLVED** | Narrowed to the three version fields release-please actually owns. Everything else in those files is maintainer-owned. |
+| Quit-with-work-in-flight enforcement point | **RESOLVED** (**AD-30**) | One enforcement point for every quit path; queued counts as running; OS shutdown gets no dialog, best-effort kill hook only. |
+| Accelerator sinks `⌘L` and `Esc` | **RESOLVED** | `⌘L` **focuses** the sidecar region — not toggle, not navigate; hidden region is a no-op. `Esc` collapses to close-dialog alone. |
+| D15's mechanism supersession | routed | The owner is drafting it as **D38**; the spine cites it only once it lands. |
+
+**AD-12** was in scope because the file-scoped reading made two sibling `AD`s
+unimplementable. `release-please-config.json` `extra-files` pins exactly `$.version` in
+`tauri.conf.json`, `$.package.version` in `Cargo.toml`, and the `pack-manager` lock
+entry. The updater `pubkey` lives in `src-tauri/tauri.conf.json` and appears in **no**
+`extra-files` path — release-please never reads or writes it — so under the old rule the
+minisign key was unrotatable and AD-11's `minimumSystemVersion` unmaintainable.
+
+**D15's rationale got stronger, not weaker.** The owner's draft rests on a fact the
+spine had missed: D15 promised the `brew unpin` command would reach the user through a
+tooltip, and it never has. The string is attached as `title` on the very input marked
+natively `disabled`, and disabled form controls dispatch no mouse events — so what ships
+is `disabled:opacity-40`, gray styling with the explanation unreachable. UX-PB.1d's
+removal of native `disabled` **restores** what D15 asked for rather than regressing from
+it. That reframes the change from a style conflict into a repair.
+
+**One premise behind the `⌘L` decision does not hold, and was deliberately not
+encoded.** The decision itself is sound and is applied. But it was argued partly on the
+grounds that Activity is "a state the sidecar transforms into, not a destination", and
+that routing `⌘L` to an Activity `ActiveView` would "reintroduce exactly the ambiguity
+AD-17 forecloses". AD-17 does not foreclose it — it **mandates** it: "Activity is a
+first-class destination in the existing discriminated `ActiveView` state — for the
+active attempt and for replaying a completed History entry", citing D30. `prd.md` names
+Activity as a first-class destination in four places, all Planned under D29/D30. Both
+models coexist exactly as AD-17 already writes them: the region transforms in place for
+the live attempt, *and* Activity is a route for replay. The decision does not depend on
+the premise — `⌘L` as a focus jump creates no fourth home because it routes nowhere — so
+it was applied without changing AD-17's Activity rule. Changing that rule would
+contradict D30 and the PRD and ripple into every UX-PB.3x and 4x story.
+
+(Also verified: "grep finds zero mentions of a drawer anywhere in `EXPERIENCE.md`" is
+wrong — there are two, and both are negations, so the conclusion holds and only the
+count was off.)
+
+### The completeness audit
+
+Prompted by the owner asking whether the report was complete. It was not, and the audit
+is at `reviews/review-completeness-rev10.md`.
+
+**The good result:** across all six revision-10 lenses, **54 findings applied, 14
+recorded in a row, 0 untracked** — checked by testing each proposed remedy against the
+spine rather than against this run's account of itself.
+
+**What it caught:** revision 10 had recreated the F11 gap for its own gate (the tail row
+covered revisions 6, 8, 9 and the revision-9 validation and said nothing about revision
+10's six lenses — now its own row); one gate-currency LOW was neither applied nor
+recorded (AD-27 called Tailwind v3's `outline-none` a "no-op", when it set a
+*transparent* outline preserving forced-colours visibility, and v4 renamed that utility
+`outline-hidden`); and three false claims of this run's own — "five independent lenses"
+where there were six, `gate-currency 0/0/4/3` where it is 0/0/4/4, and a citation to
+`MAINTAINER-EDITS-2026-07-25.md` written before that file existed. The first two were
+repeated in all three deliverables. All corrected.
+
+**Finalize steps left undone**, recorded rather than quietly skipped: no reconciler was
+run against the UX inputs (`EXPERIENCE.md`, `DESIGN.md`) — those divergences are
+recorded from the other lenses' findings rather than swept directly; no additional
+human-facing rendering was produced; and the close step's `bmad-spec` routing was
+offered in conversation but not recorded here until now.
