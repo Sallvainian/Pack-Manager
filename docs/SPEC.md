@@ -791,7 +791,7 @@ Committed representative payload JSON per IPC type in `dev/fixtures/ipc/`. Rust 
 
 ### 7.6 CI (`.github/workflows/ci.yml`)
 
-rust (macos-14): `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test --locked`. web (ubuntu): `npm ci`, `tsc --noEmit`, `vitest run`, `npm run build`. build-smoke (macos-14, main only): `npm run tauri build -- --debug`, upload `.app`. Caches; no job touches the network beyond dependency install. Beta-OS-specific issues are diagnosed on-machine by design.
+rust (macos-15): `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test --locked`. web (ubuntu): `npm ci`, `tsc --noEmit`, `vitest run`, `npm run build`. build-smoke (macos-15, main only): `npm run tauri build -- --debug`, upload `.app`. Caches; no job touches the network beyond dependency install. Beta-OS-specific issues are diagnosed on-machine by design.
 
 ---
 

@@ -363,3 +363,28 @@ infrastructure described above, which was never built and is disproportionate
 to a tool with 3 lifetime installs. Also rejected: leaving the gate documents
 in place as aspirational, since BMAD skill runs glob them back into the plan,
 re-entrenching what this record retires.
+
+## D34. CI and release build on `macos-15`; the `macos-14` pin is retired
+
+GitHub began deprecating the macOS 14 Sonoma runner images on **2026-07-06** and
+they are **fully unsupported after 2026-11-02**
+([actions/runner-images#13518](https://github.com/actions/runner-images/issues/13518)).
+During the window GitHub deliberately fails a sample of jobs on those labels to
+force migration, so the three pins — `ci.yml` `rust`, `ci.yml` `build-smoke`, and
+`release.yml` `build` — were already exposed to intermittent unexplained failures,
+and after 2026-11-02 no signed, notarized release could be cut at all.
+
+All three move to `macos-15`. D20's constraint is unchanged and still governs: the
+runner stays on a **stable** image, never a beta one, and beta-OS-specific issues
+are still diagnosed on-machine. Only which image is the stable one has changed.
+
+This also closes the question D31 left open. D31 recorded that a deployment target
+above the build SDK is a floor annotation rather than an SDK requirement, and that
+whether `notarytool` accepts `minos 15.0` against SDK 14.5 was OPEN. On `macos-15`
+the build SDK is no longer behind the declared 15.0 floor, so the mismatch that
+question was about no longer exists.
+
+**Rejected:** `macos-latest`. It floats, so a future GitHub default change would
+move the signing and notarization environment without a commit — the opposite of
+what D20 wants. Also rejected: waiting until closer to 2026-11-02, since the
+brownout failures are live now and would be diagnosed as flaky tests.

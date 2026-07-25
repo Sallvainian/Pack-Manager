@@ -58,8 +58,9 @@ permissions:
 
 jobs:
   build:
-    # ci.yml stays on stable macos-14 per DECISIONS D20; same here.
-    runs-on: macos-14
+    # ci.yml stays on a stable image per DECISIONS D20; same here. macos-14 is
+    # being deprecated by GitHub (began 2026-07-06, unsupported 2026-11-02).
+    runs-on: macos-15
     timeout-minutes: 90
     steps:
       - name: Checkout
