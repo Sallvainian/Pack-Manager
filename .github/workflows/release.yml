@@ -52,7 +52,7 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # On the release-please path the release commit is created DURING the
           # calling run, so `github.sha` still points at the commit that
