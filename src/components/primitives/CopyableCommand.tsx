@@ -33,7 +33,7 @@ export function CopyableCommand({ command, label, className = "" }: CopyableComm
       className={[
         "group inline-flex items-center gap-2 rounded-control border border-border bg-bg-inset px-2.5 py-1.5",
         "font-mono text-[12px] text-text-secondary hover:border-border-strong",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1 focus-visible:ring-offset-bg-surface",
+        "focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1",
         className,
       ].join(" ")}
     >

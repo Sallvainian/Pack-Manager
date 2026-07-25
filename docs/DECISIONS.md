@@ -419,8 +419,42 @@ element uses a separate `{colors.focusRing}` indicator that is at least 2px
 wide and visible against every surface. `{colors.borderStrong}` may indicate
 selection but never substitutes for focus; selected and focused states remain
 distinguishable." Focus now resolves `--color-focus-ring` (`#F4F7FB`), and the
-CI assertion moved with it, including a negative guard that the focus ring is
-not the accent.
+CI assertion moved with it, including a negative guard that focus is not the
+accent.
+
+**Focus is drawn as a real `outline`, never `ring-*`.** This is the part most
+likely to be "modernised" back by someone who does not know why, so the reason
+is recorded here. Tailwind's `ring-*` utilities compile to `box-shadow`, and
+**WebKit does not paint `box-shadow` on a native-appearance form control** —
+`<input type="checkbox">`, `<select>`. Pack-Manager ships inside WKWebView,
+which is WebKit, so every checkbox in the app had an invisible focus state.
+Measured on the same element, same keyboard interaction: `:focus-visible`
+matched `true` in both engines, while the computed `box-shadow` was the full
+ring in Chromium and the literal string `"none"` in WebKit. Applying
+`appearance: none` to that same checkbox made the ring paint, which isolates
+the cause to native-appearance painting rather than to focus matching — but
+`appearance: none` also destroys the native checkmark, so it is not the fix.
+An `outline` paints correctly in both engines and preserves the checkmark.
+
+Scope the rule precisely: the limitation applies to native-appearance form
+controls, not to everything. WebKit paints `box-shadow` on a `<button>`
+normally, and AUT-004 asserted exactly that for months. The rule is
+nonetheless applied uniformly to all focusable elements, because a mixed
+codebase is a trap — the next person adding a checkbox copies the `ring-` from
+the button beside it and ships an invisible focus state that no test catches.
+One mechanism, `outline` + `outline-offset`, everywhere. `outline-offset` is
+also precisely what SPEC §4.1's "offset against surface" was already asking
+for, so this closed that gap rather than deferring it. Note that Tailwind v4's
+`outline-none` genuinely sets `outline-style: none` (v3's no-op was renamed
+`outline-hidden`), so `outline-none` on a focusable element actively suppresses
+the indicator and must never be added.
+
+A runtime audit of every focusable element across the Dashboard, Manager,
+Upgrade Plan sheet, History, and Settings views reports zero elements without a
+focus indicator on both Chromium and WebKit. That audit also caught nine
+controls that had never had any focus style at all — including two `<select>`
+filters in History and both Upgrade Plan sheet checkboxes — which a class-name
+grep does not find, because the absence of a class is invisible to grep.
 
 Exactly one `ring-accent` use deliberately survives, at
 `src/components/manager/PackageRow.tsx:85`. It is a cross-manager navigation
@@ -438,3 +472,15 @@ turn the style-contract lane red — that lane is also what AD-11 relies on for
 reduced-motion coverage, so it must stay green on every push. Rejected:
 renaming the CSS variables to `DESIGN.md`'s names, which would touch every
 consumer in `src/` for no behavioural gain.
+
+On the focus mechanism specifically. **Rejected:** keeping `ring-*` and
+deferring the WebKit defect, which would have shipped a decision whose stated
+purpose is an indicator "visible against every surface" while it was invisible
+on the checkbox that controls plan membership. **Rejected:** converting only
+the form controls, which leaves two focus mechanisms in one codebase and makes
+the invisible-focus trap easy to walk back into. **Rejected:** `appearance:
+none` on the checkboxes, which does make `box-shadow` paint in WebKit but
+strips the native checkmark, trading an invisible focus state for an invisible
+checked state. **Rejected:** scoping the WebKit assertion to Chromium to get a
+green suite, which would have left CI silent about the only engine the app
+actually ships on.

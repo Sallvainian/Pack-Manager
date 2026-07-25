@@ -56,7 +56,7 @@ export function OperationRow({ op, focused, resolveName, onSelect, onCancel }: O
               e.stopPropagation();
               onCancel();
             }}
-            className="shrink-0 rounded-control px-1.5 text-[13px] text-text-muted hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+            className="shrink-0 rounded-control px-1.5 text-[13px] text-text-muted hover:text-danger focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1"
           >
             ✕
           </button>

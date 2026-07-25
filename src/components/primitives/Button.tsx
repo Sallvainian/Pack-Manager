@@ -35,7 +35,7 @@ export function Button({
       type={type}
       className={[
         "inline-flex items-center justify-center gap-1.5 rounded-control font-medium",
-        "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-base",
+        "transition-colors focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2",
         "disabled:cursor-not-allowed",
         VARIANTS[variant],
         SIZES[size],

@@ -75,6 +75,37 @@ context:
 - Given `grep -c 'ring-accent' src/`, when the change is complete, then exactly 1 match remains (`PackageRow.tsx:85`).
 - Given `docs/SPEC.md §4.1`, when compared to `src/styles/theme.css`, then every token name and value agrees.
 
+## Spec Change Log
+
+- **2026-07-25 — focus is drawn as `outline`, not `ring-*`.** Visual verification
+  found the adopted ring invisible on every native checkbox in WebKit. Measured
+  on one element, one interaction: `:focus-visible` matched `true` in both
+  engines; computed `box-shadow` was the full ring in Chromium and `"none"` in
+  WebKit. Applying `appearance: none` made it paint, isolating the cause to
+  WebKit not painting `box-shadow` on native-appearance form controls rather
+  than to focus matching. Pack-Manager ships in WKWebView, so this was a live
+  accessibility defect, not a test artifact. Approved fix (team lead): convert
+  **all** focus sites from `ring-*` to `outline` + `outline-offset` — one
+  mechanism everywhere — rather than form-controls-only (which leaves a trap)
+  or ship-and-defer. Known-bad state this avoids: a codebase where copying the
+  neighbouring `ring-` class silently ships an invisible focus state.
+  **KEEP on re-derivation:** the `PackageRow.tsx:85` navigation-highlight
+  carve-out; the negative assertion that focus is not the accent; and the
+  `EXPERIENCE.md:318` rationale recorded at the point of use.
+- **2026-07-25 — nine controls had no focus style at all.** A runtime audit
+  (focus every focusable element in every view, read computed style) found nine
+  controls with neither outline nor box-shadow — five more than the grep-based
+  pass found: both History `<select>` filters and its search input, both Upgrade
+  Plan sheet checkboxes, and the StatusBar Settings button. Absence of a class
+  is invisible to grep, so the audit, not the sweep, is the reliable check. Both
+  prior deferred-work entries are resolved by this change and were removed.
+- **2026-07-25 — audit methodology correction.** The first audit run reported 46
+  false gaps. Cause: each view after the first was swept immediately following a
+  pointer click, which puts the `:focus-visible` heuristic into pointer mode, so
+  a subsequent programmatic `.focus()` correctly does not match. Pressing a key
+  to restore keyboard modality before each sweep resolved it to zero. Any future
+  focus audit must do the same or it will report phantom failures.
+
 ## Design Notes
 
 Mapping is 1:1 by role, not by name (`DESIGN.md:110-132` supplies the role column):

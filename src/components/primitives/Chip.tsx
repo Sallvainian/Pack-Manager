@@ -37,7 +37,7 @@ export function Chip({ tone = "neutral", children, onClick, title, className = "
         className={[
           base,
           "cursor-pointer transition-colors hover:brightness-125",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1 focus-visible:ring-offset-bg-surface",
+          "focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1",
         ].join(" ")}
       >
         {children}

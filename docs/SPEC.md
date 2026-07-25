@@ -203,7 +203,9 @@ macOS 27.0 beta, arm64 M4, 16GB. Xcode-beta toolchain. brew at `/opt/homebrew/bi
 }
 ```
 
-Dark-only in MVP; tokens live in one file so a light theme is a value swap. Values are the approved "Aurora Control Deck" palette from the 2026-07-23 UX design (D35). `prefers-reduced-motion` disables all transitions (default 150ms ease). Focus: 2px `--color-focus-ring` ring, offset against surface, on every interactive element — a dedicated indicator, never `--color-accent`. `--color-border-strong` may indicate selection but never substitutes for focus; selected and focused states remain distinguishable.
+Dark-only in MVP; tokens live in one file so a light theme is a value swap. Values are the approved "Aurora Control Deck" palette from the 2026-07-23 UX design (D35). `prefers-reduced-motion` disables all transitions (default 150ms ease).
+
+Focus: a real 2px `outline` in `--color-focus-ring` with `outline-offset`, on every interactive element — a dedicated indicator, never `--color-accent`. Use `outline-*`, **not** `ring-*`: Tailwind's `ring-*` compiles to `box-shadow`, and WebKit does not paint `box-shadow` on native-appearance form controls (`<input type="checkbox">`, `<select>`). This app ships in WKWebView, so a ring on those controls is invisible to the user even though `:focus-visible` matches. The limitation is specific to native-appearance form controls — WebKit paints `box-shadow` on a `<button>` normally — but the rule is uniform so no control can be given an invisible focus state by following its neighbours. Never add `outline-none` to a focusable element. See D35. `--color-border-strong` may indicate selection but never substitutes for focus; selected and focused states remain distinguishable.
 
 ### 4.2 Typography
 

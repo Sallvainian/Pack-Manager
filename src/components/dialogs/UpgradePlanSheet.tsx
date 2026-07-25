@@ -220,7 +220,7 @@ export function UpgradePlanSheet({ plan: initialPlan }: UpgradePlanSheetProps) {
                 disabled={controlsBusy}
                 onChange={(e) => applyToggles(e.target.checked, includeGreedyCasks)}
                 aria-label="Include manager self-updates"
-                className="h-4 w-4 rounded-[4px] border border-border-strong bg-bg-raised accent-accent"
+                className="h-4 w-4 rounded-[4px] border border-border-strong bg-bg-raised accent-accent focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1"
               />
               Include manager self-updates{selfUpdateCount > 0 ? ` (${selfUpdateCount})` : ""}
             </label>
@@ -231,7 +231,7 @@ export function UpgradePlanSheet({ plan: initialPlan }: UpgradePlanSheetProps) {
                 disabled={controlsBusy}
                 onChange={(e) => applyToggles(includeSelfUpdates, e.target.checked)}
                 aria-label="Include self-updating casks"
-                className="h-4 w-4 rounded-[4px] border border-border-strong bg-bg-raised accent-accent"
+                className="h-4 w-4 rounded-[4px] border border-border-strong bg-bg-raised accent-accent focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1"
               />
               Include self-updating casks{greedyExcludedCount > 0 ? ` (${greedyExcludedCount})` : ""}
             </label>

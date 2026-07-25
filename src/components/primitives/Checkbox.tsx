@@ -35,7 +35,7 @@ export function Checkbox({
       className={[
         "h-4 w-4 shrink-0 cursor-pointer rounded-[4px] border border-border-strong bg-bg-raised",
         "accent-accent",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1 focus-visible:ring-offset-bg-surface",
+        "focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1",
         "disabled:cursor-not-allowed disabled:opacity-40",
       ].join(" ")}
     />
