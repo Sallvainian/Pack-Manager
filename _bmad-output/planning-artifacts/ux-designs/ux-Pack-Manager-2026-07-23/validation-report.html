@@ -1,528 +1,446 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Pack-Manager Focused UX Validation Report</title>
-    <style>
-      :root {
-        --bg: #fafaf9;
-        --surface: #ffffff;
-        --border: #e7e5e4;
-        --text: #1c1917;
-        --muted: #78716c;
-        --adequate: #65a30d;
-        --thin: #d97706;
-        --critical: #dc2626;
-        --high: #ea580c;
-        --medium: #ca8a04;
-        --low: #64748b;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      body {
-        margin: 0;
-        background: var(--bg);
-        color: var(--text);
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui,
-          sans-serif;
-        font-size: 15px;
-        line-height: 1.6;
-      }
-      .container {
-        max-width: 960px;
-        margin: 0 auto;
-        padding: 32px 24px 64px;
-      }
-      h1 {
-        margin: 0;
-        font-size: 24px;
-        line-height: 1.25;
-      }
-      h2 {
-        margin: 0;
-        font-size: 17px;
-      }
-      .subtitle,
-      .source,
-      footer {
-        color: var(--muted);
-        font-family: ui-monospace, "SF Mono", Menlo, monospace;
-        font-size: 12px;
-      }
-      .header {
-        padding-bottom: 18px;
-        border-bottom: 1px solid var(--border);
-      }
-      .synthesis,
-      details,
-      .scope {
-        margin-top: 18px;
-        overflow: hidden;
-        border: 1px solid var(--border);
-        border-radius: 9px;
-        background: var(--surface);
-      }
-      .synthesis,
-      .scope {
-        padding: 18px 22px;
-      }
-      .synthesis {
-        border-left: 4px solid var(--thin);
-      }
-      .synthesis p,
-      .scope p {
-        margin: 0 0 10px;
-      }
-      .synthesis p:last-child,
-      .scope p:last-child {
-        margin-bottom: 0;
-      }
-      .cards {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-        gap: 12px;
-        margin: 18px 0;
-      }
-      .card {
-        padding: 14px 16px;
-        border: 1px solid var(--border);
-        border-radius: 9px;
-        background: var(--surface);
-      }
-      .card strong {
-        display: block;
-        margin-top: 5px;
-      }
-      .counts {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 12px;
-      }
-      .badge,
-      .verdict {
-        display: inline-block;
-        border-radius: 999px;
-        padding: 3px 9px;
-        color: white;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-      }
-      .badge.critical {
-        background: var(--critical);
-      }
-      .badge.high {
-        background: var(--high);
-      }
-      .badge.medium {
-        background: var(--medium);
-      }
-      .badge.low {
-        background: var(--low);
-      }
-      .verdict.thin {
-        background: var(--thin);
-      }
-      .verdict.adequate {
-        background: var(--adequate);
-      }
-      summary {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 15px 20px;
-        cursor: pointer;
-        list-style: none;
-      }
-      summary::-webkit-details-marker {
-        display: none;
-      }
-      summary::before {
-        content: "▸";
-        color: var(--muted);
-      }
-      details[open] summary::before {
-        transform: rotate(90deg);
-      }
-      summary h2 {
-        flex: 1;
-      }
-      .body {
-        padding: 0 20px 18px;
-      }
-      .finding {
-        padding: 14px 0;
-        border-top: 1px solid var(--border);
-      }
-      .finding:first-of-type {
-        border-top: 0;
-      }
-      .finding h3 {
-        display: inline;
-        margin: 0 0 0 8px;
-        font-size: 15px;
-      }
-      .finding p {
-        margin: 7px 0 0;
-      }
-      .fix {
-        color: #44403c;
-      }
-      ol {
-        margin-bottom: 0;
-      }
-      footer {
-        margin-top: 36px;
-        padding-top: 16px;
-        border-top: 1px solid var(--border);
-      }
-      @media (prefers-reduced-motion: reduce) {
-        * {
-          scroll-behavior: auto !important;
-          transition: none !important;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <main class="container">
-      <header class="header">
-        <h1>Pack-Manager — Focused UX Validation Report</h1>
-        <div class="subtitle">
-          DESIGN.md + EXPERIENCE.md · 2026-07-24T02:30:58Z
-        </div>
-        <div class="subtitle">
-          Resolution: final spines and four promoted key-screen mockups ·
-          2026-07-24
-        </div>
-      </header>
+<head>
+<meta charset="utf-8">
+<title>UX Design Validation: Pack-Manager</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --border: #e7e5e4;
+    --text: #1c1917;
+    --muted: #78716c;
 
-      <section class="synthesis" aria-labelledby="summary-title">
-        <h2 id="summary-title">Overall verdict</h2>
-        <p>
-          The contracts now provide a coherent implementation foundation: the
-          Upgrade Plan lifecycle is understandable, terminal evidence remains
-          secondary but available, failures are handled honestly, and
-          accessibility is treated as a product requirement.
-        </p>
-        <p>
-          No critical blocker was found. The reviewers reported 9 high, 7
-          medium, and 2 low findings; one high finding overlaps around
-          virtualized Package selection. Those findings are resolved in the
-          final spine pair and represented in the authoritative key-screen
-          mockups.
-        </p>
-        <p>
-          Resolution status: all findings below have been applied to DESIGN.md
-          and EXPERIENCE.md. Four key-screen mockups have also passed visual
-          validation at both target sizes and were promoted after mock coverage
-          was confirmed. This report preserves the original review record.
-        </p>
-        <div class="counts" aria-label="Finding counts">
-          <span class="badge critical">0 critical</span>
-          <span class="badge high">9 high</span>
-          <span class="badge medium">7 medium</span>
-          <span class="badge low">2 low</span>
-        </div>
-      </section>
+    --verdict-strong: #16a34a;
+    --verdict-adequate: #65a30d;
+    --verdict-thin: #d97706;
+    --verdict-broken: #dc2626;
 
-      <div class="cards" aria-label="Original review lens verdicts">
-        <div class="card">
-          <span>Usability</span>
-          <strong>Needs clarification</strong>
-          <span class="verdict thin">5 high · 5 medium · 2 low</span>
-        </div>
-        <div class="card">
-          <span>Accessibility</span>
-          <strong>Adequate foundation</strong>
-          <span class="verdict adequate">4 high · 2 medium</span>
-        </div>
+    --sev-low: #64748b;
+    --sev-medium: #ca8a04;
+    --sev-high: #ea580c;
+    --sev-critical: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 15px;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px 64px; }
+
+  header.report-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .title h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .title .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+
+  .synthesis {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--muted);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .synthesis p { margin: 0 0 10px; }
+  .synthesis p:last-child { margin-bottom: 0; }
+
+  .dimension-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .dim-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .dim-card .dim-name { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .dim-card .dim-verdict { font-size: 14px; font-weight: 600; }
+
+  section.dimension, section.reviewer-section { margin-bottom: 14px; }
+  section.dimension details, section.reviewer-section details {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  section summary {
+    padding: 14px 20px;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  section summary::-webkit-details-marker { display: none; }
+  section summary::before {
+    content: "▸";
+    display: inline-block;
+    color: var(--muted);
+    transition: transform 0.15s ease;
+  }
+  section details[open] summary::before { transform: rotate(90deg); }
+  section summary h2 {
+    display: inline;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    flex: 1;
+  }
+  .verdict-pill {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: white;
+  }
+  .verdict-strong { background: var(--verdict-strong); }
+  .verdict-adequate { background: var(--verdict-adequate); }
+  .verdict-thin { background: var(--verdict-thin); }
+  .verdict-broken { background: var(--verdict-broken); }
+
+  .dim-body { padding: 4px 20px 18px; }
+  .dim-judgment { color: var(--text); font-size: 14.5px; }
+  .dim-judgment p { margin: 0 0 10px; }
+
+  .findings-list { padding: 0 20px 4px; }
+  article.finding {
+    padding: 14px 0;
+    border-top: 1px solid var(--border);
+  }
+  article.finding:first-child { border-top: none; }
+  article.finding header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .badge {
+    font-size: 10.5px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+  }
+  .badge-sev-low { background: rgba(100, 116, 139, 0.12); color: var(--sev-low); }
+  .badge-sev-medium { background: rgba(202, 138, 4, 0.14); color: var(--sev-medium); }
+  .badge-sev-high { background: rgba(234, 88, 12, 0.14); color: var(--sev-high); }
+  .badge-sev-critical { background: rgba(220, 38, 38, 0.14); color: var(--sev-critical); }
+  .finding-title { margin: 0; font-size: 15px; font-weight: 500; flex: 1; min-width: 200px; }
+  .finding-location { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; color: var(--muted); }
+  .finding-note, .finding-fix { margin-top: 6px; font-size: 14px; }
+  .finding-fix strong { color: var(--muted); font-weight: 500; }
+
+  .reviewer-source {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  .mechanical {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-top: 24px;
+    font-size: 14px;
+  }
+  .mechanical h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .mechanical ul { margin: 0; padding-left: 20px; }
+  .mechanical li { margin-bottom: 4px; color: var(--text); }
+
+  footer.report-footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  footer .meta { display: flex; gap: 24px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+  <div class="container">
+
+    <header class="report-header">
+      <div class="title">
+        <h1>Pack-Manager — UX Design Validation Report</h1>
+        <div class="subtitle">_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/</div>
       </div>
+    </header>
 
-      <section class="scope">
-        <h2>Review scope</h2>
-        <p>
-          This was the selected focused usability and accessibility review. The
-          broader rubric and adversarial lenses were intentionally not run.
-        </p>
-      </section>
+    <div class="synthesis">
+      <p>Mechanically these are among the denser spine pairs in the repo: exact 22/22/22 component parity across <code>DESIGN.md</code> frontmatter, <code>DESIGN.md#Components</code> and <code>EXPERIENCE.md#Component Patterns</code>; all 22 colour tokens carry hex; all six flows carry a named protagonist, numbered steps and a climax; all four mockups are linked with no orphans; both files sit in canonical section order. Against the <em>code</em> they are now in good standing — D35 adopted all 22 colours into <code>src/styles/theme.css</code> with zero value mismatches, and the focus migration the spines asked for landed at 31 sites.</p>
+      <p>They fail on <strong>inheritance</strong>. Seven of the eleven <code>sources:</code> paths across the two files do not exist, and the three that matter were deliberately retired by <code>docs/DECISIONS.md</code> D33. This is not bookkeeping: <code>EXPERIENCE.md:27</code> still delegates the authority for exact commands, execution, persistence and safety to that retired PRD, so the most consequential UX in the product currently points at nothing.</p>
+      <p>Beyond provenance, the pair carries a small number of genuine build-blockers — a sidecar that two sections require to hold two different things at once, an irreversible-run stop control with two different labels in one file, a <code>Verifying</code> state that is normative in one spine and absent from the other, and a Retry behaviour that contradicts <code>epics.md</code>. <strong>An Update run is needed.</strong> One item — transient selection — is an owner decision, not a doc edit.</p>
+    </div>
 
+    <div class="dimension-summary">
+      <div class="dim-card"><div class="dim-name">1. Flow coverage</div><div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div></div>
+      <div class="dim-card"><div class="dim-name">2. Token completeness</div><div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div></div>
+      <div class="dim-card"><div class="dim-name">3. Component coverage</div><div class="dim-verdict" style="color: var(--verdict-strong)">strong</div></div>
+      <div class="dim-card"><div class="dim-name">4. State coverage</div><div class="dim-verdict" style="color: var(--verdict-thin)">thin</div></div>
+      <div class="dim-card"><div class="dim-name">5. Visual reference coverage</div><div class="dim-verdict" style="color: var(--verdict-strong)">strong</div></div>
+      <div class="dim-card"><div class="dim-name">6. Bloat &amp; overspecification</div><div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div></div>
+      <div class="dim-card"><div class="dim-name">7. Inheritance discipline</div><div class="dim-verdict" style="color: var(--verdict-broken)">broken</div></div>
+      <div class="dim-card"><div class="dim-name">8. Shape fit</div><div class="dim-verdict" style="color: var(--verdict-strong)">strong</div></div>
+    </div>
+
+    <section class="dimension">
       <details open>
-        <summary>
-          <h2>Usability review</h2>
-          <span class="source">review-usability.md</span>
-        </summary>
-        <div class="body">
-          <p>
-            The mental model is strong, but several consequential actions have
-            ambiguous scope or consequences.
-          </p>
-
+        <summary><h2>7. Inheritance discipline</h2><span class="verdict-pill verdict-broken">broken</span></summary>
+        <div class="dim-body"><div class="dim-judgment">
+          <p>Seven of eleven <code>sources:</code> paths across the two files do not exist. The three that matter were retired on purpose, and one delegation is load-bearing in body text rather than frontmatter.</p>
+        </div></div>
+        <div class="findings-list">
           <article class="finding">
-            <span class="badge high">High</span>
-            <h3>Plan items cannot be edited directly in the sidecar</h3>
-            <p>
-              Update Everything provides no defined way to remove one Package or
-              Manager self-update.
-            </p>
-            <p class="fix">
-              <strong>Fix:</strong> Make every staged item removable, define In
-              Plan as a reversible state, update counts immediately, and return
-              Change Plan focus to the editable plan.
-            </p>
-          </article>
-
-          <article class="finding">
-            <span class="badge high">High</span>
-            <h3>Header Checkbox scope is ambiguous</h3>
-            <p>
-              “Eligible visible rows” could mean rendered rows or the complete
-              active-filter result.
-            </p>
-            <p class="fix">
-              <strong>Fix:</strong> Apply it to every eligible Package matching
-              the active filter, including virtualized rows; show the exact
-              count and mixed state.
-            </p>
-          </article>
-
-          <article class="finding">
-            <span class="badge high">High</span>
-            <h3>Confirmation-disabled action is unclear</h3>
-            <p>
-              Confirm # Updates implies another confirmation even when the
-              action executes immediately.
-            </p>
-            <p class="fix">
-              <strong>Fix:</strong> Show Confirmation is off, link to Settings,
-              expand commands, and relabel the action Run # updates.
-            </p>
-          </article>
-
-          <article class="finding">
-            <span class="badge high">High</span>
-            <h3>Abnormal Activity controls are undefined</h3>
-            <p>
-              Cancel, skip, wait, timeout, and unexpected command interaction
-              have states but no complete control contract.
-            </p>
-            <p class="fix">
-              <strong>Fix:</strong> Define when each safe action appears, what
-              it affects, and an explicit Interaction required blocked state for
-              unexpected prompts.
-            </p>
-          </article>
-
-          <article class="finding">
-            <span class="badge high">High</span>
-            <h3>Retry conflicts with one-entry History semantics</h3>
-            <p class="fix">
-              <strong>Fix:</strong> Each confirmed attempt creates a new History
-              entry linked to its source retry; the original result remains
-              unchanged.
-            </p>
-          </article>
-
-          <article class="finding">
-            <span class="badge medium">Medium</span>
-            <h3>Activity presentations can conflict</h3>
-            <p>
-              Define one shared live model, replay behavior during active work,
-              and a Back to live activity path.
-            </p>
+            <header><span class="badge badge-sev-critical">critical</span><h3 class="finding-title"><code>sources:</code> frontmatter routes consumers into retired and non-existent documents</h3><span class="finding-location">DESIGN.md:9-13 · EXPERIENCE.md:9-14</span></header>
+            <div class="finding-note"><code>DESIGN.md</code> cites 5 paths, of which <code>prds/prd-Pack-Manager-2026-07-22/prd.md</code>, its <code>addendum.md</code>, and <code>implementation-readiness-report-2026-07-23.md</code> are gone. <code>EXPERIENCE.md</code> cites 6 and adds a fourth casualty, <code>sprint-change-proposal-2026-07-24.md</code>. All sit in <code>_bmad-output/archive/2026-07-24-scope-recalibration/</code>. <code>docs/DECISIONS.md:363-365</code> names this exact hazard: “Also rejected: leaving the gate documents in place as aspirational, since BMAD skill runs glob them back into the plan, re-entrenching what this record retires.”</div>
+            <div class="finding-fix"><strong>Fix:</strong> drop both PRD entries (do <strong>not</strong> repoint to the archive); decide drop-vs-repoint for the readiness report (a live <code>implementation-readiness-report-2026-07-25.md</code> exists) and the sprint-change proposal (successors <code>-2026-07-25.md</code>, <code>-2026-07-25-spine-rev8.md</code>); add <code>docs/SPEC.md</code> and <code>docs/DECISIONS.md</code>, which neither spine cites today though <code>ARCHITECTURE-SPINE.md:15-27</code> does.</div>
           </article>
           <article class="finding">
-            <span class="badge medium">Medium</span>
-            <h3>Retry may displace unread Results</h3>
-            <p>
-              Define the transition and preserve the completed diagnosis in
-              History with a return path.
-            </p>
+            <header><span class="badge badge-sev-critical">critical</span><h3 class="finding-title"><code>EXPERIENCE.md</code> normatively delegates load-bearing UX to the retired PRD</h3><span class="finding-location">EXPERIENCE.md:27, :375, :444</span></header>
+            <div class="finding-note">“Requirements for exact commands, process ownership, execution, persistence, and safety remain authoritative in the source PRD, addendum, Architecture Spine, and epics.” AJ-1…AJ-6 do survive verbatim at <code>epics.md:148-153</code>, so the journey names still resolve; the command/execution/safety delegation does not.</div>
+            <div class="finding-fix"><strong>Fix:</strong> rewrite <code>:27</code> to name the surviving contracts rather than re-citing.</div>
           </article>
           <article class="finding">
-            <span class="badge medium">Medium</span>
-            <h3>Unavailable states lack standard explanations</h3>
-            <p>
-              Explain excluded/unavailable Packages and use plain language such
-              as Managed through mise.
-            </p>
-          </article>
-          <article class="finding">
-            <span class="badge medium">Medium</span>
-            <h3>Application update discovery lacks a canonical location</h3>
-            <p>
-              Use Settings → Pack-Manager updates plus one restrained
-              application-level notice.
-            </p>
-          </article>
-          <article class="finding">
-            <span class="badge medium">Medium</span>
-            <h3>Settings persistence is undefined</h3>
-            <p>
-              Choose immediate saving with rollback or one consistent
-              Apply/Cancel model.
-            </p>
-          </article>
-          <article class="finding">
-            <span class="badge low">Low</span>
-            <h3>Results dismissal has two names</h3>
-            <p>Choose Done consistently.</p>
-          </article>
-          <article class="finding">
-            <span class="badge low">Low</span>
-            <h3>History updated/total can overstate success</h3>
-            <p>Use verified wording such as 10 of 12 verified · 2 failed.</p>
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title"><code>EXPERIENCE.md:330</code> claims verification the release process does not perform</h3><span class="finding-location">EXPERIENCE.md:330</span></header>
+            <div class="finding-note">“Packaged acceptance verifies focus, final-row reachability, selection scope, completion announcements, and no overlap at 100%, 150%, and 200% zoom with VoiceOver and 101 Package rows.” <code>docs/RELEASE-CHECKLIST.md:90-93</code> carries one VoiceOver pass and nothing else on that list.</div>
+            <div class="finding-fix"><strong>Fix:</strong> reduce the claim to what the checklist actually performs, or add the missing steps to the checklist.</div>
           </article>
         </div>
       </details>
+    </section>
 
-      <section class="scope">
-        <h2>Applied-resolution verification</h2>
-        <ul>
-          <li>
-            All reported usability and accessibility findings are represented in
-            DESIGN.md and EXPERIENCE.md.
-          </li>
-          <li>
-            Component tables match across the spine pair, and every referenced
-            color token resolves.
-          </li>
-          <li>
-            Focus-ring contrast, all six annotated user journeys, YAML
-            frontmatter, formatting, and whitespace checks pass.
-          </li>
-          <li>
-            Manager workspace, live Activity and Results, History replay, and
-            Settings/app-update mockups were validated at 1440 × 900 and 900 ×
-            600.
-          </li>
-          <li>
-            The validated pages have no document or app-window horizontal
-            overflow and produced no browser-console errors or warnings.
-          </li>
-          <li>
-            The completed Results canvas was inspected independently at both
-            validation sizes.
-          </li>
-          <li>
-            The required structure-and-prose review completed; all ten material
-            prose refinements were applied. Mandatory machine-readable
-            frontmatter, canonical section order, full journeys, and deliberate
-            cross-checks were preserved.
-          </li>
-        </ul>
-      </section>
-
+    <section class="dimension">
       <details open>
-        <summary>
-          <h2>Accessibility review</h2>
-          <span class="source">review-accessibility.md</span>
-        </summary>
-        <div class="body">
-          <p>
-            The accessibility direction is strong, but implementation could
-            still lose focus or expose incomplete virtualized content unless the
-            remaining details become normative.
-          </p>
-
+        <summary><h2>4. State coverage</h2><span class="verdict-pill verdict-thin">thin</span></summary>
+        <div class="dim-body"><div class="dim-judgment">
+          <p>Enumerations are rich but two required State Panel states have no behavioral contract, and the trust-critical <code>Verifying</code> state exists in only one spine.</p>
+        </div></div>
+        <div class="findings-list">
           <article class="finding">
-            <span class="badge high">High</span>
-            <h3>Focus boundary token is too weak</h3>
-            <p>
-              borderStrong measures only 2.33:1 against surface and no separate
-              focus token is defined.
-            </p>
-            <p class="fix">
-              <strong>Fix:</strong> Use accent or a dedicated token with a
-              separated minimum 2px ring and distinguish focus from selection.
-            </p>
+            <header><span class="badge badge-sev-high">high</span><h3 class="finding-title"><code>Verifying</code> is normative in one spine and absent from the other</h3><span class="finding-location">EXPERIENCE.md:228 · DESIGN.md:215</span></header>
+            <div class="finding-note"><code>EXPERIENCE.md:228</code> “A successful process exit remains <code>Verifying</code> until affected Manager state refreshes.” <code>grep -c 'Verifying' DESIGN.md</code> → 0, and the Activity Operation Row required-state list at <code>DESIGN.md:215</code> ends “…cancelling, verified, failed, cancelled, skipped, timed out”. Load-bearing downstream at <code>epics.md:818</code> and <code>:844</code>, so <code>DESIGN.md:236</code> “Verify refreshed state before coloring an update successful” has no visual contract.</div>
+            <div class="finding-fix"><strong>Fix:</strong> add <code>Verifying</code> to <code>DESIGN.md:215</code> and to <code>EXPERIENCE.md:155</code>’s enumeration.</div>
           </article>
-
           <article class="finding">
-            <span class="badge high">High</span>
-            <h3>Virtualized Package-table operation is incomplete</h3>
-            <p>
-              Table semantics, bounded Tab behavior, arrow navigation, stable
-              focus, position metadata, and final-row reachability are not
-              defined.
-            </p>
-            <p class="fix">
-              <strong>Fix:</strong> Add one normative table interaction model
-              and verify the packaged app with VoiceOver and 101 rows.
-            </p>
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title"><code>offline</code> and <code>no Managers</code> are required states with no behavioral coverage</h3><span class="finding-location">DESIGN.md:222</span></header>
+            <div class="finding-note"><code>DESIGN.md:222</code> requires State Panel “Loading, empty, offline, no Managers, no active upgrade, interrupted, fatal”; <code>grep -ic offline EXPERIENCE.md</code> → 0.</div>
+            <div class="finding-fix"><strong>Fix:</strong> add both to <code>EXPERIENCE.md#State Patterns</code>, or drop them from the required list.</div>
           </article>
-
           <article class="finding">
-            <span class="badge high">High</span>
-            <h3>Lifecycle focus transitions are undefined</h3>
-            <p class="fix">
-              <strong>Fix:</strong> Define initial dialog focus, final-confirm
-              focus, stable Activity focus, Results announcement/focus, and
-              focus restoration after Results closes.
-            </p>
-          </article>
-
-          <article class="finding">
-            <span class="badge high">High</span>
-            <h3>Fixed panes conflict with 200% zoom</h3>
-            <p class="fix">
-              <strong>Fix:</strong> Add a high-zoom/narrow mode that collapses
-              navigation and makes Plan/Activity/Results a full-workspace or
-              stacked surface; test 100%, 150%, and 200%.
-            </p>
-          </article>
-
-          <article class="finding">
-            <span class="badge medium">Medium</span>
-            <h3>Live-announcement behavior is underspecified</h3>
-            <p>
-              Define one atomic channel for meaningful plan events, suppress
-              duplicate notification speech, and never announce output lines or
-              progress ticks.
-            </p>
-          </article>
-
-          <article class="finding">
-            <span class="badge medium">Medium</span>
-            <h3>Explanatory-disabled semantics are contradictory</h3>
-            <p>
-              A native disabled Checkbox cannot receive focus or activation. Use
-              an unavailable semantic state without native disabled, attach a
-              persistent accessible description, and keep activation inert.
-            </p>
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Transient selection has no owning invariant — owner decision, not a doc edit</h3><span class="finding-location">ARCHITECTURE-SPINE.md:1050 · EXPERIENCE.md:143</span></header>
+            <div class="finding-note"><code>docs/SPEC.md</code> F5 has Esc clear the transient selection while <code>EXPERIENCE.md:143</code> has “selection immediately adds/removes Upgrade Plan membership”, and <code>src/store/packages.ts:17</code> ships a live <code>selection</code> set <code>PlanIntent</code> cannot represent. The UX side is deliberate — <code>.memlog.md:75</code> records “Eliminate the separate temporary selection and Add Selected layer” — so <code>docs/SPEC.md</code> F5 is the stale side, and F5 was never added to §0.1’s supersession list. But <code>reviews/review-reconcile-epics.md:166</code> flags a real cost: a shift-range across 100 rows becomes 100 Rust round-trips against NFR-3 (<code>epics.md:88</code>).</div>
+            <div class="finding-fix"><strong>Fix:</strong> owner decision first. Do not let an Update run “resolve” this in prose.</div>
           </article>
         </div>
       </details>
+    </section>
 
-      <section class="scope">
-        <h2>Recommended resolution order</h2>
-        <ol>
-          <li>
-            Resolve the five high-impact workflow ambiguities and four
-            high-impact accessibility contracts.
-          </li>
-          <li>
-            Resolve coexistence, persistence, unavailable-state, announcement,
-            and explanatory-disabled details.
-          </li>
-          <li>Standardize Done and verified History wording.</li>
-          <li>
-            Render the remaining authoritative mockups only after the high
-            findings are committed.
-          </li>
-        </ol>
-        <p>Steps 1–4 and finalization are complete.</p>
-      </section>
+    <section class="dimension">
+      <details>
+        <summary><h2>2. Token completeness</h2><span class="verdict-pill verdict-adequate">adequate</span></summary>
+        <div class="dim-body"><div class="dim-judgment">
+          <p>All 22 colour tokens carry hex and are adopted verbatim in code. Gaps are in non-text contrast targets and one undefined health-meter band.</p>
+        </div></div>
+        <div class="findings-list">
+          <article class="finding">
+            <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Non-text contrast has no stated target and the selection tokens fall below 3:1</h3><span class="finding-location">EXPERIENCE.md:318 · DESIGN.md:122</span></header>
+            <div class="finding-note">Computed from the spine’s own hex: <code>borderStrong</code> vs <code>surface</code> = 2.33:1, vs <code>overlay</code> = 1.97:1; <code>accentSubtle</code> vs <code>surface</code> = 1.18:1 — all below WCAG 1.4.11’s 3:1 floor, with no non-text target stated anywhere. <code>EXPERIENCE.md:318</code> permits <code>borderStrong</code> to indicate selection. All <em>text</em> pairs pass 4.5:1, including <code>DESIGN.md:122</code>’s <code>textMuted</code> claim (4.99:1 through overlay — true, 0.49 of margin). <code>ARCHITECTURE-SPINE.md:328</code> confirms automated contrast does not exist, so the by-eye checker has no reference values.</div>
+            <div class="finding-fix"><strong>Fix:</strong> state a 3:1 non-text target and give the by-eye check a table of computed values.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Health-meter 80–99% band has no colour value</h3><span class="finding-location">DESIGN.md:138</span></header>
+            <div class="finding-note">“80–99% current: interpolate through yellow-green while maintaining contrast” names no token and no hex, while <code>:134</code> requires “one solid fill color—not a gradient fill” and <code>:246</code> forbids “a gradient inside the Package Health Meter”. Implementable only by invention.</div>
+            <div class="finding-fix"><strong>Fix:</strong> name a token for the band, or collapse 80–99% into <code>success</code>/<code>warning</code>.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Radius tokens diverge and most are undefined in code</h3><span class="finding-location">DESIGN.md:57-63 · src/styles/theme.css:46</span></header>
+            <div class="finding-note"><code>DESIGN.md</code> declares 6 radius values; <code>theme.css</code> defines 2, and both shared names disagree — <code>--radius-card: 10px</code> vs <code>card: 13px</code>, <code>--radius-control: 6px</code> vs <code>control: 7px</code>. Dialogs borrow <code>rounded-card</code>.</div>
+            <div class="finding-fix"><strong>Fix:</strong> reconcile in the same direction D35 took the colours — adopt the spine’s values, or record a decision changing them.</div>
+          </article>
+        </div>
+      </details>
+    </section>
 
-      <footer>
-        Reviewers: review-usability.md · review-accessibility.md<br />
-        Generated: 2026-07-24T02:30:58Z
-      </footer>
-    </main>
-  </body>
+    <section class="dimension">
+      <details>
+        <summary><h2>1. Flow coverage</h2><span class="verdict-pill verdict-adequate">adequate</span></summary>
+        <div class="dim-body"><div class="dim-judgment">
+          <p>All six AJ flows carry a named protagonist, numbered steps, a climax beat and a failure path, with names matching <code>epics.md:148-153</code> verbatim. The gaps are two live stories with no contract and quoted labels that diverge from the binding epic.</p>
+        </div></div>
+        <div class="findings-list">
+          <article class="finding">
+            <header><span class="badge badge-sev-critical">critical</span><h3 class="finding-title"><code>Create new plan</code> contradicts AD-24 as written</h3><span class="finding-location">EXPERIENCE.md:231 · epics.md:990</span></header>
+            <div class="finding-note"><code>EXPERIENCE.md:231</code> “<code>Create new plan</code> deliberately replaces the sidecar with a new reviewable draft.” <code>epics.md:990</code> requires the derived <code>RetryIntent</code> reach preview and confirmation “without ever writing to, merging with, or emptying the one persistent draft”. A dev following the binding spine breaks the invariant.</div>
+            <div class="finding-fix"><strong>Fix:</strong> restate <code>:231</code> as a separate reviewable object that does not touch the persistent draft.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Two live stories have zero contract on either spine</h3><span class="finding-location">UX-PB.2f · UX-PB.4e · DESIGN.md:217</span></header>
+            <div class="finding-note">Both require legacy-Operation History labeling. <code>grep -ci legacy</code> → 0 in both spines, and <code>DESIGN.md:217</code> gives History Plan Row only “Success, partial, failed, cancelled, timed out, interrupted, retry-linked”.</div>
+            <div class="finding-fix"><strong>Fix:</strong> add a legacy row identity to both spines, or confirm the stories are retired.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Quoted UI label literals diverge from the binding epic</h3><span class="finding-location">EXPERIENCE.md:251 · epics.md:1060</span></header>
+            <div class="finding-note"><code>epics.md</code> uses <code>Confirm N Updates</code> 10×, <code>docs/DECISIONS.md</code> 2×, <code>docs/SPEC.md</code> 1×; <code>EXPERIENCE.md</code> uses <code>Confirm # updates</code> 6× and <code>Confirm N Updates</code> 0×. The opt-out checkbox carries two labels: <code>Disable upgrade plan command execution confirmation</code> vs <code>Skip confirmation for future upgrade plans</code>.</div>
+            <div class="finding-fix"><strong>Fix:</strong> align the spine to <code>epics.md</code>’s literals, since those are what the stories assert.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <section class="reviewer-section">
+      <details open>
+        <summary><h2>Usability review</h2><span class="reviewer-source">review-usability.md</span></summary>
+        <div class="dim-body"><div class="dim-judgment">
+          <p>The prior review is essentially closed (11 of 12 resolved) and the spines are now strong on the <em>draft</em> lifecycle. They specify the <em>execution</em> lifecycle thinly, and three defects block the build.</p>
+        </div></div>
+        <div class="findings-list">
+          <article class="finding">
+            <header><span class="badge badge-sev-critical">critical</span><h3 class="finding-title">The single Upgrade Sidecar has two mutually exclusive required occupants</h3><span class="finding-location">EXPERIENCE.md:62, :100-101, :179</span></header>
+            <div class="finding-note"><code>:62</code> commits the sidecar to Results “until <code>Done</code>”; <code>:100-101</code> permits “A user may continue reviewing a draft, but it cannot be confirmed until the active attempt is terminal”; <code>:179</code> opens the sidecar unconditionally on “First eligible addition”. Adding an item while Results is pending has no defined outcome. <code>epics.md:782</code> restates the collision rather than resolving it, so UX-PB.1b and UX-PB.3a cannot both be built as written.</div>
+            <div class="finding-fix"><strong>Fix:</strong> decide precedence — stacked regions, a Results dismissal requirement, or a draft-defers rule.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-critical">critical</span><h3 class="finding-title">The irreversible-run stop control has two labels in one document</h3><span class="finding-location">EXPERIENCE.md:155 vs :216, :427</span></header>
+            <div class="finding-note"><code>:155</code> “Stalled rows expose exactly <code>Keep waiting</code>, <code>Copy command</code>, and <code>Cancel</code>” against <code>:216</code> and <code>:427</code> “exactly … <code>Cancel plan</code>”. The file’s own glossary at <code>:110</code> reserves the generic form for “closing a dialog or retry-scope editor without mutating running work”. <code>DESIGN.md</code> never contains the string <code>Cancel plan</code>.</div>
+            <div class="finding-fix"><strong>Fix:</strong> <code>:155</code> → <code>Cancel plan</code>; add the label to <code>DESIGN.md</code>’s Activity Operation Row.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">The 900×600 minimum does not fit the specified content</h3><span class="finding-location">DESIGN.md:171 · mockups/manager-workspace.html</span></header>
+            <div class="finding-note">Arithmetic from the authoritative mockup’s own CSS: sidebar 190 + padding 32 + gap 14 + sidecar 370 leaves <strong>294px</strong> for a <code>.grid-row</code> declaring <code>min-width: 560px</code>, pushing Version, Status and Source behind horizontal scroll — contradicting <code>DESIGN.md:171</code>’s promise to “preserve the sidebar, the primary action, status words, and version evidence”. The high-zoom rule cannot rescue it: its 720px trigger measures the window (900), not the pane.</div>
+            <div class="finding-fix"><strong>Fix:</strong> raise the minimum, narrow the sidecar, or make the grid drop columns before scrolling.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <section class="reviewer-section">
+      <details open>
+        <summary><h2>Accessibility review</h2><span class="reviewer-source">review-accessibility.md</span></summary>
+        <div class="dim-body"><div class="dim-judgment">
+          <p>All 6 prior findings are closed in spine text and D35 implemented the focus half correctly. What remains is a different class: the spines predate the ring→outline migration and never record the constraint that motivated it. No critical issues on the spine side.</p>
+        </div></div>
+        <div class="findings-list">
+          <article class="finding">
+            <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Neither spine records the WebKit native-appearance constraint</h3><span class="finding-location">DESIGN.md:119 · EXPERIENCE.md:318</span></header>
+            <div class="finding-note"><code>grep -ci 'box-shadow'</code> → 0 and <code>WebKit</code> → 0 in both files; <code>DESIGN.md:119</code> still calls the token a “ring”. The reason lives only in <code>docs/DECISIONS.md</code> D35 and AD-27. A story satisfying <code>EXPERIENCE.md:318</code> “at least 2px wide” with <code>ring-2</code> reships the exact defect D35 closed at 31 sites — invisible to grep, since it returns as a different class name.</div>
+            <div class="finding-fix"><strong>Fix:</strong> record “drawn with <code>outline</code>, never <code>box-shadow</code>/<code>ring-*</code>” in the Accessibility Floor, and require <code>outline-offset</code>.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Checkbox target size contradicts the Accessibility Floor, and code takes the smaller value</h3><span class="finding-location">DESIGN.md:203 vs EXPERIENCE.md:327</span></header>
+            <div class="finding-note"><code>DESIGN.md:203</code> “16–18px aligned control” against <code>EXPERIENCE.md:327</code> “Hit targets are at least 28 × 28px for compact desktop controls”. Code lands on the smaller: <code>src/components/manager/PackageRow.tsx:98</code> is <code>h-4 w-4</code> (16px). This is the control that governs plan membership.</div>
+            <div class="finding-fix"><strong>Fix:</strong> reconcile the two numbers, then give the control a ≥28px hit area independent of its painted box.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Focus destination undefined when the draft sidecar closes</h3><span class="finding-location">EXPERIENCE.md:181 · matrix :294-302</span></header>
+            <div class="finding-note"><code>:181</code> “Removing the final item closes the sidecar” names no focus destination, and the nine-row Focus transitions matrix has no such row — asymmetric, since the opening case <em>is</em> covered at <code>:179</code>. Pressing the last <code>Remove</code> from the keyboard drops focus to <code>&lt;body&gt;</code>.</div>
+            <div class="finding-fix"><strong>Fix:</strong> add a matrix row returning focus to the source row’s checkbox or the plan heading.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Reduced motion freezes the indeterminate spinner</h3><span class="finding-location">src/styles/theme.css:61-66 · Spinner.tsx:13</span></header>
+            <div class="finding-note"><code>theme.css</code> kills all animation; <code>Spinner.tsx:13</code> is <code>animate-spin</code>. <code>EXPERIENCE.md:310</code> asks to “remove nonessential animation”, but a running indicator is essential state. The automated test asserts only an idle button.</div>
+            <div class="finding-fix"><strong>Fix:</strong> exempt progress indicators, or specify a non-animated running affordance.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <section class="reviewer-section">
+      <details open>
+        <summary><h2>Code-consistency review — defects that belong in code, not the spines</h2><span class="reviewer-source">review-code-consistency.md</span></summary>
+        <div class="dim-body"><div class="dim-judgment">
+          <p>The colour layer is in exact lockstep — all 22 colours adopted with 0 missing and 0 value mismatches — and the focus migration is real and CI-guarded. But two shipped defects violate the spines, and in both cases <em>the spine is right and the code is stale</em>.</p>
+        </div></div>
+        <div class="findings-list">
+          <article class="finding">
+            <header><span class="badge badge-sev-critical">critical</span><h3 class="finding-title">Shipped text-on-fill contrast failures; the tokens that prevent them have zero consumers</h3><span class="finding-location">Button.tsx:7, :11 · UpdateStatusItem.tsx:63</span></header>
+            <div class="finding-note"><code>primary: "bg-accent text-white …"</code> and <code>danger: "bg-danger text-white …"</code>. Computed: white on accent <code>#65A7FF</code> = <strong>2.46:1</strong>, on hover <code>#7DB3FF</code> = <strong>2.15:1</strong>, on danger <code>#FF8793</code> = <strong>2.30:1</strong> — all fail 4.5:1 <em>and</em> 3:1 against <code>EXPERIENCE.md:317</code>. <code>grep -rn 'on-accent\|on-success' src/</code> matches only <code>theme.css</code>. Using the spine’s own tokens gives 7.74:1 and 12.15:1. D35 adopted the palette but not the on-fill pairs, and contrast is by-eye at release.</div>
+            <div class="finding-fix"><strong>Fix:</strong> code change — <code>text-on-accent</code> / <code>text-on-success</code> in place of <code>text-white</code>. No spec change needed.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Explanatory-disabled checkboxes use native <code>disabled</code></h3><span class="finding-location">PackageRow.tsx:92 · EXPERIENCE.md:326</span></header>
+            <div class="finding-note"><code>EXPERIENCE.md:326</code> requires <code>aria-disabled="true"</code> and explicitly forbids native <code>disabled</code>; the code is <code>disabled={checkboxDisabled}</code> and <code>grep -rn aria-disabled src/ | wc -l</code> → 0. The pinned-Package explanation is keyboard-unreachable today.</div>
+            <div class="finding-fix"><strong>Fix:</strong> code change — swap to <code>aria-disabled</code> with inert activation, per the spine.</div>
+          </article>
+          <article class="finding">
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Sidebar width</h3><span class="finding-location">DESIGN.md:166 · Sidebar.tsx:63</span></header>
+            <div class="finding-note"><code>DESIGN.md:166</code> “A 190px left sidebar at ordinary zoom” vs <code>w-60</code> (240px) in code, and <code>docs/SPEC.md:227</code>. The 900×600 arithmetic above assumes 190.</div>
+            <div class="finding-fix"><strong>Fix:</strong> pick one and propagate; it changes the minimum-width math.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <section class="dimension">
+      <details>
+        <summary><h2>5. Visual reference coverage</h2><span class="verdict-pill verdict-strong">strong</span></summary>
+        <div class="dim-body"><div class="dim-judgment">
+          <p>All four <code>mockups/*.html</code> are linked inline at the relevant section, <code>imports/</code> is empty, there are no orphans, and spines-win-on-conflict is stated once at <code>DESIGN.md:198</code>. The one issue is fidelity, not coverage.</p>
+        </div></div>
+        <div class="findings-list">
+          <article class="finding">
+            <header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">The “authoritative” mockups are largely off-palette</h3><span class="finding-location">DESIGN.md:198 · mockups/*.html</span></header>
+            <div class="finding-note">The four files contain 75 distinct hexes; only 19 are in the 21-hex <code>DESIGN.md</code> palette — <strong>56 are not</strong>, including off-palette accents <code>#4F77FF</code>, <code>#529CFF</code>, <code>#76B4FF</code> beside the real <code>#65A7FF</code>. Now that the code paints the real palette, the mockups are the least accurate reference in the folder. <code>DESIGN.md:198</code> does state spines-win-on-conflict, which contains the damage.</div>
+            <div class="finding-fix"><strong>Fix:</strong> re-render the mockups from the adopted tokens, or downgrade the wording from “authoritative”.</div>
+          </article>
+        </div>
+      </details>
+    </section>
+
+    <div class="mechanical">
+      <h3>Verified clean</h3>
+      <ul>
+        <li><strong>Colour parity:</strong> all 22 <code>DESIGN.md</code> colours present in <code>theme.css</code> — 0 missing, 0 value mismatches.</li>
+        <li><strong>Focus migration:</strong> 31 production sites, all <code>outline-2</code>; zero <code>ring-*</code> focus utilities; zero <code>outline-none</code>; the one <code>ring-accent</code> at <code>PackageRow.tsx:85</code> is the navigation highlight D35 exempts.</li>
+        <li><strong>Component parity:</strong> 22 / 22 / 22 across <code>DESIGN.md</code> frontmatter, <code>DESIGN.md#Components</code>, <code>EXPERIENCE.md#Component Patterns</code> — names identical.</li>
+        <li><strong>Flow coverage:</strong> AJ-1…AJ-6 each carry a named protagonist, numbered steps, a climax and a failure path; names match <code>epics.md:148-153</code> verbatim.</li>
+        <li><strong>Shape fit:</strong> <code>DESIGN.md</code> sections in canonical order; all eight <code>EXPERIENCE.md</code> defaults present plus two justified triggered sections.</li>
+        <li><strong>Token refs resolve:</strong> <code>{colors.focusRing}</code> and <code>{colors.borderStrong}</code> at <code>EXPERIENCE.md:318</code> both resolve to <code>DESIGN.md</code> frontmatter.</li>
+        <li><strong>Control heights:</strong> <code>DESIGN.md:202</code>’s 28px/36px clear WCAG 2.5.8’s 24×24 with margin.</li>
+        <li><strong><code>EXPERIENCE.md</code> tracks the <em>new</em> plan model</strong>, not the retired sheet — <code>:153</code>, <code>:154</code>, <code>:188</code>, <code>:256</code> agree with <code>docs/SPEC.md:28-30</code>; it is <code>docs/SPEC.md:251</code>/<code>:284</code> that are stale.</li>
+      </ul>
+    </div>
+
+    <div class="mechanical">
+      <h3>Recommended sequencing</h3>
+      <ul>
+        <li><strong>1. Owner decision</strong> on transient selection (<code>ARCHITECTURE-SPINE.md:1050</code>) — blocks UX-PB.1a and Story 3.5, and may change <code>EXPERIENCE.md#Component Patterns</code>.</li>
+        <li><strong>2. <code>bmad-ux</code> Update run</strong> for every Critical/High/Medium above except the owner decision.</li>
+        <li><strong>3. Separate code fix</strong> for the contrast failures and <code>aria-disabled</code> — no spec change needed.</li>
+        <li><strong>4. <code>docs/SPEC.md</code> pass</strong> (§11 component tree, F5, the §0.1 supersession list) — outside <code>bmad-ux</code> scope.</li>
+      </ul>
+    </div>
+
+    <footer class="report-footer">
+      <div class="meta">
+        <span>Reviewers: review-rubric.md · review-code-consistency.md · review-epics-consistency.md · review-accessibility.md · review-usability.md</span>
+        <span>Generated: 2026-07-25</span>
+      </div>
+    </footer>
+  </div>
+</body>
 </html>

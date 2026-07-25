@@ -1,0 +1,709 @@
+---
+title: Pack-Manager
+status: final
+created: 2026-07-25
+updated: 2026-07-25
+---
+
+# PRD: Pack-Manager
+
+## 0. Document Purpose
+
+This is the Phase 2 requirements artifact for Pack-Manager. It exists because `docs/DECISIONS.md` D33 retired the previous PRD on 2026-07-24 and archived it, leaving requirements authority split between a hand-written file no workflow owns (`docs/SPEC.md`) and a Phase 3 artifact that had absorbed the FR/NFR block (`_bmad-output/planning-artifacts/epics.md`, lines 53–450). Solutioning had no separable requirements input. This document restores one.
+
+**Audience:** the maintainer, and the BMAD workflows that consume Phase 2 output — `bmad-architecture`, `bmad-ux`, and `bmad-create-epics-and-stories`.
+
+**Authority.** This PRD is the requirements authority. `ARCHITECTURE-SPINE.md` and `epics.md` are reconciled *against* it, not the reverse. Where this document and an older artifact disagree, this document wins, with one exception: `docs/DECISIONS.md` remains the decision record, and a decision later than 2026-07-25 supersedes anything here.
+
+**Structure.** Vocabulary is Glossary-anchored (§3) and used verbatim throughout. Features are grouped (§4) with globally numbered FRs nested; cross-cutting NFRs live in §5. Requirement IDs are **preserved from the prior artifacts** — FR-1…FR-22, RP-1, RP-2, NFR-1…NFR-8 — because `epics.md` and `ARCHITECTURE-SPINE.md` already cite them, and renumbering would break every downstream reference.
+
+**Status tags.** Pack-Manager ships at 1.0.1 today, but decisions D27–D30 redesigned the upgrade experience and are decided-but-unimplemented. Every FR therefore states the requirement normatively and carries one of:
+
+- **Shipping** — implemented and verifiable in the current build.
+- **Partial** — some limbs ship; the rest is named inline.
+- **Planned — D27–D30** — decided, not implemented. `planAttemptId`, `plan_attempt_id`, `Verifying`, `InteractionRequired`, and `skipUpgradePlanConfirmation` return **zero** occurrences across `src/` and `src-tauri/src/`; do not go looking for them.
+
+The tags are implementation status, not requirement strength. A Planned FR is as binding as a Shipping one.
+
+**Upstream inputs already written; not duplicated here.** UX experience contract and interaction detail: `_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/EXPERIENCE.md` (journeys AJ-1…AJ-6, referenced by ID below) and `DESIGN.md` (the approved "Aurora Control Deck" palette, adopted by D35). Architecture invariants and `AD-` ids: `ARCHITECTURE-SPINE.md` revision 9 — the sole authority for `AD-` numbering.
+
+**Not carried forward.** D33 retired the 72-criterion P0 gate, the 55 versioned scenario contracts, `readiness-coverage-map.md`, the evidence-manifest and candidate-freeze process, all coverage percentages, and the multi-host environment requirements. None of it appears here. Release readiness is `docs/RELEASE-CHECKLIST.md` plus the two release-blocking checks in `release.yml`. No archived file was copied or moved into `planning-artifacts/`; BMAD skills glob `*prd*.md` from there and would silently reload the retired apparatus.
+
+### 0.1 Relationship to `docs/SPEC.md`
+
+`docs/SPEC.md` was created in the repo's second commit (`f395db3`, 2026-07-22) and has been the de-facto requirements contract since. It remains valuable and remains authoritative for UI specification, architecture detail, parser contracts, and the test plan. **It is no longer the requirements authority.**
+
+A 2026-07-25 validation, re-verified against `HEAD` for this PRD, found it materially out of date on the following. These are recorded so no future reader reconciles back to a stale source:
+
+| SPEC location | Says | Code says |
+| --- | --- | --- |
+| §5.9 "IPC contract (exact)" | 17 commands | `lib.rs` `generate_handler!` registers **20** — `check_for_app_update`, `get_app_update_state`, `install_app_update` are missing from SPEC |
+| §5.9 events table | 5 events | `events.rs` defines **6** — `appUpdate:status` is missing from SPEC (D25a accepted it explicitly) |
+| §F11 and §5.9 `Settings` | 7 fields each, and the two lists disagree with each other | `settings.rs` `Settings` has **8**; `autoCheckForUpdates` (default `true`) appears in neither SPEC section despite shipping |
+| §F11 | `skipUpgradePlanConfirmation` is a current setting | Zero occurrences in `src-tauri/src/`; it is D28 target state |
+| §1 P2 (line 128) | `notarized DMG` is out of scope | Line 108 of the same file says delivery is "signed, notarized, and stapled"; D25/D25a superseded D20 and the pipeline has notarized since |
+| §0.1 supersession list | Retires "immediate-row, direct self-update, Operation-row History, Activity-drawer-only, global self-update toggle, and `autoOpenDrawer`" | **F5 was never added to that list**, so SPEC's transient-selection-plus-`Add N to Plan` model reads as current when D27 superseded it. This omission is the entire reason the FR-6 conflict stayed live — see FR-6 |
+| §F1–F17 | — | 9 of 17 features carry no acceptance criterion, including four P0s |
+
+Additionally, SPEC §0 invariant 7 (line 19) states the unimplemented durable `planAttemptId` in present tense under a "violations are bugs" heading, and sits **above** §0.1, which is itself undelivered target state. The Current-vs-Target split in this PRD's status tags supersedes that reading.
+
+---
+
+## 1. Vision
+
+Pack-Manager is a macOS desktop app that gives one person one trustworthy control plane over a machine whose software arrives through six different package managers — Homebrew, mise, npm, uv, rustup, and the Mac App Store CLI. It detects what is installed, shows what each Manager says is outdated, explains which Manager actually owns and will update each tool, and updates everything, a chosen subset, a single Package, or a Manager itself.
+
+The differentiator is not that it wraps update commands in a window. It is **confidence across a mixed Manager topology**. Nothing runs that was not staged and shown. No version judgment is invented — the Manager's verdict is the only verdict. No privilege prompt exists anywhere in the product. One Manager failing never blanks the others or destroys their last-good data. Routing is derived from the machine's real layout and explained in plain language, so "why did updating uv run mise?" has a visible answer. Every operation streams live, cancels immediately, and leaves durable evidence on disk.
+
+That combination matters because the topology is genuinely confusing and the failure modes are quiet. `npm` installed through mise lives inside mise's Node tree, so upgrading Node resets it. `uv` resolves through a mise shim that is a symlink to the mise binary, so a naive path lookup misroutes its self-update to Homebrew. Real version strings include `2.0.14-1`, `1.6.2.dev0`, `stable`, and commit hashes, on which semver math produces confidently wrong answers. A tool that guesses at any of this is worse than the six terminals it replaces.
+
+---
+
+## 2. Target User
+
+### 2.1 Jobs To Be Done
+
+- **Functional:** "Keep my Mac's developer tools current without memorizing six syntaxes or accidentally updating the wrong thing."
+- **Functional:** "Tell me what's actually outdated right now, across every Manager, in one place."
+- **Emotional (the load-bearing one):** "Let me approve a bulk update without the low-grade fear that I'm about to break my toolchain." Every trust requirement in §4.2 exists to serve this.
+- **Functional:** "When something fails at 11pm, let me find out what ran and what happened without reconstructing it from memory."
+- **Contextual:** "Work when I launch it from the Dock" — Finder-launched apps inherit `PATH=/usr/bin:/bin:/usr/sbin:/sbin`, which finds none of these Managers. This is the product's single most-likely failure mode, and it is invisible to anyone who only ever runs the app from a terminal.
+- **Builder's own:** "This is my tool for my machine." Per D33 the project is a personal, open-source utility — 1 star, 0 forks, 3 lifetime `.dmg` downloads — and rigor is calibrated to that, not to a commercial launch.
+
+### 2.2 Non-Users (v1)
+
+- **Teams and organizations.** No multi-user, no shared state, no fleet management, no policy enforcement.
+- **Non-macOS users.** macOS 15.0+ only (D31), declared in `src-tauri/tauri.conf.json` `bundle.macOS.minimumSystemVersion`.
+- **People who want to install or remove software.** Pack-Manager updates what is already there. See §6.
+- **Users of package managers outside the supported six.** `cargo install`, pipx, gem, and everything else are out of scope.
+- **Assistive-technology users.** Per D37 this is a single-user utility operated with a mouse, and keyboard navigation and screen-reader support are explicitly not release criteria. See the reconciliation note in §4.4.
+
+### 2.3 Key User Journeys
+
+The journeys already exist, in narrative form with named protagonist, entry state, path, climax, and failure path, in `EXPERIENCE.md` §"Key Flows". **This PRD mirrors those IDs rather than creating a parallel set** — there are already three ID namespaces in this project (`FR-`, `AD-`, `AJ-`) and a fourth would be a liability.
+
+| ID | Journey | Realized by |
+| --- | --- | --- |
+| **AJ-1** | Launch, detect, and refresh — Sallvain opens the app from the Dock and learns current system state; the window renders immediately with progressive per-Manager states rather than a blank screen, and settles into `Ready` or `Warning` with exact failed-refresh context. | FR-1, FR-2, FR-3, FR-4, FR-5 |
+| **AJ-2** | Review and authorize Update Everything — eligible work populates the Upgrade Plan with exclusions and reasons; exact commands are reviewable; final confirmation atomically admits the whole plan. | FR-6, FR-7, FR-8, FR-9, FR-11 |
+| **AJ-3** | Update a selected Package or Manager — the same safe path at smaller scope; no row or header action executes immediately. | FR-5, FR-6, FR-10, FR-11 |
+| **AJ-4** | Handle slow, blocked, failed, cancelled, or interrupted work — stalls, Homebrew contention, cancellation, hard cap, Results, Retry, and crash reconstruction. | FR-13, FR-14, FR-15, FR-16 |
+| **AJ-5** | Diagnose and export support evidence — History replay and a privacy-preserving diagnostics export. | FR-15, FR-18 |
+| **AJ-6** | Install and update Pack-Manager — background check and download, explicit Restart to update, refusal while Package work is active, manual-install fallback with no privilege escalation. | FR-20, FR-21, FR-22, RP-1 |
+
+Full narratives: `EXPERIENCE.md` lines 373–460. Where a journey beat and an FR here disagree, the FR wins and `EXPERIENCE.md` is reconciled through the queue in `addendum.md` §3 — never by hand.
+
+**FR-12, FR-17, FR-19 and RP-2 appear in no row, deliberately.** They are cross-cutting: FR-12's no-privilege boundary and FR-19's interface constrain *every* journey rather than realizing any one, FR-17 owns Settings, and RP-2 owns menu and accelerator survival. A workflow source-extracting by journey will not reach them, so it must read §4 in full — this table is not a complete index of the FR set.
+
+---
+
+## 3. Glossary
+
+Downstream workflows must use these terms exactly. No synonyms appear anywhere else in this document.
+
+- **Manager** — one of Homebrew (`brew`), mise, npm, uv, rustup, or `mas`. Exactly six; the set is closed.
+- **Package** — one Manager-owned update unit: a formula, cask, self-updating cask, tool, global package, toolchain, or App Store app.
+- **Outdated** — a Manager's verdict that an update exists. Pack-Manager never infers it. See FR-2.
+- **Snapshot** — the merged installed-plus-outdated view of one Manager at one moment.
+- **Last-good Snapshot** — the most recent successful Snapshot, retained and labeled stale after a later refresh fails.
+- **Operation** — one queued unit of work: Refresh, Upgrade, SelfUpdate, or HealthFix. Has an **executor** (whose binary runs), a **subject** (whose data it changes), and a lock set.
+- **Executor** — the Manager whose binary actually runs an Operation.
+- **Subject** — the Manager whose state an Operation changes. Often, but not always, the same as the executor.
+- **Route** — the discovered way a Manager updates itself: in-band, routed through another Manager, via refresh, or unavailable.
+- **Managed by** — the ownership relationship derived from the detected installation path, surfaced with human-readable evidence.
+- **Upgrade Plan** — the reviewable set of Package and Manager updates, their exact commands, exclusions, notes, and warnings. Under D27 it is one persistent editable draft; see FR-7.
+- **Plan Capability** — a bounded, one-use backend authorization bound to a reviewed Upgrade Plan and a coherent state revision. Invalid, evicted, or replayed capabilities enqueue nothing.
+- **Plan Attempt** — one confirmed execution of an Upgrade Plan, durably identified by `planAttemptId`. The unit of Activity, Results, and History under D29.
+- **VersionDelta** — the display treatment showing `installed → latest` with the changed segment highlighted. Display-only; never a source of truth.
+- **Pinned formula** — a Homebrew Package the user pinned deliberately. Never updated in-app (D15).
+- **Self-updating cask** — a Homebrew cask that manages its own updates ("greedy"). Excluded from bulk work unless explicitly opted in.
+- **Health issue** — a Manager-reported warning about a broken Package or tool environment. Only a narrowly recognized fix may become runnable.
+- **Stalled** — an Operation that has produced no output for the configured silence threshold but has not timed out.
+- **Interrupted** — an Operation with a durable start record and no durable finish record, discovered on a later launch.
+- **Application update** — an update to Pack-Manager itself. Deliberately outside the Operation queue, holds no Manager lock, and never appears in History.
+
+---
+
+## 4. Features
+
+### 4.1 Manager discovery and state truth
+
+**Description:** Pack-Manager's first job is to be right about the machine. It discovers which Managers exist, derives who owns each one from the real installation paths, keeps every Manager's data independent, and never substitutes its own judgment for a Manager's. Realizes AJ-1.
+
+This group carries the product's two hardest-won correctness rules. Both look like implementation detail and are not. First, ownership is classified from the **raw** resolved path before canonicalization — mise shims are symlinks to the mise binary, so canonicalizing first misroutes uv and npm to Homebrew (D3). Second, the Manager's `outdated` verdict is the only verdict (D2).
+
+**Functional Requirements:**
+
+#### FR-1: Detect supported Managers
+
+**Status:** Shipping.
+
+The user can see which of the six Managers are present on the machine, at launch and on demand, without configuring anything.
+
+**Consequences (testable):**
+- All six Managers are probed at launch and on an explicit Re-detect action.
+- Each present Manager reports its resolved path, version where available, ownership classification, and a human-readable evidence string.
+- Absence is a normal state — rendered as "Not installed" with a copyable install hint where one is known — never an error.
+- Detection succeeds when the app is launched from Finder or the Dock, not only from a terminal.
+- One coherent detection result replaces the previous one; a partial result never overwrites a complete one.
+- Detection details appear in the Environment Report and in the diagnostics export.
+
+#### FR-2: Preserve Manager-reported update truth
+
+**Status:** Shipping.
+
+A Package is Outdated when and only when its Manager says so.
+
+**Consequences (testable):**
+- Pack-Manager performs no version comparison to decide outdatedness.
+- Manager-supplied version strings render verbatim, including non-semver forms.
+- VersionDelta styling and severity chips are display affordances only.
+- An unknown latest version stays unknown; the UI says "update available" rather than fabricating a version or a severity.
+- Output a parser cannot handle fails that Manager visibly, with an excerpt, rather than presenting incomplete data as complete.
+
+#### FR-3: Refresh Managers independently
+
+**Status:** Shipping.
+
+Each Manager's inventory and Outdated state refresh on their own, and one Manager's failure never damages another's.
+
+**Consequences (testable):**
+- Refresh All starts independent work per present Manager; unrelated Managers proceed concurrently.
+- Each Manager shows its own loading, phase, timeout, and error state.
+- A failed refresh retains the Last-good Snapshot, keeps it browsable, and labels it stale.
+- Duplicate refresh requests for the same Manager coalesce rather than queueing twice.
+- A successful Upgrade, SelfUpdate, or HealthFix refreshes every affected subject and executor.
+- Homebrew's metadata refresh doubles as Homebrew's self-update Route.
+
+#### FR-4: Discover and explain ownership and update Routes
+
+**Status:** Partial. Detection, derivation, precedence, re-evaluation, and Route explanation all ship. The D21 npm consequence does not render on every route — named inline below.
+
+The user can see which Manager owns each tool and how each Manager updates itself, with inspectable evidence.
+
+**Consequences (testable):**
+- Ownership and Route are derived from current detection and refresh data. No Route is hardcoded.
+- Route precedence is fixed: in-band override → delegated-if-detected → native → unavailable.
+- Routes are reconsidered after every fresh Snapshot, because a Manager's own Outdated row can change the correct Route.
+- A routed action names both subject and executor in plain language.
+- When the required executor is absent, the action is disabled with a stated reason.
+- The npm-inside-mise consequence — upgrading the mise-managed Node runtime resets npm and its global packages — appears permanently at the point of action (D21). **Planned:** today it renders only when npm's Route is in-band. The note is computed for mise-owned npm but discarded on the routed branch, because the routed Route carries no channel for it — so mise-managed npm that is *not* itself outdated, the ordinary state on the target machine, shows ownership without the consequence. Making this permanent requires the routed Route to carry the note.
+
+#### FR-5: Present Package state and eligibility
+
+**Status:** Partial. Browsing, search, filtering, and every eligibility rule ship. Two limbs do not: outdated-first ordering, and the explanatory-disabled treatment on ineligible rows — both named inline below.
+
+The user can browse, search, filter, and understand each Manager's Packages, and can tell at a glance what can and cannot be updated.
+
+**Consequences (testable):**
+- Current, Outdated, Pinned, self-updating, unknown-version, and error states are visually distinct and carry text or icon equivalents, not color alone.
+- Pinned formulae cannot enter the Upgrade Plan. The row keeps a checkbox in place for table alignment, rendered in a *visually* disabled treatment that **must not be the native disabled state** — a natively disabled control cannot receive the pointer interaction this consequence requires. Activation stays inert and never changes membership, while the control remains an explanatory target that states how to unpin and refresh. **Planned:** the shipping row uses native `disabled` plus reduced opacity, which both blocks the explanation and leans on gray styling alone.
+- Self-updating casks are excluded by default and grouped separately; including them requires explicit opt-in.
+- Up-to-date and otherwise ineligible Packages cannot enter the Upgrade Plan and expose a plain-language reason on pointer interaction. Ineligibility never relies on gray styling alone.
+- Manager-specific detail is preserved where useful — uv executables, mise source path, Package kind, Homebrew pinned version.
+- A filter narrows the list to Packages with updates, defaulted on whenever anything is outdated, with a "show all" escape.
+- **Planned:** within the list, Packages with updates sort first. No ordering is applied anywhere today — the default filter delivers most of the benefit, but the ordering requirement is real and unbuilt.
+- The one permitted cross-Manager deduplication is the Rust rule (D10): a single Upgrade Plan never contains both mise's `tool:rust` and rustup toolchains; the mise entry is excluded with a visible reason. No broader cross-Manager deduplication is performed.
+
+**Feature-specific NFRs:**
+- The Package list stays usable and responsive beyond 100 Packages.
+
+---
+
+### 4.2 Reviewable planning and intentional selection
+
+**Description:** This is where the product's central promise lives: *nothing runs that was not staged and shown.* Every path to a mutation converges on one reviewable Upgrade Plan — a Package row, a Manager header, a Manager-wide action, `Update Everything`. Execution happens only against a plan the user confirmed and the backend can still prove coherent. Realizes AJ-2, AJ-3.
+
+This group carries the largest concentration of D27–D30 target state. The trust machinery beneath it (Plan Capability, stale-plan rejection, atomic admission) already ships; what is Planned is the persistent draft, the separate confirmation gate, and the removal of the immediate-execution paths.
+
+**Functional Requirements:**
+
+#### FR-6: Control Upgrade Plan membership directly from eligible Packages
+
+**Status:** Planned — D27. The current build ships a transient selection layer this FR replaces.
+
+A Package checkbox **is** the Upgrade Plan membership control. There is no separate selection to build and then submit.
+
+**Consequences (testable):**
+- Checking an eligible Package immediately adds it to the Upgrade Plan draft; unchecking immediately removes it.
+- The header checkbox adds or removes every eligible Package matching the active filter, including off-screen virtualized rows, and reports the exact count it will affect. It shows a mixed state when only some are staged.
+- Current, Pinned, and default-excluded Packages cannot enter the Upgrade Plan under any interaction, including the header checkbox.
+- Membership is stored as exact canonical Package identities, never as display strings.
+- The draft persists while the user navigates between Managers and the Dashboard, and every staged item is individually removable from the Upgrade Plan.
+- Neither a checkbox nor a row action executes anything. **Three immediate-execution call sites are in scope for removal**, not one: the Package row action, and *both* direct Manager self-update paths — the Dashboard Manager card and the Manager workspace self-update card each invoke the self-update command directly today, bypassing the plan entirely. Scoping the D27 work to the row action alone would leave two unstaged mutation paths alive and breach SM-2.
+- The draft is transient dialog state discarded on close — pre-D27 behavior this FR removes.
+- **Membership mutation must accept a batch.** A range or filter-wide interaction submits one membership operation covering every affected Package identity, not one per row. This is a requirement, not an optimization: the canonical draft lives in the backend and every mutation round-trips before the projection updates, so a per-row mapping turns a shift-range across 100 rows into 100 round-trips and breaks NFR-3's "The interface stays interactive beyond 100 Packages, with correct actions reachable at 101 rows."
+- **⌘A re-points to membership.** The shipping select-all already computes eligibility through one predicate that applies the search term, the outdated-only filter, and per-Package eligibility before returning identities. Only the sink changes: the same identity set goes to the batch membership operation instead of a selection set. The filter semantics are unchanged and no new predicate is needed. ⌘A must also stop suppressing the native select-all on surfaces that have no Package list — see the Notes.
+- **Esc collapses from three rungs to two.** The Escape cascade is close-dialog → clear-selection → close-drawer. This FR removes the middle rung only; Esc keeps close-dialog and close-drawer. It is not deleted.
+
+**Out of Scope:**
+- A transient selection distinct from draft membership, and any `Add Selected` submit step. Both are eliminated.
+- **⌘U (upgrade selected).** Once selection *is* membership, its scope becomes ambient and it collapses into ⌘⇧U (Update Everything) — two accelerators opening the same surface. The non-shift limb is dropped; ⌘⇧U is unaffected.
+
+**Notes:** this resolves the conflict between `docs/SPEC.md` F5 (Esc clears a transient selection) and `EXPERIENCE.md` (selection immediately changes membership) in favor of `EXPERIENCE.md`. The decision was made during the UX run and is recorded verbatim at `ux-Pack-Manager-2026-07-23/.memlog.md:75`; the owner confirmed it on 2026-07-25. See §0.1 for why `docs/SPEC.md` still carries the stale side, and §9 for the reconciliation this triggers in `ARCHITECTURE-SPINE.md`.
+
+`[NOTE FOR PM]` — the re-pointed ⌘A must suppress the native select-all **only on surfaces where it actually stages something**. A shipping defect in the same handler currently violates this; it is diagnosed in `addendum.md` §4, and this FR must not inherit it.
+
+#### FR-7: Preview every update command exactly, in one persistent Upgrade Plan
+
+**Status:** Partial. Exact command preview, exclusions, and warnings ship. The persistent editable sidecar and the separate confirmation dialog are Planned — D27, D28.
+
+Before anything runs, the user can see precisely what will run.
+
+**Consequences (testable):**
+- Every staged Package and Manager update appears in the plan before execution, grouped by Manager, showing `installed → latest`.
+- The exact commands are revealable on demand and are byte-equal to the commands actually spawned.
+- Exclusions, their reasons, warnings, and staleness notices are visible.
+- The draft stores canonical intent, never executable display strings. Commands are rebuilt by the backend whenever the draft changes and again before execution.
+- **Planned — D27:** the sidecar is hidden when empty, appears on first addition, persists across navigation, and offers Remove on every staged item.
+- **Planned — D28:** `Confirm N Updates` opens a separate modal confirmation showing the exact commands, offering `Change Plan` and final confirmation. The opt-out checkbox appears *only* in that dialog and persists `skipUpgradePlanConfirmation`. The safe default is confirmation enabled (`false`), and Settings can restore it. The preference removes only the final dialog — never the draft review, the backend rebuild, or the stale-plan check.
+- **Planned — D28, and load-bearing:** when the opt-out is active, three compensations replace the dialog and all three are required. The plan **auto-expands the exact commands** before the action is enabled; a **persistent `Confirmation is off` notice** is shown and links to Settings; and the primary action **relabels from `Confirm` to `Run N updates`**. Removing the gate without them produces a button still reading `Confirm` that executes immediately with commands collapsed behind a reveal — the outcome `EXPERIENCE.md` names as an anti-pattern, and a direct breach of SM-2. The compensations are the price of the opt-out, not a nicety attached to it.
+
+#### FR-8: Reject stale, altered, replayed, or invalid plans
+
+**Status:** Shipping.
+
+Execution proceeds only when the submitted plan matches both the reviewed plan and a fresh coherent rebuild from current state.
+
+**Consequences (testable):**
+- A Plan Capability is one-use and bounded — at most 64 unconsumed capabilities are retained per session, oldest evicted first.
+- An unknown, evicted, already-replayed, altered, or state-mismatched plan enqueues **nothing** and returns the user to review with a newly issued plan.
+- An in-progress state update, revision drift, an active refresh, or a lock-set overlap with any pending or running Upgrade, SelfUpdate, or HealthFix rejects the submission without enqueueing.
+- A failed execution other than a stale-plan rejection is never retried speculatively, because the capability may already be consumed.
+- Dismissed dialogs and superseded results cannot trigger later execution or state changes.
+- Final confirmation is unavailable while a plan rebuild is in flight and after a rebuild failure. The user can never confirm a preview the backend has not just re-derived — during a pending rebuild the displayed commands still belong to the previous options, so a confirmation in that window would execute something other than what is on screen while passing every other check in this FR.
+
+#### FR-9: Admit multi-group plans atomically
+
+**Status:** Shipping.
+
+A confirmed plan is admitted all-or-none. The user is never left with a partially submitted bulk update.
+
+**Consequences (testable):**
+- All derived groups enqueue together, or none do.
+- Conflicting work serializes; independent Managers run concurrently within a global concurrency cap of 4.
+- **Planned — D30:** only one confirmed Plan Attempt may be active at a time. A second confirmation fails closed while an attempt is unterminated, **independent of lock-set overlap** — two attempts touching disjoint Managers are still refused. Cross-Manager concurrency continues to occur *inside* the single active attempt. FR-8's lock-overlap rejection is a different test and does not imply this one.
+- Queue relationships are explained to the user ("Queued behind Homebrew").
+- External Homebrew lock contention is detected, named distinctly, and **never** retried automatically (D22).
+
+#### FR-10: Support intentional single-Package updates
+
+**Status:** Planned — D27.
+
+The user has a low-friction path to update one Package, and it is the same safe path as everything else.
+
+**Consequences (testable):**
+- The action adds exactly that one eligible Package to the persistent Upgrade Plan.
+- It follows the common confirmation path.
+- It retains every eligibility, Route, conflict, and no-privilege protection.
+- It never executes immediately and never expands to unrelated Packages.
+
+**Notes:** This FR supersedes D6's immediate single-Package exception. D6's command-trust and stale-plan protections remain fully in force.
+
+#### FR-11: Explain Manager self-update behavior
+
+**Status:** Partial. The Manager title area and Route explanation ship. Independent removable membership is Planned — D27.
+
+Each Manager has a standardized identity area that explains what it is, where it is, and how it updates.
+
+**Consequences (testable):**
+- Short description, executable path, installed version, and a Manager-status badge reading `NO UPDATES` or `UPDATE AVAILABLE`.
+- When an update exists, the installed and target versions appear with the established warning/success treatment.
+- Ownership and Route are explained in plain language near the Manager identity, not as unexplained metadata.
+- The npm-inside-mise consequence is stated here permanently, subject to the routed-Route limitation recorded under FR-4.
+- **Planned — D27:** the Manager update action adds *independent, individually removable* plan membership. Today it is a single global all-or-nothing `include_self_updates` toggle — do not re-entrench a global toggle when implementing this.
+
+---
+
+### 4.3 Safe and reconstructible Operation lifecycle
+
+**Description:** Once work is authorized, the product owes the user three things: it never acquires privilege, it never becomes an opaque spinner, and it leaves enough evidence to reconstruct what happened after a crash. Realizes AJ-4, AJ-5.
+
+**Functional Requirements:**
+
+#### FR-12: Exclude arbitrary shell and privilege paths
+
+**Status:** Shipping.
+
+There is no path through Pack-Manager to a shell, a password prompt, or elevated privilege.
+
+**Consequences (testable):**
+- Only product-defined structured Operations execute. Resolved absolute executables are spawned with structured argument vectors — never a shell command string.
+- Child processes get a constructed environment, never the inherited one, and null stdin.
+- Display text is never parsed back into executable arguments. A submitted preview that does not match the preview re-rendered from trusted arguments fails closed.
+- Copy-to-terminal remains a user-controlled handoff, never an automated execution.
+- An application update that would require elevation becomes a manual-install-required state rather than an administrator prompt.
+
+#### FR-13: Show live plan and Operation state
+
+**Status:** Partial. Live streaming, exact command visibility, and `opId` correlation ship. Plan-level state, `planAttemptId` correlation, Activity as a first-class destination, and the Results summary are Planned — D29, D30.
+
+The user can watch work happen and understand where it is.
+
+**Consequences (testable):**
+- Queued, running, stalled, and terminal states are exposed with the exact command and live output visible. There is no distinct `cancelling` state: cancellation moves an Operation to its terminal state, and the 5-second SIGTERM grace window is not surfaced as its own status.
+- Live output is bounded in memory while the complete transcript is preserved on disk, and the UI says so when earlier output has moved to the log file.
+- Refresh Operations never auto-open a live surface and never emit a success notification.
+- Side effects fire only on a genuine status transition of an already-known Operation — rehydrated records and first sightings fire nothing, so relaunch is silent.
+- **Planned — D29/D30:** plan-level progress correlated by `planAttemptId` with nested Operations by `opId`; a `Verifying` state before success is declared; Activity as a first-class navigation destination; a terminal Results summary with successes, failures, skipped work, verification outcomes, and Retry where appropriate.
+
+#### FR-14: Handle stalls, timeouts, and cancellation honestly
+
+**Status:** Partial. The 120-second stall threshold, the 30-minute hard cap, immediate cancellation with process-group escalation, and explicit terminal states all ship. Attempt-wide `Cancel plan` and trusted interaction classification are Planned — D30. **The quit guard is unbuilt** — see the consequence below.
+
+Silence and excessive duration become honest, actionable states rather than an indefinite spinner.
+
+**Consequences (testable):**
+- After the configured silence threshold (default 120 seconds) the Operation is visibly Stalled and offers Keep waiting, Copy command, and Cancel.
+- The stall surface states that Pack-Manager never enters passwords.
+- The configured hard cap (default 30 minutes) produces an explicit Timed out terminal state.
+- Cancellation requires no confirmation dialog, escalates SIGTERM → 5s grace → SIGKILL over the process group, and promises no rollback of partially completed work.
+- **Not yet built:** quitting with work in flight presents an explicit choice and does not silently discard it. The dialog exists and is rendered by the shared dialog host, but nothing listens for a quit — its only caller is the application-update path, so the *restart* case is guarded (FR-21) and the *quit* case is not. Do not read this consequence as shipping.
+- **Planned — D30:** `Interaction required` is shown **only** when a closed Manager-specific classifier or an explicit native signal recognizes a trusted prompt. All other null-stdin silence follows the ordinary stall path. The primary cancellation label becomes `Cancel plan` when the whole attempt is affected; `Cancel operation` is reserved for deliberately Operation-scoped diagnostics.
+
+#### FR-15: Preserve History, transcripts, and crash evidence
+
+**Status:** Partial. Per-Operation transcripts, the crash journal, `Interrupted` reconstruction, and Operation-level History ship. Plan Attempt as the History unit and Retry lineage are Planned — D29.
+
+The user can answer "what ran, what happened, where is the evidence" after the fact.
+
+**Consequences (testable):**
+- Every Operation writes a durable transcript and crash-safe start and finish records.
+- Work with a start record and no finish record surfaces as Interrupted on the next launch.
+- Recorded process group identifiers are historical evidence only and are **never** signaled after relaunch — process IDs are reused.
+- Transcript content is faithful to child output, with exactly one exception: D26's closed, literal list of unterminated `mas` notices, after which one readability newline may be inserted. No general heuristic rewriting.
+- Retention is bounded and stated: application logs pruned beyond 14 days, transcripts kept to the newest 200 files or 90 days, History compacted to the newest 1,000 records.
+- Durable evidence is also **reachable**, not merely retained. History is browsable and filterable by Manager, by status, and by free-text search; a record exposes its full command and transcript tail; and the on-disk transcript can be revealed in Finder. Retention without these affordances would satisfy every other consequence in this FR and still leave the evidence unusable.
+- **Planned — D29:** one immutable History row per confirmed Plan Attempt, with Operation evidence nested inside it and Activity replay from the row. Retry creates a **new linked attempt** and never overwrites the first failure. Legacy Operation records without an attempt identity stay visibly legacy and are never fabricated into plans.
+
+#### FR-16: Preserve useful state after Operation outcomes
+
+**Status:** Shipping.
+
+An outcome — good or bad — leaves the user with more information than they had, never less.
+
+**Consequences (testable):**
+- Successful work refreshes affected state automatically.
+- Failed work retains the Manager's prior useful state.
+- Errors state what happened and what to do next, in plain language, per error class.
+- `View log` is exposed only when a corresponding log actually exists — the action never dangles.
+
+---
+
+### 4.4 Settings, diagnostics, and interface quality
+
+**Description:** The preferences the user can tune, the evidence they can export, and the one coherent macOS surface all of it lives in. Realizes AJ-5.
+
+**Functional Requirements:**
+
+#### FR-17: Persist Settings atomically
+
+**Status:** Partial. Atomic persistence and all eight shipping fields work. `skipUpgradePlanConfirmation` and the demotion of `autoOpenDrawer` are Planned — D28.
+
+A setting becomes active only after it is successfully saved.
+
+**Consequences (testable):**
+- A patch is persisted **before** in-memory settings change and before the canonical state revision advances. A failed save changes neither.
+- The shipping settings and their defaults are:
+
+  | Setting | Default |
+  | --- | --- |
+  | Run Homebrew metadata update during refresh | on |
+  | Refresh automatically on launch | on |
+  | Stall threshold | 120 seconds |
+  | Upgrade hard cap | 30 minutes |
+  | Application log level | debug, for the app's own code |
+  | Auto-open the activity surface for mutations | on |
+  | Include self-updating casks by default | off |
+  | Check for application updates automatically | on |
+- The Settings view also provides the read-only Environment Report, Copy, Open Logs Folder, diagnostics export, and Re-detect.
+- **Planned — D28:** `skipUpgradePlanConfirmation` is added with a safe default of `false` and is reversible in Settings; `autoOpenDrawer` becomes inactive legacy input.
+
+**Notes:** the eighth field — check for application updates automatically — ships today and is absent from both of `docs/SPEC.md`'s settings sections. It is recorded here because the byte-equality contract fixtures already carry it.
+
+#### FR-18: Export privacy-preserving diagnostics
+
+**Status:** Shipping.
+
+One action produces one support bundle that explains the machine without disclosing it.
+
+**Consequences (testable):**
+- A timestamped archive is written to the documented Desktop path.
+- It contains an environment and detection report, the newest three application logs, the newest 25 transcripts, and the History journal.
+- It includes application, OS, and architecture information, the constructed search path and its source, detection evidence, settings, and the log filter.
+- It contains **only** environment values Pack-Manager itself set. The inherited environment is never dumped.
+- Symlink substitution is rejected both when selecting files and when streaming them.
+
+#### FR-19: Provide one coherent macOS interface
+
+**Status:** Shipping for the current navigation model. The D30 navigation changes — Activity as a first-class destination, the Results surface, and one-plan-per-row History — are Planned.
+
+The app reads as one focused macOS control surface, not six command wrappers in a window.
+
+**Consequences (testable):**
+- One coherent dark-only interface spans the Dashboard, Manager navigation and workspaces, the Upgrade Plan, Activity, History, Settings, status surfaces, and application menus.
+- The visual identity is the approved "Aurora Control Deck" palette in `DESIGN.md`, adopted by D35, with a recognizable package/update application icon.
+- All color states carry text or icon equivalents; status chips do not wrap.
+- Text contrast meets at least 4.5:1 on its surface. **Not met at `HEAD`** — see NFR-6.
+- The reduced-motion preference disables transitions.
+- Every interactive element carries a visible focus indicator, drawn as a real `outline` — never a `ring-*` box-shadow, which WebKit does not paint on native-appearance form controls, and never `outline-none`. Focus is a dedicated indicator, never the accent, so focused and selected stay distinguishable.
+- VersionDelta remains display-only and never decides whether an update exists.
+- The interface remains usable at 900 × 600, at 150–200% zoom, with more than 100 Packages, and with long command output. Narrow widths scroll rather than letting essential content collide.
+- The app launches correctly from Finder and the Dock.
+
+**Notes — D37 reconciliation (the conflict this PRD resolves).** `epics.md` FR-19 (line 89) and NFR-6 (line 113) require primary actions be "keyboard/VoiceOver operable" with plan-progress announcements. D37 is the later decision and removes keyboard navigation and screen-reader support as criteria, on the same evidence D33 used to retire the enterprise apparatus. **This PRD restates FR-19 and NFR-6 without those obligations.** Specifically dropped: keyboard operability of primary actions, VoiceOver operability, live-region announcements of plan progress/verification/cancellation/failure/completion, and NFR-6's deterministic dialog/sidecar focus restoration.
+
+Three things explicitly stay, and none of them is kept as an accessibility obligation:
+
+1. **The focus indicator.** It ships across 31 sites, is asserted in CI by `tests/e2e/browser-style-contract.spec.ts`, and is governed by D35 and AD-27. Removing the rule would delete no work and would only un-guard working code against the next `ring-*` — the exact trap D35 documents.
+2. **⌘X / ⌘C / ⌘V / ⌘A, and the application accelerator map** — both enumerated in RP-2. Copy, paste, and refresh are things a mouse user does constantly, and per D25a they break silently if the Edit and Window submenus are not re-declared. That is a functional copy/paste regression, not an accessibility check.
+3. **Contrast** (D36's guard). It caught text unreadable to anyone looking at the button — product quality, not accommodation.
+
+Pointer-facing explanations of *why* a Package is ineligible also stay; only their keyboard and screen-reader limbs are out of scope.
+
+`epics.md`, `ARCHITECTURE-SPINE.md`, `EXPERIENCE.md`, and `docs/RELEASE-CHECKLIST.md` still carry the removed obligations. The first three are workflow-owned and come out through `bmad-correct-course`, a `bmad-architecture` Update, and a `bmad-ux` Update — never a hand edit. The fourth is workflow-unowned and is a maintainer edit. **Scope each run by section, not by a mention count** — `addendum.md` §3 carries the named headings, and the reason that matters is recorded there.
+
+---
+
+### 4.5 Pack-Manager application updates
+
+**Description:** The app updates itself, and the boundary between updating the app and updating packages is deliberate and visible. Application updates sit outside the Operation queue entirely — they are not Operations, hold no Manager lock, and never appear in History. Realizes AJ-6.
+
+**Functional Requirements:**
+
+#### FR-20: Expose and automatically download available application updates
+
+**Status:** Shipping.
+
+The user learns about a new version without asking, and the download does not interrupt their work.
+
+**Consequences (testable):**
+- Checks run at launch, every six hours, and on demand from the application menu.
+- A newer authorized release downloads automatically in the background. Automatic **download** is required behavior, not an optional outcome — installation is the machine mutation, and that stays user-gated.
+- Checking, available, downloading, ready, and failure states are visible.
+- Only a *manual* check may surface a notification. An automatic check that finds nothing, or that fails while offline, stays invisible, and a repeated payload for the same terminal state does not re-notify.
+- Package work remains understandable and uninterrupted throughout.
+
+#### FR-21: Require explicit installation and relaunch
+
+**Status:** Shipping.
+
+Nothing about the installed application changes without a deliberate user action.
+
+**Consequences (testable):**
+- A downloaded update installs only after the user chooses Restart to update. Never a silent install, never a silent restart.
+- Installation and relaunch are **refused** while any Package Operation is queued or running. Queued counts as active — admission has already committed to the work, and a restart would drop it unstarted.
+- This refusal is enforced independently in two layers, and both must stay: the frontend quit guard explains it to the user, and the backend refuses on its own because the install path terminates every child process before relaunching.
+- A non-writable install location produces manual-install-required, never an administrator prompt.
+- The app relaunches as the intended version, and success is reported only after that.
+- Every update-stage failure is actionable.
+
+#### FR-22: Launch normally and accept only authorized updates
+
+**Status:** Shipping.
+
+**Consequences (testable):**
+- The release is universal and supports both Apple silicon and Intel. Update metadata publishes **both** architecture keys, both pointing at the single universal archive; dropping the Intel key would strand every installed Intel user with no signal (D32).
+- The application, disk image, and updater payload are signed and notarized, and the relevant bundles are stapled — so the normal update path does not require Gatekeeper to contact Apple on first launch. This supersedes D20 and `docs/SPEC.md`'s stale "notarized DMG is out of scope" line.
+- Only updater payloads cryptographically authorized for the installed application are accepted.
+- Verification is Apple-silicon only; Intel remains best-effort and unverified (D32).
+
+---
+
+### 4.6 Release prerequisites
+
+These two are mandatory prerequisites rather than product features. They are validated through `docs/RELEASE-CHECKLIST.md`.
+
+#### RP-1: Preserve application-update triggers and state continuity
+
+**Status:** Shipping.
+
+**Consequences (testable):**
+- Launch, six-hour, and app-menu update checks are all preserved.
+- In-process update state survives supported UI recreation.
+- The saved trigger policy survives a normal relaunch.
+- A failed or interrupted download never presents as Ready.
+- Application-update state stays separate from the Operation queue and from History.
+
+#### RP-2: Preserve standard macOS menu behavior
+
+**Status:** Shipping.
+
+Standard Edit and Window menu actions — including cut, copy, paste, and select-all in the search field and in every copyable command surface — are preserved. This is a functional requirement, not an accessibility one: `app.set_menu` replaces Tauri's default menu wholesale, so these submenus must be re-declared or the shortcuts die silently (D25a).
+
+The application accelerators outside the Edit and Window standards are equally in scope and must survive the same menu replacement: **⌘R** (refresh current, or all from the Dashboard), **⌘⇧R** (refresh all), **⌘⇧U** (Update Everything), **⌘L** (toggle the activity surface), **⌘F** (focus search), and **⌘1–9** (navigation jump). ⌘A is covered above as an Edit-menu action, and its re-pointing under D27 is specified in FR-6.
+
+---
+
+## 5. Cross-Cutting NFRs
+
+#### NFR-1: Fail closed
+
+**Status:** Shipping.
+
+Unreviewed, stale, altered, replayed, partially admissible, or privilege-seeking work never runs. User exclusions and Manager protections remain authoritative in every path.
+
+#### NFR-2: Isolate and recover from failure
+
+**Status:** Shipping.
+
+Detection, refresh, parse, network, update, crash, cancellation, timeout, and persistence failures are contained. None of them blanks another Manager or destroys a Last-good Snapshot. Recovered partial data merges into the existing inventory rather than replacing it — replacing a Snapshot with an outdated-only overlay would make every up-to-date Package vanish.
+
+#### NFR-3: Stay responsive
+
+**Status:** Shipping.
+
+State renders progressively without waiting for all Managers. The interface stays interactive beyond 100 Packages, with correct actions reachable at 101 rows. Live output flushes at 50 ms, 64 lines, or 8 KiB, whichever comes first. The newest 5,000 live lines are retained while the complete transcript is preserved on disk. Navigation, the plan, confirmation, Activity, Results, and recovery all remain usable at 900 × 600 and at 150–200% zoom.
+
+#### NFR-4: Correlate evidence
+
+**Status:** Partial. `opId` correlation ships; `planAttemptId` is Planned — D29.
+
+Status, output, transcript, structured log, History, and diagnostics correlate through durable identity. Failure to create an Operation transcript blocks the spawn — an unaudited command never starts. Later non-critical logging failures never hang Package work.
+
+#### NFR-5: Protect privacy and the trust boundary
+
+**Status:** Shipping.
+
+No telemetry. No generic shell surface. Inherited environment values are excluded from logs and diagnostics. Diagnostic export resists symlink substitution. Any external-content, capability, or permission change is security-sensitive.
+
+#### NFR-6: Maintain interface quality
+
+**Status:** Partial. Non-color cues, reduced motion, the focus indicator, the size and zoom floors, and display-only VersionDelta all ship. **The 4.5:1 contrast floor does not hold at `HEAD`** — three bright-fill sites still paint white ink, measuring 2.46:1, 2.30:1 and 2.15:1. The fix and its automated guard exist only as uncommitted working-tree changes. The explanatory-disabled treatment on ineligible rows is likewise unbuilt (FR-5).
+
+Non-color status cues and pointer-accessible ineligibility reasons; at least 4.5:1 text contrast; reduced motion honored; a visible focus indicator on every interactive element (see FR-19 for the mechanism and why it is not an accessibility obligation); usability at 900 × 600 and 150–200% zoom, and with more than 100 Packages; VersionDelta display-only.
+
+**Restated per D37** — the keyboard-operability, VoiceOver, announcement, and focus-restoration limbs of `epics.md` NFR-6 are removed. Full reconciliation in FR-19's notes.
+
+#### NFR-7: Meet platform compatibility
+
+**Status:** Shipping.
+
+Normal GUI launch from Finder and the Dock. Both promised architectures supported. Incompatible Manager output fails visibly and locally rather than crashing the app. **Minimum supported macOS is 15.0**, declared in `src-tauri/tauri.conf.json` — D31 closed this; it is no longer an open prerequisite for candidate acceptance.
+
+#### NFR-8: Keep delivery artifacts coherent
+
+**Status:** Shipping.
+
+Direct-download and updater artifacts stay mutually consistent, cryptographically authorized, and attributable to one release, without weakening explicit install/restart control. Two release-blocking checks enforce this: the updater's detached signature is verified against the public key the shipping app embeds, and the published update metadata is asserted reachable and coherent after upload. Without them, a drifted signing key produces a fully green release that silently breaks updates for every installed client.
+
+---
+
+## 6. Non-Goals (Explicit)
+
+Pack-Manager is not, and will not become in v1:
+
+- **A package installer or uninstaller.** It updates what is already installed. Nothing else.
+- **A privilege-escalation path.** No `sudo`, no password entry, no administrator prompt, anywhere, for any reason. This is a hard product boundary, not a default.
+- **An unattended updater.** No scheduled or automatic Package upgrades. Application-update *download* is automatic; application-update *installation* is not.
+- **A terminal.** No general shell surface, no arbitrary command execution, no user-supplied argument vectors.
+- **A version oracle.** It never replaces a Manager's outdated verdict with its own comparison.
+- **A telemetry client.** Nothing is reported anywhere.
+- **A pin-breaker.** Pinned Homebrew formulae are never force-updated in-app.
+- **A retry loop.** External Homebrew lock contention is named and handed back to the user, never retried automatically.
+- **A rollback engine.** Cancellation stops work; it does not undo a partially completed Manager command, and the product does not pretend otherwise.
+- **A cross-Manager deduplicator.** The single Rust rule (D10) is the only exception, and it is scoped to one plan.
+- **A team or fleet tool.** No multi-user, no shared state, no policy.
+
+---
+
+## 7. Scope
+
+### 7.1 Shipping today (1.0.1)
+
+- Manager detection, ownership derivation, and Route precedence.
+- Independent per-Manager refresh with Last-good Snapshot retention.
+- The Package table with full eligibility semantics.
+- Exact-command plan preview with the complete fail-closed trust machinery, and atomic multi-group admission.
+- The lock-set scheduler with cross-Manager concurrency.
+- Live output streaming, stall detection, cancellation, and the hard cap.
+- Operation transcripts, the crash journal, and `Interrupted` reconstruction.
+- Operation-level History with search, filtering, and reveal-in-Finder.
+- Diagnostics export.
+- Settings with atomic persistence.
+- The dark-only Aurora Control Deck interface with a CI-asserted focus mechanism.
+- uv health fixes, with the exact-suggestion-only constraint on what becomes runnable.
+- The full application self-update flow, including the two-layer refusal while Package work is in flight.
+
+**Not in this list, deliberately:** the automated contrast guard. The 4.5:1 assertion and the on-fill ink tokens that make it pass are **uncommitted working-tree changes**, absent from `HEAD` `5972109`. Until they land, contrast at release time is a by-eye check, and neither FR-19 nor NFR-6 may be read as CI-guaranteed on that axis.
+
+### 7.2 Decided, not yet implemented (D27–D30)
+
+The Upgrade Plan redesign, in one coherent block:
+
+- One persistent editable Upgrade Plan draft, replacing transient dialog state, with every path converging on it and **no** immediate execution from a row, header, or selection (D27).
+- Independent, individually removable Manager self-update membership, replacing the global all-or-nothing toggle (D27).
+- A separate final confirmation dialog with a reversible skip preference (D28).
+- A durable `planAttemptId` correlating reviewed intent, Operations, events, transcripts, journal records, verification, Results, and Retry lineage — with History carrying one immutable row per confirmed attempt (D29).
+- One active attempt at a time, a `Verifying` state before success is declared, Activity as a first-class destination, a terminal Results summary, attempt-wide `Cancel plan`, and trusted-classifier-only `Interaction required` (D30).
+
+This is the live build queue — 28 stories under `epic-ux-pb` in `_bmad-output/implementation-artifacts/sprint-status.yaml`, which D33 describes as "28 real product stories".
+
+### 7.3 Deferred
+
+- **Snapshot cache**, **native notifications when backgrounded**, **Package detail popover**, and the **"also managed by rustup"** note on mise's Rust row. `[NOTE FOR PM]` — these were P1 in `docs/SPEC.md`, but D33's surviving habit applies: verify whether each already ships before scheduling it as new work. An adversarial triage pass overturned 14 of 20 initial keep verdicts for exactly that reason.
+  - **Health fixes were on this list and have been removed from it — they ship in full**, including the exact-recognized-suggestion constraint that gates which fixes become runnable. Deferring them was this document committing the very error the note above warns against, one sentence later. They are recorded in §7.1.
+- **Light theme** — the tokens live in one file specifically so this is a value swap, but dark-only is the v1 commitment (D19).
+- **Menu-bar extra**, **scheduled Package refresh** (distinct from the six-hour *application*-update check), **`cargo install` support**, and cross-Manager deduplication beyond the Rust rule.
+
+---
+
+## 8. Success Metrics
+
+Calibrated to what this project is. D33 established the scale on observable evidence — 1 star, 0 forks, 3 lifetime `.dmg` downloads, with 27 of 30 recorded downloads being the app's own updater traffic. Adoption metrics would be theater.
+
+**Primary**
+
+- **SM-1: Sustained personal use.** The maintainer reaches for Pack-Manager instead of six terminals, and still does so a month from now. Validates the product thesis as a whole.
+- **SM-2: Zero unreviewed mutations.** No Package or Manager update ever runs that the user did not see staged first. A single violation is a P0 defect, not a metric miss. Validates FR-7, FR-8, FR-10.
+- **SM-3: Zero privilege prompts.** No release ever surfaces `sudo`, a password field, or an administrator dialog. Validates FR-12, FR-21.
+
+**Secondary**
+
+- **SM-4: Failure legibility.** When something fails, the transcript plus History answer "what ran and what happened" without reproducing the failure. Validates FR-15, FR-16, FR-18.
+- **SM-5: Update path integrity.** Every release's updater signature verifies against the embedded public key and its metadata is reachable and coherent, checked automatically at release time. Validates FR-22, NFR-8.
+
+**Counter-metrics (do not optimize)**
+
+- **SM-C1: Time-to-update.** Making the path from intent to execution *faster* is not a goal and directly counterbalances SM-2. The review step, the confirmation gate, and the stale-plan rejection all exist to add deliberate friction. Anyone optimizing clicks-to-upgrade is optimizing away the product.
+- **SM-C2: Feature count.** Counterbalances the temptation in §7.3. This is a six-Manager update tool for one machine. A larger surface is a larger thing to keep correct, and §6 exists to make the boundary expensive to cross by accident.
+
+---
+
+## 9. Open Questions
+
+1. **What happens on quit with work *queued* but not running, and on an OS-initiated shutdown?** The running-Operation quit guard is defined as a requirement (FR-14, unbuilt). These two cases are not. The application-update-during-Package-activity case is **not** open — FR-21 decides it normatively and ships two-layer enforcement.
+2. **Does a downloaded application update survive a relaunch that was not the update restart?** RP-1 requires that failed or interrupted downloads never present as Ready, but the persistence expectation for a *successful* pending download across an ordinary quit is unstated.
+3. **What is the first-run experience for a machine with none of the six Managers installed?** Every empty state is defined per-Manager; the all-absent case is not.
+4. **Can the user clear or delete History entries?** Automatic retention is defined (newest 1,000). User-initiated deletion is not.
+5. **Does the diagnostics export get a preview or redaction step before the user shares it?** Contents are enumerated and the inherited environment is excluded, but there is no review-before-share affordance.
+
+All five are non-blocking: each can be resolved during the epic that touches it. This document carries **no phase-blockers**.
+
+### 9.1 Closed during this run
+
+**Q1 — Does a Package checkbox mutate Upgrade Plan membership directly, or is there a separate transient selection? CLOSED 2026-07-25: directly.**
+
+`EXPERIENCE.md` is correct and `docs/SPEC.md` F5 is the stale side. The decision was already made during the UX run and is recorded verbatim at `ux-Pack-Manager-2026-07-23/.memlog.md:75` — "Package checkboxes directly control Upgrade Plan membership: checking an eligible Package immediately adds it, unchecking immediately removes it, and the header checkbox adds or removes all eligible visible Packages. Eliminate the separate temporary selection and Add Selected layer." The owner confirmed it directly on 2026-07-25.
+
+The conflict survived for a mechanical reason, not an unresolved one: `docs/SPEC.md` §0.1's supersession list retires six behaviors and **never added F5**. That omission is the whole defect, and it is now recorded in §0.1. The live `selection` set in `src/store/packages.ts` is pre-D27 code, not a competing decision.
+
+Two consequences carried into this document:
+
+- FR-6 is rewritten around direct membership control, with the transient selection and `Add Selected` layers explicitly out of scope, and it now states the **batch** requirement that comes with the model — one membership operation per range or filter-wide interaction, not one per row. The cost that makes this a requirement is recorded at `architecture-Pack-Manager-2026-07-23/reviews/review-reconcile-epics.md:166`: mapping selection onto draft membership per-row turns a shift-range across 100 rows into 100 Rust round-trips, against NFR-3.
+- `ARCHITECTURE-SPINE.md:1050` still records this as OPEN and routes it to the owner. It is now answered, and that row should be **retired** in the `bmad-architecture` Update that follows this PRD.
+
+---
+
+## 10. Review Record and Judgment Calls
+
+No `[ASSUMPTION]` tags were needed. Every requirement in this document traces to a named source — `docs/SPEC.md`, `docs/DECISIONS.md` D1–D37, `epics.md` FR/NFR lines 53–450, `ARCHITECTURE-SPINE.md` revision 9, `EXPERIENCE.md`, `DESIGN.md`, or verification against `src/` and `src-tauri/` at `HEAD` `5972109`. Where a source was wrong, §0.1 records the correction rather than assuming past it. Where a source was silent, §9 records the gap rather than filling it.
+
+This document went through a reviewer gate on 2026-07-25: seven reconcilers, one per source input, and six review lenses including the quality-rubric walker, with every finding facing an adversarial verifier required to open the cited file and default to refuting. The gate raised 62 findings across the review lenses alone, of which 53 were refuted. Its verdict was *Good*, with **downstream usability** the one thin dimension — the handoff, not the thinking. Everything it confirmed has been applied, including two criticals: FR-7 had removed a safety gate without carrying the three compensations that were the price of removing it, and FR-14 described a quit guard that is not wired to anything. Reviewer output is preserved in this folder as `reconcile-*.md` and `review-*.md`.
+
+Three judgment calls are recorded here because a reviewer might reasonably have made them differently:
+
+- **The §2.3 journey table is not a complete index of the FR set.** FR-12, FR-17, FR-19 and RP-2 are cross-cutting and map to no journey. Declaring that in one line was chosen over stretching journeys to cover requirements they do not drive.
+
+- **Requirement IDs were preserved rather than renumbered.** `epics.md` and `ARCHITECTURE-SPINE.md` already cite FR-1…FR-22 and NFR-1…NFR-8; renumbering would have broken every downstream reference for cosmetic gain.
+- **NFR-6's "deterministic dialog/sidecar focus restoration" was dropped** along with the keyboard obligations, on the grounds that it is a keyboard-focus concern. D37 protects the focus *indicator* by name and nothing else; a mouse user clicks the next thing they want. Confirmed by the owner on 2026-07-25: it stays dropped, and the PRD stays consistent with D37 rather than carving an exception.

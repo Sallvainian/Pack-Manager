@@ -2,7 +2,7 @@
 title: "Adopt the approved DESIGN.md palette and a dedicated focus ring"
 type: "feature"
 created: "2026-07-25"
-status: "in-progress"
+status: "done"
 baseline_commit: "db92db7"
 review_loop_iteration: 0
 context:

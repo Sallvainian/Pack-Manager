@@ -67,9 +67,23 @@ two failures are different and D33 keeps them separate.
 
 ## A note on completeness
 
-Files matching `**/.memlog.md` are gitignored by `.gitignore:52`. Two were moved here on
-disk with the artifacts they belong to, but they are **not tracked by git** and will not
-appear in a fresh clone. If they matter, they need force-adding.
+This archive holds exactly one memlog:
+`planning/prds/prd-Pack-Manager-2026-07-22/.memlog.md`, the PRD run's working memory.
+
+It **is** tracked by git and will appear in a fresh clone. An earlier version of this
+note said the opposite — that `**/.memlog.md` was gitignored and needed force-adding.
+That ignore rule was removed on 2026-07-25 and all three memlogs in the repo are now
+tracked (`git ls-files '*.memlog.md'`).
+
+The rule was removed because a memlog is a workflow run's append-only working memory —
+`_bmad/scripts/memlog.py` has no edit or delete subcommand by design — and the `bmad-*`
+Update intents resume from it as the authority on what was decided, not from the rendered
+artifact. It is not a deliverable, but it is not regenerable either: lose it and the
+artifact can never be re-distilled. See `.gitignore:51-55`.
+
+That is also why the architecture run's memlog is **not** here. It was moved back to
+`_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/`,
+its live run folder, so the spine's Update intent has something to resume from.
 
 ## One habit worth keeping
 
