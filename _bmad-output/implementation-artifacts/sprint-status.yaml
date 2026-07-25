@@ -1,5 +1,5 @@
 # generated: 2026-07-24T16:47:19
-# last_updated: 2026-07-24T21:40:00
+# last_updated: 2026-07-25T00:04:01
 # project: Pack-Manager
 # project_key: NOKEY
 # tracking_system: file-system
@@ -43,21 +43,24 @@
 # NOTE ON ux-pb: 'epic-ux-pb' is the primary build queue - the 28 stories
 # implementing Decisions D27-D30 (persistent Upgrade Plan, durable plan
 # attempts, verification-gated Results/History, separate confirmation gate).
+# epics.md: "It is the primary build queue."
 #
-# NOTE ON epics 1-6: retained but UNSCHEDULED pending rescope into normal
-# development stories (2026-07-24 scope recalibration, DECISIONS D33).
-# Triage complete: 6 keep, 19 merge, 12 retire. These 37 entries were authored
-# as evidence production for the retired readiness gate; most of the behavior
-# they describe is already implemented and tested in the shipping code.
-# 'backlog' here does NOT mean queued.
+# NOTE ON epics 2, 3, 6: the D33 rescope was APPLIED to epics.md on 2026-07-25.
+# epics.md: "Six stories survived the triage and stay live under Epics 2, 3,
+# and 6; the other 31 moved to the archive. Epics 1, 4, and 5 lost every story
+# and were removed." The 31 archived stories and the three removed epics were
+# dropped from this file on 2026-07-25 to match. Archived story text:
+#   _bmad-output/archive/2026-07-24-scope-recalibration/planning/epics-1-6-triaged-out.md
 # Per-story verdicts and rationale:
 #   _bmad-output/planning-artifacts/story-triage-2026-07-24.md
+# epics.md: "the survivors carry no inter-epic dependencies."
 #
-# NOTE ON epics 7-8: retired. Release readiness is docs/RELEASE-CHECKLIST.md
-# plus two automated checks in release.yml. See DECISIONS D33.
+# NOTE ON epics 7-8: retired. epics.md: "Release readiness is a short manual
+# checklist plus automated checks in the release pipeline, not a closure epic
+# and not an evidence lane. See `docs/RELEASE-CHECKLIST.md`."
 
 generated: 2026-07-24T16:47:19
-last_updated: 2026-07-24T21:40:00
+last_updated: 2026-07-25T00:04:01
 project: Pack-Manager
 project_key: NOKEY
 tracking_system: file-system
@@ -96,63 +99,20 @@ development_status:
   ux-pb-5e-application-update-presentation-kept-separate-from-package-plans-and-history: backlog
   epic-ux-pb-retrospective: optional
 
-  # epic-1: Restore Trustworthy mas and Target-Mac Truth
-  epic-1: backlog
-  1-1-restore-current-mas-and-release-truth: backlog
-  1-2-qualify-the-initial-split-evidence-lanes: backlog
-  1-3-verify-the-live-six-manager-target-mac-topology: backlog
-  1-4-capture-the-real-mas-correctness-oracle: backlog
-  1-5-enforce-mas-provenance-and-fixture-honesty: backlog
-  epic-1-retrospective: optional
-
   # epic-2: Make Detection and Refresh Fail Independently and Recover Usefully
   epic-2: backlog
-  2-1-preserve-honest-absence-and-complete-environment-evidence: backlog
   2-2-prove-refresh-phases-and-per-manager-timeouts: backlog
-  2-3-keep-offline-failures-isolated: backlog
-  2-4-revalidate-stable-detection-and-refresh-state-truth: backlog
   epic-2-retrospective: optional
 
   # epic-3: Keep Package Choice, Plans, and Settings Exact and Understandable
   epic-3: backlog
   3-1-present-complete-package-state-and-manager-detail: backlog
   3-2-enforce-pinned-and-greedy-eligibility: backlog
-  3-3-build-plans-from-every-user-entry-point: backlog
   3-4-validate-every-settings-control-and-environment-report: backlog
   3-5-preserve-exact-keyboard-selection-and-row-plan-actions: backlog
-  3-6-revalidate-version-truth-mise-consequences-and-plan-defaults: backlog
   epic-3-retrospective: optional
-
-  # epic-4: Prove the Real Desktop Command-and-Event Boundary
-  epic-4: backlog
-  4-1-establish-the-versioned-production-boundary-contract: backlog
-  4-2-deliver-the-deterministic-process-control-core: backlog
-  4-3-cross-native-startup-detection-and-re-detect: backlog
-  4-4-cross-all-six-native-refresh-ordering: backlog
-  4-5-revalidate-native-refresh-and-contract-equality: backlog
-  4-6-revalidate-reviewed-plans-and-native-admission: backlog
-  epic-4-retrospective: optional
-
-  # epic-5: Make Manager Updates and Process Lifecycles Safe and Honest
-  epic-5: backlog
-  5-1-refresh-every-routed-subject-and-executor: backlog
-  5-2-prove-dynamic-self-update-routes-and-manager-header-card-plan-state: backlog
-  5-3-reject-unsafe-spawns-and-hold-complete-locks: backlog
-  5-4-preserve-native-output-and-activity-boundaries: backlog
-  5-5-cancel-stall-time-out-and-shut-down-honestly: backlog
-  5-6-repair-only-the-allowlisted-unterminated-mas-notice: backlog
-  5-7-prove-the-d26-rule-cannot-become-heuristic: backlog
-  5-8-revalidate-preview-bytes-against-spawned-bytes: backlog
-  5-9-revalidate-scheduler-locks-parallelism-and-capacity: backlog
-  epic-5-retrospective: optional
 
   # epic-6: Preserve State, Evidence, and Privacy Across Failure and Relaunch
   epic-6: backlog
-  6-1-deliver-asr-02-filesystem-and-native-utility-extensions: backlog
-  6-2-deliver-the-disposable-lifecycle-environment: backlog
-  6-3-preserve-real-transcripts-and-atomic-journals: backlog
-  6-4-reconstruct-interrupted-work-without-signaling-history: backlog
   6-5-export-exact-native-diagnostics-and-visible-outcomes: backlog
-  6-6-reject-hostile-or-private-diagnostic-inputs: backlog
-  6-7-preserve-settings-and-native-utility-actions-across-failure: backlog
   epic-6-retrospective: optional
