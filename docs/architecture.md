@@ -34,8 +34,11 @@ The Product Behavior Prerequisite UX-PB.1..UX-PB.5 must implement that target
 before this document's current Activity drawer, direct self-update,
 Operation-History, or settings mechanics are rewritten as implemented truth.
 `_bmad-output/implementation-artifacts/sprint-status.yaml` lists those 28
-stories as the primary build queue; the 37 Epic 1-6 entries in the same file
-are UNSCHEDULED, not queued.
+stories as the primary build queue. The Epics 1-6 rescope D33 called for was
+applied on 2026-07-25: six stories survived and stay live under Epics 2, 3,
+and 6 (2.2, 3.1, 3.2, 3.4, 3.5, 6.5), the other 31 moved to the archive, and
+Epics 1, 4, and 5 lost every story and were removed. `epics.md` records that
+"the survivors carry no inter-epic dependencies."
 
 Decisions D31-D33 then recalibrated scope around that target: the supported
 macOS floor is declared (D31), the universal build is retained with Apple

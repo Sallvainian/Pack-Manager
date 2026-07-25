@@ -1,9 +1,9 @@
 {
   "workflow_version": "1.2.0",
   "timestamps": {
-    "started": "2026-07-24T23:31:32-0400",
-    "last_updated": "2026-07-24T23:43:07-0400",
-    "completed": "2026-07-24T23:43:07-0400"
+    "started": "2026-07-25T00:24:25-0400",
+    "last_updated": "2026-07-25T00:41:52-0400",
+    "completed": "2026-07-25T00:41:52-0400"
   },
   "mode": "full_rescan",
   "scan_level": "deep",
@@ -13,74 +13,68 @@
     {
       "step": "step_1",
       "status": "completed",
-      "timestamp": "2026-07-24T23:33:15-0400",
-      "summary": "Re-detected desktop type from key_file_patterns (package.json + src-tauri/Cargo.toml + src-tauri/tauri.conf.json all present; no client/server/packages split, no workspace config). User confirmed monolith, 1 part 'pack-manager', project_type_id=desktop"
+      "timestamp": "2026-07-25T00:26:40-0400",
+      "summary": "Re-derived classification independently of the cached value: package.json has no workspaces key, src-tauri/Cargo.toml has no [workspace] table, and no client/server/api/packages/apps directories exist; desktop row key_file_patterns matched on package.json + src-tauri/Cargo.toml + src-tauri/tauri.conf.json. User confirmed carry-forward: monolith, 1 part 'pack-manager', project_type_id=desktop. Note: documentation-requirements.csv holds 11 rows, not the 12 the workflow prose claims."
     },
     {
       "step": "step_2",
       "status": "completed",
-      "timestamp": "2026-07-24T23:33:15-0400",
-      "summary": "Inventoried existing docs: 8 generated in docs/, plus README/AGENTS/CLAUDE/SPEC/DECISIONS/IMPL_PLAN/RELEASE-CHECKLIST/ci.md/ci-secrets-checklist/dev-fixtures README/tests README, 7 workflows, 45 _bmad-output markdown files. User directed: fold in _bmad-output/planning-artifacts (D31-D33 recalibration) and link RELEASE-CHECKLIST.md, tests/README.md, AGENTS.md + planning artifacts from index.md"
+      "timestamp": "2026-07-25T00:27:05-0400",
+      "summary": "Inventoried 68 tracked markdown files (git ls-files '*.md' excluding _bmad/ skill internals). User directed three focus areas: (1) correct the sprint-status passages, (2) re-read epics.md and story-triage-2026-07-24.md so Planning State is quoted from rescoped text, (3) systematically audit every generated doc for post-23:43 drift."
     },
     {
       "step": "step_3",
       "status": "completed",
-      "timestamp": "2026-07-24T23:34:32-0400",
-      "summary": "Tech stack re-grounded from package-lock.json (lockfileVersion 3) and src-tauri/Cargo.lock (488 locked crates): app 1.0.0 (was 0.2.9); TypeScript 7.0.2 (was 5.8.3), Vite 8.1.5 (was 7.3.6), @vitejs/plugin-react 6.0.4, @tanstack/react-virtual 3.14.8; React/react-dom 19.2.8, Zustand 5.0.14, Tailwind 4.3.3, Vitest 4.1.10, jsdom 29.1.1, RTL 16.3.2, Playwright 1.61.1, faker 10.5.0, @tauri-apps/api 2.11.1, cli 2.11.4; Rust unchanged: tauri 2.11.5, tauri-build 2.6.3, tokio 1.53.1, updater 2.10.1, opener 2.5.4, nix 0.31.3, uuid 1.24.0. New: tauri.conf.json bundle.macOS.minimumSystemVersion=15.0. Architecture pattern unchanged: React component/store UI over command+event-driven Rust core"
+      "timestamp": "2026-07-25T00:29:15-0400",
+      "summary": "Tech stack re-grounded from package-lock.json (lockfileVersion 3) and src-tauri/Cargo.lock. All versions UNCHANGED from the prior scan: app 1.0.0; React/react-dom 19.2.8, TypeScript 7.0.2 (tilde-pinned ~7.0.2), Vite 8.1.5, @vitejs/plugin-react 6.0.4, Tailwind + @tailwindcss/vite 4.3.3, Zustand 5.0.14, @tanstack/react-virtual 3.14.8, Vitest 4.1.10, RTL 16.3.2, jest-dom 7.0.0, jsdom 29.1.1, @playwright/test 1.61.1, faker 10.5.0, @tauri-apps/api 2.11.1, cli 2.11.4; Rust: tauri 2.11.5, tauri-build 2.6.3, tokio 1.53.1, tauri-plugin-updater 2.10.1, tauri-plugin-opener 2.5.4, nix 0.31.3, uuid 1.24.0, serde 1.0.229, serde_json 1.0.151. CORRECTION to the prior scan: Cargo.lock holds 547 locked crates, not 488 (grep -c '^[[package]]' and grep -c '^name = ' both return 547); Cargo.lock last changed in a4c016b (release 1.0.0), which predates the prior scan, so 488 was a miscount. The figure appears in no generated doc."
     },
     {
       "step": "step_4",
       "status": "completed",
-      "timestamp": "2026-07-24T23:35:33-0400",
-      "summary": "Conditional analysis per desktop row (requires_api_scan=false, requires_data_models=false, requires_state_management=true, requires_ui_components=true, requires_deployment_config=true, requires_asset_inventory=true, requires_hardware_docs=false). Re-verified against source: 37 production TSX components, 5 Zustand stores + store/index.ts derived selectors, 20 registered commands (lib.rs:233-252), 6 event constants (events.rs:77-82), 17 packaging icons + dev/icon source PNG and generator, 26 parser fixtures + 15 ipc contract fixtures, 22 Vitest files, 259 Rust #[test]/#[tokio::test] attributes, 4 Playwright specs, no i18n framework (English-only). No src/ or src-tauri/src/ file changed since the prior scan, so behavioral documentation carries forward"
+      "timestamp": "2026-07-25T00:33:10-0400",
+      "summary": "Conditional analysis per the desktop row (requires_api_scan=false, requires_data_models=false, requires_state_management=true, requires_ui_components=true, requires_deployment_config=true, requires_asset_inventory=true, requires_hardware_docs=false). Re-verified: 37 TSX modules under src/components/ (plus src/App.tsx and src/main.tsx = 39 TSX files total, which reconciles component-inventory.md's '37 production TSX component modules'); 5 Zustand stores + store/index.ts; 20 registered commands (lib.rs:232-253); 6 event constants (events.rs:77-82); 17 packaging icons; 24 parser fixtures in dev/fixtures/ plus 15 in dev/fixtures/ipc/; 23 Vitest files (22 under src/ plus tests/support/fixtures/factories/pack-manager.test.ts, reconciling the recorded '23 files'); 259 Rust test attributes; 4 Playwright specs; 6 workflows under .github/workflows/. DRIFT AUDIT: git show --stat on the three commits after the doc run proves only _bmad-output/planning-artifacts/epics.md, its archive companion, and sprint-status.yaml changed - no source, config, or workflow file. A grep of every planning-state claim across all 8 generated docs found exactly 3 stale passages (architecture.md:37, index.md:183, project-overview.md:138) and confirmed the rest accurate: the 28-UX-PB claims, the Epics 7-8 retirement, and both '37' references that correctly describe the triage's own scope."
     },
     {
       "step": "step_5",
       "status": "completed",
-      "timestamp": "2026-07-24T23:40:28-0400",
-      "summary": "source-tree-analysis.md updated: added .github/dependabot.yml and the expanded .github/ subtree, docs/RELEASE-CHECKLIST.md, .env.example, and the _bmad-output planning/implementation/archive split; config table gained playwright.config.ts, tests/tsconfig.json, .env.example, and dependabot.yml. Annotated tree, entry points, asset counts (17 icons + dev/icon) re-verified as current"
+      "timestamp": "2026-07-25T00:36:30-0400",
+      "summary": "source-tree-analysis.md verified rather than rewritten, because the drift audit proved no file under src/, src-tauri/src/, .github/, or any config changed since the prior scan. All 54 paths named in the annotated tree exist. Every example file in the 'File organization patterns' table exists. FIXED one pre-existing error the prior run missed: line 201 cited `ipc/app-state.json` but the real fixture is `ipc/app_state.json` (underscore) - the prior validation checked markdown links only, not backtick-quoted paths, so it went undetected."
     },
     {
       "step": "step_6",
       "status": "completed",
-      "timestamp": "2026-07-24T23:40:28-0400",
-      "summary": "development-guide.md: macOS 15.0 floor vs macos-14 CI runner, .env.example clarification, npm run test:rust, and a Dependabot caveat naming the TS 7.0.2 / Vite 8.1.5 jumps. deployment-guide.md: new Supported Target section (D31 floor, D32 Apple-silicon-only verification), release steps 8-11, new sections 4 (two automated checks incl. the base64 .sig decode that cost v1.0.0 its assets) and 5 (SHA pinning), attach_to_tag repair mode, RELEASE-CHECKLIST pointer. contribution-guide.md: decision-supersedence order, AGENTS.md authority, the D33 verify-before-scheduling rule, e2e commands, and an action-pinning review hotspot"
+      "timestamp": "2026-07-25T00:37:10-0400",
+      "summary": "development-guide.md, deployment-guide.md, and contribution-guide.md verified current. Every documented command resolves to a real package.json script (dev, build, test, test:e2e, test:e2e:typecheck, test:rust, tauri) or a real cargo invocation. Node pinning claim re-confirmed: .nvmrc holds 24, test.yml reads it via node-version-file at four call sites, ci.yml (x2) and release.yml hardcode node-version: 24. Release-pipeline claims re-confirmed in release.yml: the updater .sig is base64-decoded to updater.minisig before minisign -V (lines 305-318), latest.json is written with both darwin targets (line 342), attach_to_tag drives the repair path (lines 43-50, 75, 100, 203), and dtolnay/rust-toolchain is SHA-pinned in release.yml while floating in ci.yml. Config claims re-confirmed: minimumSystemVersion 15.0, version 1.0.0, csp null, updater pubkey present, macos-14 runners, capabilities grant only core:default and opener:default."
     },
     {
       "step": "step_8",
       "status": "completed",
-      "timestamp": "2026-07-24T23:40:28-0400",
-      "summary": "architecture.md updated: TypeScript 5.8.3->7.0.2, Vite 7.3.6->8.1.5 (+plugin-react 6.0.4), react-virtual 3.14.7->3.14.8; target-course-correction section now cites sprint-status.yaml and D31-D33; deployment section documents the 15.0 floor and the two publication-gating checks; security section documents SHA pinning of secret-handling workflows; constraints record the OPEN notarytool question. 20 commands / 6 events re-verified at lib.rs:233-252 and events.rs:77-82"
+      "timestamp": "2026-07-25T00:38:00-0400",
+      "summary": "architecture.md target-course-correction section corrected. The stale sentence 'the 37 Epic 1-6 entries in the same file are UNSCHEDULED, not queued' was replaced with the applied rescope, grounded in epics.md:370-374: six stories survived and stay live under Epics 2, 3, and 6 (2.2, 3.1, 3.2, 3.4, 3.5, 6.5), the other 31 moved to the archive, Epics 1, 4, and 5 lost every story and were removed, and 'the survivors carry no inter-epic dependencies'. The 28-UX-PB build-queue claim and the D31-D33 paragraph were re-verified and left unchanged."
     },
     {
       "step": "step_9",
       "status": "completed",
-      "timestamp": "2026-07-24T23:40:28-0400",
-      "summary": "project-overview.md: stack versions corrected, distribution line records the 15.0 floor and Apple-silicon-only verification, new Planning State section (28 UX-PB stories queued but unimplemented; 37 Epic 1-6 entries UNSCHEDULED), RELEASE-CHECKLIST link, test:rust. component-inventory.md: sprint-status pointer, Vitest 23 files/133 tests, Playwright 4 specs. 37 components and 17 icons re-verified"
+      "timestamp": "2026-07-25T00:38:40-0400",
+      "summary": "project-overview.md Planning State section rewritten. Beyond the count change, the SEMANTICS changed: the six survivors are the story-triage 'Keep - real work with a verified gap' set, so they are live work ordered after the UX-PB queue, not the retired gate's evidence production that the prior text told readers not to schedule. Triage totals re-verified verbatim at story-triage-2026-07-24.md:16 ('6 keep - 19 merge - 12 retire - 37 total'). component-inventory.md re-verified unchanged: its claim that the 28 UX-PB stories are all backlog matches sprint-status.yaml exactly."
     },
     {
       "step": "step_10",
       "status": "completed",
-      "timestamp": "2026-07-24T23:40:28-0400",
-      "summary": "index.md regenerated: stack versions corrected, test counts added, macOS 15.0 in Quick Reference and Prerequisites, and the previously-unlinked sources now linked - RELEASE-CHECKLIST.md, tests/README.md, AGENTS.md, CLAUDE.md, project-context.md, epics.md, ARCHITECTURE-SPINE.md, story-triage-2026-07-24.md, sprint-status.yaml, DESIGN.md, EXPERIENCE.md, and the archive README. Two caveats added: D27-D30 decided-not-implemented, and Epic 1-6 backlog != queued"
-    },
-    {
-      "step": "step_11_iteration",
-      "status": "completed",
-      "timestamp": "2026-07-24T23:40:28-0400",
-      "summary": "Doc validation passed (8/8 files present, 0 incomplete markers strict+fuzzy, 69 relative links all resolve, 0 trailing whitespace) and all code gates passed"
+      "timestamp": "2026-07-25T00:39:20-0400",
+      "summary": "index.md updated at three points: the Sprint Status link description now names the six surviving Epic 2/3/6 stories alongside the 28 UX-PB stories; the stale caveat at line 183 was replaced with the applied rescope; and the Story Triage link at line 65 was left unchanged because 'verdicts for the 37 Epic 1-6 entries' correctly describes that document's own scope. No incomplete-documentation markers were introduced, so no _(To be generated)_ entries exist."
     },
     {
       "step": "step_11",
       "status": "completed",
-      "timestamp": "2026-07-24T23:43:07-0400",
-      "summary": "Validation and review complete; no incomplete documentation remained and the user requested no further revisions"
+      "timestamp": "2026-07-25T00:41:00-0400",
+      "summary": "Validation passed: 8/8 generated docs present (1,696 lines); 0 strict and 0 fuzzy incomplete markers; 38/38 unique relative links resolve; no trailing whitespace; state file is valid JSON. All code gates green: Vitest 23 files/133 tests passed, tsc --noEmit passed, test:e2e:typecheck passed, Vite build passed (92 modules), cargo fmt --check passed, cargo clippy --all-targets -D warnings passed, cargo test --locked 248 passed / 0 failed / 11 ignored. At the review gate the user chose Finalize, and separately approved one out-of-scope correction: story-triage-2026-07-24.md:4 said sprint-status.yaml 'marks UNSCHEDULED' the 37 entries, which the rescope falsified; it now describes the applied rescope. index.md's caveat was updated to match rather than caveat around it."
     },
     {
       "step": "step_12",
       "status": "completed",
-      "timestamp": "2026-07-24T23:43:07-0400",
-      "summary": "Full rescan (deep) complete; finalized resumable state and confirmed docs/index.md as the primary AI development entry point"
+      "timestamp": "2026-07-25T00:41:52-0400",
+      "summary": "Full rescan (deep) complete. docs/index.md remains the primary AI development entry point. Four of eight generated docs changed this run plus one planning artifact; the other four were verified current and left byte-identical."
     }
   ],
   "current_step": "completed",
@@ -93,35 +87,33 @@
       "primary_technology": "Tauri 2 desktop app with a React 19 + TypeScript interface and a Rust native core",
       "architecture_summary": "Single bundled application; React and Rust layers connected through local Tauri IPC commands and events"
     },
-    "user_context": "Standard deep scan; fold in _bmad-output/planning-artifacts; link previously-unlinked existing docs from index.md",
+    "user_context": "Deep rescan triggered by planning-artifact drift: the prior doc run finished 23:43 but the epics rescope (cf2662d) and sprint-status regeneration (e64ae2a) landed at 00:19. Correct the stale sprint-status passages, re-read epics.md and story-triage-2026-07-24.md for verbatim grounding, and audit all generated docs for other post-23:43 drift.",
     "technology_stack": [
       {
         "part_id": "pack-manager",
-        "tech_summary": "app 1.0.0; Tauri 2.11.5 + Rust 2021 native core; React 19.2.8, TypeScript 7.0.2, Vite 8.1.5, Tailwind 4.3.3, Zustand 5.0.14, TanStack React Virtual 3.14.8; tests: Vitest 4.1.10, RTL 16.3.2, Playwright 1.61.1, cargo tests; macOS floor 15.0"
+        "tech_summary": "app 1.0.0; Tauri 2.11.5 + Rust 2021 native core (547 locked crates); React 19.2.8, TypeScript 7.0.2, Vite 8.1.5, Tailwind 4.3.3, Zustand 5.0.14, TanStack React Virtual 3.14.8; tests: Vitest 4.1.10, RTL 16.3.2, Playwright 1.61.1, cargo tests; macOS floor 15.0. Unchanged from the 2026-07-24T23:34 scan."
       }
     ],
     "conditional_analysis": {
       "state_management": "5 Zustand stores (managers, packages, operations, ui, appUpdate) plus store/index.ts derived selectors; Rust AppState; file-backed settings/journal",
-      "ui_components": "37 production TSX component modules (unchanged)",
+      "ui_components": "37 TSX modules under src/components/ (unchanged); 39 TSX files counting src/App.tsx and src/main.tsx",
       "ipc_surface": "20 registered #[tauri::command] handlers; 6 event channels (detection:updated, snapshot:updated, op:status, op:output, op:stalled, appUpdate:status)",
       "assets": "17 packaging icons under src-tauri/icons + dev/icon/icon-1024.png and generate_icon.py",
       "localization": "English-only; no i18n framework",
-      "deployment_config": "6 workflows under .github/workflows plus dependabot.yml; release.yml now SHA-pins all third-party actions and adds attach_to_tag repair input"
+      "deployment_config": "6 workflows under .github/workflows plus dependabot.yml"
     },
     "changes_since_last_scan": {
-      "released_versions": "0.2.9 -> 1.0.0 (release-please PR #31)",
-      "new_config": "tauri.conf.json bundle.macOS.minimumSystemVersion = 15.0 (D31)",
-      "toolchain": "TypeScript 5.8.3 -> 7.0.2; Vite 7.3.6 -> 8.1.5; @vitejs/plugin-react -> 6.0.4; @tanstack/react-virtual 3.14.7 -> 3.14.8",
-      "ci": "actions/checkout, setup-node, upload-artifact 4->7 across ci.yml and release.yml; release.yml third-party actions pinned by commit SHA; updater .sig base64-decoded before minisign -V; workflow_dispatch attach_to_tag input added; published latest.json verified after upload",
-      "planning": "D31/D32/D33 recorded; readiness gate retired; Epics 7-8 retired; Epics 1-6 triaged (6 keep, 19 merge, 12 retire); retired artifacts archived under _bmad-output/archive/2026-07-24-scope-recalibration/; docs/RELEASE-CHECKLIST.md added",
-      "code": "no file under src/ or src-tauri/src/ changed since the 2026-07-24T07:13 scan"
+      "code": "none - no file under src/, src-tauri/src/, .github/, or any config changed since the 2026-07-24T23:43 doc run",
+      "planning": "cf2662d applied the D33 rescope to epics.md (1586 lines removed, 1499 moved to archive/2026-07-24-scope-recalibration/planning/epics-1-6-triaged-out.md); e64ae2a regenerated sprint-status.yaml (53 deletions, 13 insertions), dropping 31 Epic 1-6 stories and the epic-1/epic-4/epic-5 keys",
+      "planning_effect": "sprint-status.yaml now holds 28 ux-pb stories plus 6 surviving Epic 2/3/6 stories (2.2, 3.1, 3.2, 3.4, 3.5, 6.5) - exactly the story-triage 'Keep - real work with a verified gap' set. The survivors are live work ordered after the UX-PB queue, not the retired gate's evidence production, and epics.md records that 'the survivors carry no inter-epic dependencies.'"
     },
     "final_summary": {
       "generated_files": 8,
+      "files_changed_this_run": 4,
       "primary_entry_point": "docs/index.md",
-      "verification_summary": "Vitest 23 files/133 tests passed; tsc --noEmit passed; Vite build passed (92 modules); test:e2e:typecheck passed; cargo fmt --check passed; cargo clippy --all-targets -D warnings passed; cargo test --locked 248 passed, 0 failed, 11 ignored; doc validation passed",
-      "open_risks": "notarytool acceptance of minos 15.0 against the CI SDK is OPEN (D31) and is settled by a manual Release run; Rust toolchain unpinned (no rust-toolchain.toml); Tauri CSP null; D27-D30 decided but unimplemented; older prose retains pre-updater 17-command/5-event counts and conflicting historical mas status",
-      "next_checks": "Run the manual Release workflow with attach_to_tag EMPTY to settle the notarization question before the next real release; run npm run test:e2e for browser journeys; run cargo test -- --ignored for real-machine detection/Homebrew behavior; verify v1.0.0's GitHub Release now carries its four assets"
+      "verification_summary": "Vitest 23 files/133 tests passed; tsc --noEmit passed; test:e2e:typecheck passed; Vite build passed (92 modules); cargo fmt --check passed; cargo clippy --all-targets -D warnings passed; cargo test --locked 248 passed, 0 failed, 11 ignored; doc validation passed (8/8 files, 0 incomplete markers strict+fuzzy, 38/38 relative links resolve, 0 trailing whitespace, state file valid JSON)",
+      "open_risks": "notarytool acceptance of minos 15.0 against the CI SDK is OPEN (D31) and is settled only by a manual Release run; Rust toolchain unpinned (no rust-toolchain.toml) while Node is pinned to 24; Tauri CSP null; D27-D30 decided but unimplemented; older prose retains pre-updater 17-command/5-event counts and conflicting historical mas status. RESOLVED after this scan: _bmad-output/project-context.md carried the pre-rescope '37 Epic 1-6 entries ... UNSCHEDULED' claim; bmad-generate-project-context was re-run on 2026-07-25 and corrected it, keeping the rule count at 87.",
+      "next_checks": "Run the manual Release workflow with attach_to_tag EMPTY to settle the notarization question before the next real release; run npm run test:e2e for browser journeys; run cargo test -- --ignored for real-machine detection/Homebrew behavior."
     }
   },
   "outputs_generated": [
@@ -135,7 +127,7 @@
     "deployment-guide.md",
     "contribution-guide.md"
   ],
-  "resume_instructions": "Full rescan (deep) complete on 2026-07-24 at 23:4x; begin future brownfield planning from docs/index.md. Prior scan state archived at docs/.archive/project-scan-report-2026-07-24T071335.json",
+  "resume_instructions": "Full rescan (deep) complete on 2026-07-25 at 00:41. Changed this run: docs/architecture.md, docs/project-overview.md, docs/index.md, docs/source-tree-analysis.md, and _bmad-output/planning-artifacts/story-triage-2026-07-24.md. Verified current and left unchanged: component-inventory.md, development-guide.md, deployment-guide.md, contribution-guide.md. A bmad-generate-project-context run immediately after this scan corrected the matching claim in _bmad-output/project-context.md. Begin future brownfield planning from docs/index.md. Prior scan state archived at docs/.archive/project-scan-report-2026-07-25T002425.json",
   "project_types": [
     {
       "part_id": "pack-manager",
@@ -145,17 +137,19 @@
     }
   ],
   "validation_status": {
-    "last_validated": "2026-07-24T23:40:28-0400",
+    "last_validated": "2026-07-25T00:41:00-0400",
     "validation_errors": [],
     "checks_passed": [
-      "All 8 generated docs plus project-scan-report.json exist",
-      "69 relative links across all 8 docs resolve",
+      "All 8 generated docs plus project-scan-report.json exist (1,696 lines total)",
+      "38 unique relative links across all 8 docs resolve",
+      "All 54 paths named in the source-tree-analysis annotated tree exist",
       "No incomplete-documentation markers remain (strict or fuzzy)",
       "No trailing whitespace in generated docs",
+      "project-scan-report.json parses as valid JSON",
       "Vitest: 23 files and 133 tests passed",
       "TypeScript no-emit check passed under TypeScript 7.0.2",
-      "Vite production build passed (92 modules) under Vite 8.1.5",
       "Playwright TypeScript project check passed",
+      "Vite production build passed (92 modules) under Vite 8.1.5",
       "cargo fmt --check passed",
       "cargo clippy --all-targets with warnings denied passed",
       "cargo test --locked: 248 passed, 0 failed, 11 ignored"
@@ -165,7 +159,8 @@
       "Rust toolchain is not repository-pinned (no rust-toolchain.toml); Node is pinned to 24 via .nvmrc",
       "Tauri CSP is null",
       "The D27-D30 upgrade experience is decided but not implemented",
-      "Older comments/prose retain pre-updater 17-command/5-event counts and conflicting historical mas availability statements"
+      "Older comments/prose retain pre-updater 17-command/5-event counts and conflicting historical mas availability statements",
+      "RESOLVED: _bmad-output/project-context.md carried the pre-rescope '37 Epic 1-6 entries ... UNSCHEDULED' claim; corrected by a bmad-generate-project-context run immediately after this scan"
     ]
   }
 }

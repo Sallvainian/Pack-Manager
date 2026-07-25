@@ -198,7 +198,7 @@ Subscribing before frontend hydration prevents the UI from missing the asynchron
 | `src-tauri/src/*.rs` | Native orchestration and services | `queue.rs`, `settings.rs` |
 | `src-tauri/src/managers/*.rs` | Manager adapters | `brew.rs`, `uv.rs` |
 | `src-tauri/src/managers/parse/*.rs` | Pure output parsers | `mise.rs`, `npm.rs` |
-| `dev/fixtures/**/*` | Captured and contract test inputs | `ipc/app-state.json` |
+| `dev/fixtures/**/*` | Captured and contract test inputs | `ipc/app_state.json` |
 | `.github/workflows/*.yml` | CI and release automation | `ci.yml`, `test.yml`, `release.yml` |
 
 ## Asset Locations

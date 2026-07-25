@@ -63,7 +63,7 @@ Start with [project-overview.md](./project-overview.md) for the concise system s
 - [Epics](../_bmad-output/planning-artifacts/epics.md) — epic and story definitions.
 - [Architecture Spine](../_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md) — architecture decisions driving the UX-PB queue.
 - [Story Triage 2026-07-24](../_bmad-output/planning-artifacts/story-triage-2026-07-24.md) — per-story keep/merge/retire verdicts for the 37 Epic 1–6 entries.
-- [Sprint Status](../_bmad-output/implementation-artifacts/sprint-status.yaml) — the 28 UX-PB stories that form the primary build queue.
+- [Sprint Status](../_bmad-output/implementation-artifacts/sprint-status.yaml) — the 28 UX-PB stories that form the primary build queue, plus the six Epic 2/3/6 stories that survived the D33 rescope.
 - [UX Design](../_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/DESIGN.md) and [Experience](../_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/EXPERIENCE.md) — target upgrade experience.
 - [Retired Artifacts](../_bmad-output/archive/2026-07-24-scope-recalibration/README.md) — what the scope recalibration archived and why.
 
@@ -180,7 +180,7 @@ Use:
 - Fixture/spec history contains conflicting statements about machine-specific mas availability/verification; current code and captured fixtures are the implementation evidence until authoritative prose is reconciled.
 - `docs/IMPL_PLAN.md` records the original implementation plan and can describe older scaffold state.
 - The D27–D30 upgrade experience is **decided but not implemented**. `planAttemptId`, a `Verifying` status, `InteractionRequired`, the separate confirmation dialog, and per-manager removable self-updates do not exist in the current source. Documents that describe them mark those sections as target state; do not search the code for those symbols.
-- `sprint-status.yaml` marks all 37 Epic 1–6 stories `backlog`, but D33 declares them UNSCHEDULED, not queued. Check `story-triage-2026-07-24.md` before scheduling one.
+- `sprint-status.yaml` lists 28 UX-PB stories plus the six Epic 2/3/6 stories that survived the D33 rescope — all `backlog`. The rescope was applied on 2026-07-25: 31 Epic 1–6 stories moved to the archive and Epics 1, 4, and 5 were removed entirely. `story-triage-2026-07-24.md` records the per-story reasoning for all 37 original entries and remains the reference before restoring any archived story.
 
 ---
 
