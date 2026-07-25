@@ -304,9 +304,9 @@ dependencies.
 
 | Decision or dependency | Current state | Accountable role | Effect on implementation entry |
 | --- | --- | --- | --- |
-| Product Behavior Prerequisite UX-PB.1..UX-PB.5 | `APPROVED TARGET — NOT IMPLEMENTED` | Product/UX/Architecture accept; Development implements | Epic UX-PB is the primary build queue and runs first, and nothing blocks starting it **except UX-PB.1e and UX-PB.5d**, which are blocked on the canonical design-token set in the row below. Any story or test text authored against immediate row execution, direct self-update execution, the Activity drawer, Operation-row History, or active `autoOpenDrawer` behavior is superseded by D27-D30. |
-| Canonical design-token set | `OPEN` — needs an owner decision | UX decides; Development implements | **Blocks UX-PB.1e and UX-PB.5d** (`ARCHITECTURE-SPINE.md:944`). `src/styles/theme.css` ships one palette and `tests/e2e/browser-style-contract.spec.ts` asserts it on every push and PR to `main`, while `DESIGN.md` and `EXPERIENCE.md` specify another plus a dedicated `focusRing` that `docs/SPEC.md`'s accent-coloured ring contradicts. Both stories are bound to build from the UX sources, so whichever lands first either rewrites the tokens and breaks the CI style contract on `main` — the same lane AD-11 relies on for reduced motion — or keeps the shipping values and ships focus rings `EXPERIENCE.md` forbids. The token set and the focus mechanism are decided together, then the CI assertion moves with them in one change. Not a story's call and not architecture's alone. |
-| DR-1 — minimum supported macOS | `CLOSED` — D31 | Resolved 2026-07-24 | None. 15.0 declared and shipped in v1.0.0. Whether `notarytool` accepts `minos 15.0` against the CI SDK is OPEN and is settled by a manual Release run, never by assertion. |
+| Product Behavior Prerequisite UX-PB.1..UX-PB.5 | `APPROVED TARGET — NOT IMPLEMENTED` | Product/UX/Architecture accept; Development implements | Epic UX-PB is the primary build queue and runs first, and nothing blocks starting it — the canonical design-token set that blocked UX-PB.1e and UX-PB.5d was decided and shipped (`docs/DECISIONS.md` D35), so both are startable. Any story or test text authored against immediate row execution, direct self-update execution, the Activity drawer, Operation-row History, or active `autoOpenDrawer` behavior is superseded by D27-D30. |
+| Canonical design-token set | `CLOSED` — D35 | Resolved 2026-07-25 | Nothing blocked. `DESIGN.md`'s palette was adopted into `src/styles/theme.css`, focus gained a dedicated indicator, and the CI style contract moved with it in one change — see `ARCHITECTURE-SPINE.md` AD-27 and the *Canonical design-token set* row of its Decision Status table. Retained for the reasoning, since the conflict recurs whenever a story proposes its own values: previously `src/styles/theme.css` ships one palette and `tests/e2e/browser-style-contract.spec.ts` asserts it on every push and PR to `main`, while `DESIGN.md` and `EXPERIENCE.md` specify another plus a dedicated `focusRing` that `docs/SPEC.md`'s accent-coloured ring contradicts. Both stories are bound to build from the UX sources, so whichever lands first either rewrites the tokens and breaks the CI style contract on `main` — the same lane AD-11 relies on for reduced motion — or keeps the shipping values and ships focus rings `EXPERIENCE.md` forbids. The token set and the focus mechanism are decided together, then the CI assertion moves with them in one change. Not a story's call and not architecture's alone. |
+| DR-1 — minimum supported macOS | `CLOSED` — D31 | Resolved 2026-07-24 | None. 15.0 declared and shipped in v1.0.0. The `notarytool` `minos 15.0` question is CLOSED by `docs/DECISIONS.md` D34: CI and release moved to `macos-15`, so the build SDK is no longer behind the declared floor and the mismatch the question was about no longer exists. A manual Release run verified signing and notarization on the new image. |
 | DR-2 — packaged accessibility method | `RESTATED` — D33 | Existing Playwright/Vitest lane + release checklist | None. Reduced motion is already automated and runs in CI (`tests/e2e/browser-style-contract.spec.ts` via `.github/workflows/test.yml`); automated 4.5:1 contrast does not exist and is the one outstanding obligation, on whichever story adds it. |
 | DR-3 — physical Intel requirement | `NARROWED` — D32 | Resolved 2026-07-24 | None. Universal build retained; verification Apple silicon only. |
 | DR-4 — P0 gate/retry policy | `DISSOLVED` — D33 | Retired with the gate | None. |
@@ -511,7 +511,7 @@ confirmation gate. It is the primary build queue.
 ### Story UX-PB.1a: Persistent draft domain with single-entry membership and Rust rebuild
 
 **Primary concern:** Product Behavior  
-**Dependencies:** D27-D30; AD-16; AD-17; finalized UX spines  
+**Dependencies:** D27-D30; AD-16; AD-17; finalized UX spines; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.1b, UX-PB.1c; Story 3.5  
 
 As a Pack-Manager user, I want one eligible Package to become persistent draft-plan membership so that acting on a single row never executes and always has a reviewable home.
@@ -542,7 +542,7 @@ As a Pack-Manager user, I want one eligible Package to become persistent draft-p
 ### Story UX-PB.1b: Sidecar lifecycle and navigation-persistent visibility
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.1a; D27-D30; AD-16; AD-17  
+**Dependencies:** UX-PB.1a; D27-D30; AD-16; AD-17; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.1d, UX-PB.1e  
 
 As a Pack-Manager user, I want the Upgrade Sidecar to appear, persist, and close in step with the draft so that my proposed plan always has a stable reviewable home and no empty drawer clutters the workspace.
@@ -569,7 +569,7 @@ As a Pack-Manager user, I want the Upgrade Sidecar to appear, persist, and close
 ### Story UX-PB.1c: Remaining draft entry points as independent removable items
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.1a; D27-D30; AD-16; AD-17; AD-23 (per-member provenance and tombstones)  
+**Dependencies:** UX-PB.1a; D27-D30; AD-16; AD-17; AD-23 (per-member provenance and tombstones); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.1d, UX-PB.1e  
 
 As a Pack-Manager user, I want selected-Package, Manager-header, Manager-wide, and `Update Everything` actions to all feed the same draft as independent removable items so that every entry point stages into one plan and no global toggle bypasses it.
@@ -596,7 +596,7 @@ As a Pack-Manager user, I want selected-Package, Manager-header, Manager-wide, a
 ### Story UX-PB.1d: Ineligible-control inertness with keyboard, pointer, and VoiceOver explanation
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.1a, UX-PB.1c; D27-D30; AD-16; AD-17  
+**Dependencies:** UX-PB.1a, UX-PB.1c; D27-D30; AD-16; AD-17; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** Story 3.2  
 
 As a Pack-Manager user, I want pinned, current, excluded, and unavailable Packages to stay inert and explain themselves through keyboard, pointer, and VoiceOver so that I understand why they cannot join the plan without guessing.
@@ -619,7 +619,7 @@ As a Pack-Manager user, I want pinned, current, excluded, and unavailable Packag
 ### Story UX-PB.1e: Standardized Manager workspace presentation
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.1c; D27-D30; AD-16; AD-17; AD-25 (Last-good Snapshot retention on refresh failure)  
+**Dependencies:** UX-PB.1c; D27-D30; AD-16; AD-17; AD-25 (Last-good Snapshot retention on refresh failure); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** Story 3.1  
 
 As a Pack-Manager user, I want each Manager Header and Card to present standardized identity, version, status, ownership, counts, and deltas so that every Manager reads consistently and its self-update staging is obvious.
@@ -642,7 +642,7 @@ As a Pack-Manager user, I want each Manager Header and Card to present standardi
 ### Story UX-PB.2a: Distinct one-use preview planId and durable planAttemptId identity types
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.1 complete (PB.1a-e); AD-3; AD-16; D29  
+**Dependencies:** UX-PB.1 complete (PB.1a-e); AD-3; AD-16; D29; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.2b, UX-PB.2f  
 
 As a Pack-Manager user, I want the one-use preview identity and the durable confirmed-attempt identity to be separate, non-interchangeable types so that a short-lived authorization can never masquerade as the permanent record of what I confirmed.
@@ -661,7 +661,7 @@ As a Pack-Manager user, I want the one-use preview identity and the durable conf
 ### Story UX-PB.2b: Atomic admission mints one planAttemptId and fails a second attempt closed
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.2a; AD-3; AD-16; AD-18; AD-25 (a Manager failure is contained and never destroys a Last-good Snapshot); D29-D30  
+**Dependencies:** UX-PB.2a; AD-3; AD-16; AD-18; AD-25 (a Manager failure is contained and never destroys a Last-good Snapshot); D29-D30; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.2c, UX-PB.2d, UX-PB.2e  
 
 As a Pack-Manager user, I want confirming a reviewed plan to atomically create exactly one durable attempt identity so that every Operation it launches shares one reconstructible identity and no two confirmed attempts can ever run at once.
@@ -681,7 +681,7 @@ As a Pack-Manager user, I want confirming a reviewed plan to atomically create e
 ### Story UX-PB.2c: Persist reviewed intent and the exact command snapshot durably
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.2b; AD-16; D29  
+**Dependencies:** UX-PB.2b; AD-16; D29; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.3 (on UX-PB.2 completion)  
 
 As a Pack-Manager user, I want the confirmed attempt to durably store exactly what I reviewed and the exact commands as a snapshot so that recovery and history are reconstructible and never rebuild executable input from display text.
@@ -708,7 +708,7 @@ As a Pack-Manager user, I want the confirmed attempt to durably store exactly wh
 ### Story UX-PB.2d: Correlate every Operation, event, and durable record by planAttemptId
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.2b; AD-16; D29  
+**Dependencies:** UX-PB.2b; AD-16; D29; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.2e  
 
 As a Pack-Manager user, I want every Operation, event, and durable record produced by a confirmed attempt to carry that attempt's identity so that its progress, output, and evidence reconstruct as one coherent whole.
@@ -728,7 +728,7 @@ As a Pack-Manager user, I want every Operation, event, and durable record produc
 ### Story UX-PB.2e: Plan-level cancellation that skips unstarted work and escalates running process groups
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.2b, UX-PB.2d; AD-16; D30  
+**Dependencies:** UX-PB.2b, UX-PB.2d; AD-16; D30; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.3 (on UX-PB.2 completion)  
 
 As a Pack-Manager user, I want cancelling the plan to stop only that attempt's work honestly so that unstarted items are marked Skipped, running work is escalated through existing mechanics, and every real outcome is preserved.
@@ -748,7 +748,7 @@ As a Pack-Manager user, I want cancelling the plan to stop only that attempt's w
 ### Story UX-PB.2f: Keep legacy Operations honest without inferred plan grouping
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.2a; AD-16; D29  
+**Dependencies:** UX-PB.2a; AD-16; D29; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** None  
 
 As a Pack-Manager user, I want Operations that predate the attempt model to stay honestly labeled as legacy so that older records are never fabricated into plans that never existed.
@@ -766,7 +766,7 @@ As a Pack-Manager user, I want Operations that predate the attempt model to stay
 ### Story UX-PB.3a: Confirmed sidecar as the single active plan summary
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.2 complete (PB.2a-f); D27-D30; AD-16; AD-17; finalized UX spines  
+**Dependencies:** UX-PB.2 complete (PB.2a-f); D27-D30; AD-16; AD-17; finalized UX spines; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.3b  
 
 As a Pack-Manager user, I want the sidecar I confirmed to become the one live summary of the admitted attempt so that I follow a single plan from review into execution without a new surface appearing.
@@ -784,7 +784,7 @@ As a Pack-Manager user, I want the sidecar I confirmed to become the one live su
 ### Story UX-PB.3b: Full Activity as detailed view of the same attempt
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.3a; D29-D30; AD-16  
+**Dependencies:** UX-PB.3a; D29-D30; AD-16; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.3c  
 
 As a Pack-Manager user, I want full Activity to be a deeper view of the very same attempt shown in the sidecar so that the compact summary and the detailed evidence are never two different executions.
@@ -802,7 +802,7 @@ As a Pack-Manager user, I want full Activity to be a deeper view of the very sam
 ### Story UX-PB.3c: Per-item live progress states
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.3b, UX-PB.2d; D29-D30; AD-16 (`Verifying`/`Skipped` as durable wire states)  
+**Dependencies:** UX-PB.3b, UX-PB.2d; D29-D30; AD-16 (`Verifying`/`Skipped` as durable wire states); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.3d, UX-PB.3f  
 
 As a Pack-Manager user, I want each Package and Manager item to show its own honest live state so that I can see what is running, what is waiting, and what has verified without reading a terminal.
@@ -824,7 +824,7 @@ As a Pack-Manager user, I want each Package and Manager item to show its own hon
 ### Story UX-PB.3d: Verification-gated Results with outcome taxonomy
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.3c; D29-D30; AD-16 (verification-gated success; post-exit fresh acquisition); AD-18 (UX-PB.4a owns the single durable terminal write; this story renders Results and never writes the record); AD-25 (a failed verification refresh leaves the Last-good Snapshot in place)  
+**Dependencies:** UX-PB.3c; D29-D30; AD-16 (verification-gated success; post-exit fresh acquisition); AD-18 (UX-PB.4a owns the single durable terminal write; this story renders Results and never writes the record); AD-25 (a failed verification refresh leaves the Last-good Snapshot in place); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.3e, UX-PB.3g; Story 6.5
 
 As a Pack-Manager user, I want the plan to become Results only after affected state is verified so that success is earned, not assumed from a process exit.
@@ -842,6 +842,7 @@ As a Pack-Manager user, I want the plan to become Results only after affected st
 **Given** an Operation whose process exited successfully (verification-refresh failure/timeout)
 **When** the required refresh verification itself errors or times out, distinct from a mutation failure
 **Then** the item does not declare success — it stays `Verifying` until it resolves, then reports verification failure with its evidence, and is never colored successful on the strength of the exit code alone.
+**And** the Manager's Last-good Snapshot is left in place with its timestamp (AD-25) — a verification refresh that errors or times out never replaces or clears the snapshot it failed to refresh, so the surface keeps showing the last state it actually knows rather than blanking.
 
 **Given** an attempt reaching terminal state (Results persistence failure)
 **When** the single durable terminal write owned by UX-PB.4a fails
@@ -850,7 +851,7 @@ As a Pack-Manager user, I want the plan to become Results only after affected st
 ### Story UX-PB.3e: Failure guidance and safe next step before Retry
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.3d; D30; AD-16  
+**Dependencies:** UX-PB.3d; D30; AD-16; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.4a-4e  
 
 As a Pack-Manager user, I want a failed item to explain what happened and what to do next before I see Retry so that I fix the real cause instead of repeating a doomed attempt.
@@ -868,7 +869,7 @@ As a Pack-Manager user, I want a failed item to explain what happened and what t
 ### Story UX-PB.3f: Trusted Interaction-required classifier
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.3c; D30; AD-16 (interaction-required policy)  
+**Dependencies:** UX-PB.3c; D30; AD-16 (interaction-required policy); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.4a-4e  
 
 As a Pack-Manager user, I want `Interaction required` to appear only when a trusted classifier recognizes a real prompt so that Pack-Manager never invents prompt meaning from arbitrary output.
@@ -890,7 +891,7 @@ As a Pack-Manager user, I want `Interaction required` to appear only when a trus
 ### Story UX-PB.3g: Two labeled cancellation scopes
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.3d, UX-PB.2e; D30; AD-16 (attempt-scoped cancellation; `Skipped` marks only never-started work)  
+**Dependencies:** UX-PB.3d, UX-PB.2e; D30; AD-16 (attempt-scoped cancellation; `Skipped` marks only never-started work); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.4a-4e  
 
 As a Pack-Manager user, I want the primary cancel action to clearly stop the whole plan, with an Operation-only cancel reserved for a deliberate diagnostic, so that I always know the scope of what I am stopping.
@@ -912,7 +913,7 @@ As a Pack-Manager user, I want the primary cancel action to clearly stop the who
 ### Story UX-PB.4a: One immutable History row per confirmed attempt
 
 **Primary concern:** Product Behavior  
-**Dependencies:** D29; AD-16 (durable `planAttemptId` identity; atomic all-or-none admission); AD-18; UX-PB.3 complete (PB.3a-g)  
+**Dependencies:** D29; AD-16 (durable `planAttemptId` identity; atomic all-or-none admission); AD-18; UX-PB.3 complete (PB.3a-g); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.4b, UX-PB.4e  
 
 As a Pack-Manager user, I want each plan I confirm to become exactly one immutable History entry so that every attempt has one durable record instead of scattered per-command rows.
@@ -935,7 +936,7 @@ As a Pack-Manager user, I want each plan I confirm to become exactly one immutab
 ### Story UX-PB.4b: Read-only Activity replay of a History row
 
 **Primary concern:** Product Behavior  
-**Dependencies:** D29-D30; AD-16; AD-24 (Retry derives its own intent; revealing the scope executes nothing); UX-PB.4a  
+**Dependencies:** D29-D30; AD-16; AD-24 (Retry derives its own intent; revealing the scope executes nothing); UX-PB.4a; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.4c, UX-PB.4d  
 
 As a Pack-Manager user, I want opening a History row to route Activity into read-only replay so that I can inspect exactly what a prior attempt did instead of piecing together unrelated commands.
@@ -954,7 +955,7 @@ As a Pack-Manager user, I want opening a History row to route Activity into read
 ### Story UX-PB.4c: Live and replay coexistence with the live attempt primary
 
 **Primary concern:** Product Behavior  
-**Dependencies:** D30; UX-PB.4b  
+**Dependencies:** D30; UX-PB.4b; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** No dependent sub-story (leaf of the UX-PB.4 spine)  
 
 As a Pack-Manager user, I want a replay I open during a live upgrade to stay clearly secondary so that the one running attempt never looks paused or lost while I inspect a past one.
@@ -972,7 +973,7 @@ As a Pack-Manager user, I want a replay I open during a live upgrade to stay cle
 ### Story UX-PB.4d: Retry scope preview and linked new attempt
 
 **Primary concern:** Product Behavior  
-**Dependencies:** D29; AD-16 (Retry mints a new linked `planAttemptId` and preserves the original failure); AD-24 (derived `RetryIntent`; the persistent draft has exactly one author); UX-PB.4b, UX-PB.2b  
+**Dependencies:** D29; AD-16 (Retry mints a new linked `planAttemptId` and preserves the original failure); AD-24 (derived `RetryIntent`; the persistent draft has exactly one author); UX-PB.4b, UX-PB.2b; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** Story 6.5  
 
 As a Pack-Manager user, I want Retry to first show the failed-item scope and then create a new linked attempt so that I can re-run only what failed while the original result stays untouched.
@@ -995,7 +996,7 @@ As a Pack-Manager user, I want Retry to first show the failed-item scope and the
 ### Story UX-PB.4e: Legacy Operation History honest labeling
 
 **Primary concern:** Product Behavior  
-**Dependencies:** D29; AD-16 (legacy honesty — no inferred plan grouping); AD-18; UX-PB.4a, UX-PB.2f  
+**Dependencies:** D29; AD-16 (legacy honesty — no inferred plan grouping); AD-18; UX-PB.4a, UX-PB.2f; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 
 As a Pack-Manager user, I want legacy Operation records that predate plan attempts to stay honestly labeled so that older history remains readable without being faked into plans it never had.
 
@@ -1012,7 +1013,7 @@ As a Pack-Manager user, I want legacy Operation records that predate plan attemp
 ### Story UX-PB.5a: Separate final confirmation gate with the `Confirm N Updates` action and `Proceed with Upgrade Plan?` dialog
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.1 and UX-PB.2 complete; D27, D28; AD-16; finalized UX spines  
+**Dependencies:** UX-PB.1 and UX-PB.2 complete; D27, D28; AD-16; finalized UX spines; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.5b, UX-PB.5d  
 
 As a Pack-Manager user, I want the persistent Upgrade Plan to present one deliberate final confirmation before anything runs so that a review step always stands between staging and execution and nothing bypasses it silently.
@@ -1042,7 +1043,7 @@ As a Pack-Manager user, I want the persistent Upgrade Plan to present one delibe
 ### Story UX-PB.5b: Dialog-only disable control with atomic `skipUpgradePlanConfirmation` persistence and Settings migration
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.5a; D28; FR-17; AD-19; AD-21 (`skipUpgradePlanConfirmation` is declared plan-inert); AD-22 (admit, then persist the rider); Settings migration  
+**Dependencies:** UX-PB.5a; D28; FR-17; AD-19; AD-21 (`skipUpgradePlanConfirmation` is declared plan-inert); AD-22 (admit, then persist the rider); Settings migration; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.5c; Story 3.4  
 
 As a Pack-Manager user, I want to deliberately disable the final confirmation from the dialog and restore it from Settings so that I can remove friction without ever losing a safe default.
@@ -1057,6 +1058,7 @@ As a Pack-Manager user, I want to deliberately disable the final confirmation fr
 **When** I choose the final `Confirm N Updates` and admission succeeds
 **Then** the ordering is validate, admit through the scheduler's revision-checked transaction, then persist the rider once admission has returned — `skipUpgradePlanConfirmation: true` is written atomically only after the plan is admitted, and it becomes active only after that write succeeds
 **And** the opt-out never precedes the admission it rides on; if that atomic save then fails, the admitted attempt stands, the prior `false` preference is retained as both active and persisted state, and the failure is surfaced inline.
+**And** `skipUpgradePlanConfirmation` is plan-inert (AD-21) — it is not a plan-determining input, so writing it never advances the canonical revision and never invalidates the preview it rides on. Without that, this story's own save would expire the plan it just admitted and the safety opt-out would deterministically fail its own run.
 
 **Given** the dialog with `Disable upgrade plan command execution confirmation` selected
 **When** I choose the final `Confirm N Updates` and admission is rejected
@@ -1077,7 +1079,7 @@ As a Pack-Manager user, I want to deliberately disable the final confirmation fr
 ### Story UX-PB.5c: Confirmation-disabled bypass with expanded commands and native rebuild/stale-validation-gated run
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.5b; D27, D28; AD-16  
+**Dependencies:** UX-PB.5b; D27, D28; AD-16; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** None (leaf of the confirmation branch)  
 
 As a user who has disabled the final confirmation, I want the run action to still rebuild the commands natively and stale-check the plan so that removing the dialog never removes the real safety.
@@ -1099,7 +1101,7 @@ As a user who has disabled the final confirmation, I want the run action to stil
 ### Story UX-PB.5d: Accessibility and responsiveness of the confirmation and safety surfaces
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.5a; finalized focus and high-zoom contracts; FR-19  
+**Dependencies:** UX-PB.5a; finalized focus and high-zoom contracts; FR-19; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 
 As a keyboard and VoiceOver user at high zoom, I want every safety action reachable and announced so that the confirmation gate protects everyone at the 900 x 600 minimum and at 150-200% zoom.
 
@@ -1124,7 +1126,7 @@ As a keyboard and VoiceOver user at high zoom, I want every safety action reacha
 ### Story UX-PB.5e: Application-update presentation kept separate from Package plans and History
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.4 complete (History must exist to assert separation); finalized application-update presentation  
+**Dependencies:** UX-PB.4 complete (History must exist to assert separation); finalized application-update presentation; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 
 As a Pack-Manager user, I want the application's own update to appear only as a restrained `Pack-Manager Update Ready!` badge that links into Settings so that it never mixes with Package Upgrade Plans, Activity, Results, or History.
 
@@ -1190,7 +1192,7 @@ So that I can understand what each Manager reports without losing Manager-specif
 
 - FR and requirement links: FR-2; FR-5; FR-6; FR-10; FR-11; FR-19
 - Required test level: Component
-- Governing invariants: AD-16, AD-17
+- Governing invariants: AD-16, AD-17, AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)
 - Dependencies: representative all-state fixtures
 
 **Acceptance Criteria:**
@@ -1214,7 +1216,7 @@ So that no plan silently overrides a pin or includes default-excluded work.
 
 - FR and requirement links: FR-5; FR-6; FR-7
 - Required test level: Unit plus component
-- Governing invariants: AD-16, AD-17
+- Governing invariants: AD-16, AD-17, AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)
 - Dependencies: Story 3.1; deterministic plan-builder and UI fixtures
 
 **Acceptance Criteria:**
@@ -1262,7 +1264,7 @@ So that I can act efficiently without adding excluded or unrelated Packages to t
 
 - FR and requirement links: FR-6; FR-10; FR-13; FR-19
 - Required test level: Component plus browser E2E
-- Governing invariants: AD-16, AD-17
+- Governing invariants: AD-16, AD-17, AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)
 - Dependencies: Stories 3.1 and 3.2; semantic keyboard/focus locators; deterministic bridge
 
 **Acceptance Criteria:**
