@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/Sallvainian/Pack-Manager/compare/v1.0.0...v1.0.1) (2026-07-25)
+
+
+### Bug Fixes
+
+* restore window dragging from the title bar ([#33](https://github.com/Sallvainian/Pack-Manager/issues/33)) ([03e03fa](https://github.com/Sallvainian/Pack-Manager/commit/03e03fa5c04f84cb8eefd09761e66864b3ff3ed0))
+
 ## [1.0.0](https://github.com/Sallvainian/Pack-Manager/compare/v0.2.9...v1.0.0) (2026-07-25)
 
 
