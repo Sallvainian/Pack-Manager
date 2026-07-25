@@ -44,6 +44,12 @@ This section supersedes older text in this document wherever the two conflict:
   Activity-drawer-only, global self-update toggle, and `autoOpenDrawer`
   descriptions below are historical implementation detail, not target
   behavior.
+- **F5's transient-selection-plus-`Add N to Plan` model is superseded.** A
+  Package checkbox *is* Upgrade Plan membership; there is no separate selection
+  set and no submit step (`ARCHITECTURE-SPINE.md` AD-28, `docs/DECISIONS.md`
+  D27). F5's row `Update Package` action and its "Neither action executes" line
+  remain correct as target behavior; only the two-step selection model is
+  historical.
 
 ---
 
@@ -286,6 +292,16 @@ Pane states: loading (header immediate from detection + 8 skeleton rows); clean 
 ### 4.11 Keyboard map
 
 Cmd+R refresh current manager (Dashboard: all) · Cmd+Shift+R refresh all · Cmd+U upgrade selected (opens sheet) · Cmd+Shift+U Update Everything (sheet) · Cmd+A select all visible selectable rows · Space toggle focused row · Esc clear selection / close sheet / close drawer · Cmd+L toggle drawer · Cmd+F focus search · Cmd+1..9 sidebar jump. Roving tabindex in tables; live region announces op completions; all color states carry text/icon equivalents; text contrast ≥4.5:1 on its surface.
+
+> **Superseded in part (2026-07-25).** Retired: `Cmd+U upgrade selected` and the
+> `Esc` *clear selection* rung — `ARCHITECTURE-SPINE.md` AD-28 removes both
+> (`Esc` closes a dialog and nothing else; membership is never cleared by a
+> keystroke). Also retired: the roving tabindex and the completion-announcing
+> live region — `docs/DECISIONS.md` D37 removes keyboard navigation and
+> screen-reader support as obligations. **Surviving from this line:** the ≥4.5:1
+> text contrast floor, now CI-asserted (D36), and the non-color status cues. The
+> surviving accelerator map is `prd.md` RP-2: ⌘R, ⌘⇧R, ⌘⇧U, ⌘L, ⌘F, ⌘1–9, plus
+> ⌘A as an Edit-menu action.
 
 ### 4.12 App icon
 

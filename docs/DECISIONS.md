@@ -485,7 +485,7 @@ checked state. **Rejected:** scoping the WebKit assertion to Chromium to get a
 green suite, which would have left CI silent about the only engine the app
 actually ships on.
 
-## D36. Bright fills use the palette's dark ink; D35's on-fill tokens get consumers
+## D36. Bright fills use the palette's dark ink; `--color-on-accent` gets consumers
 
 D35 added `--color-on-accent` (`#07101D`) and `--color-on-success` (`#07140D`)
 for text sitting on bright accent and success fills, and then never pointed
@@ -504,6 +504,8 @@ All three sites move to `text-on-accent`; no `text-white` remains in `src/`.
 `danger` uses `on-accent` rather than a new `onDanger` token — it is the
 palette's dark ink and measures 8.30:1 there. Naming a dedicated `onDanger` in
 `DESIGN.md` is a UX-spine concern, not a blocker for the fix.
+`--color-on-success` remains consumer-less: no bright success fill carries text
+today, so D35's second token is still defined and unused.
 
 This shipped in 1.0.1 and was invisible to review because release-time contrast
 was a by-eye check, and white on light blue reads as fine. So the fix carries a
@@ -553,14 +555,53 @@ absence as a gap. The equivalent mistake was live this morning: a stale
 `project-context.md` line instructing agents not to bump the CI runner image,
 against a fix already merged and verified.
 
-**Not yet applied:** `epics.md` (10 mentions, including FR-19, NFR-6, and Story
-UX-PB.1d), `ARCHITECTURE-SPINE.md` (3), and `EXPERIENCE.md` (4) still carry the
-removed obligations. Those are workflow-owned and come out through
-`bmad-correct-course`, a `bmad-architecture` Update, and a `bmad-ux` Update
-respectively — never a hand edit. **Story UX-PB.1d is not to be deleted**: its
-pointer-hover explanation of why a Package is ineligible is mouse-facing
-behavior, and only its keyboard and VoiceOver limbs are in scope here.
+**Not yet applied:** `epics.md` and `EXPERIENCE.md` still carry the removed
+obligations. In `epics.md` they are FR-19, NFR-6, Story UX-PB.1d, Story
+UX-PB.5d, UX-PB.3a's plan-start announcement, and the DR-2 restatement's claim
+that a manual VoiceOver pass joins the release checklist. In `EXPERIENCE.md`
+they are the `Keyboard` and `Package Grid keyboard model` sections and the
+`Accessibility Floor`. Those come out through `bmad-correct-course` and a
+`bmad-ux` Update respectively — never a hand edit. **Story UX-PB.1d is not to be
+deleted**: its pointer-hover explanation of why a Package is ineligible is
+mouse-facing behavior, and only its keyboard and VoiceOver limbs are in scope
+here.
+
+`ARCHITECTURE-SPINE.md` is **done**: revision 10 (2026-07-25) is the
+`bmad-architecture` Update named here, and it applied D37 through AD-11, AD-16,
+AD-17 and AD-27.
+
+**Scope those runs by the named sections above, never by a mention count.**
+A count is measurable — `grep -ciE "voiceover|keyboard" <file>` — but it is not
+the scope: applying D37 means *recording* what was retired, and the recording
+uses the same words. The spine's own count rose from 8 to 14 while it was
+applying D37 correctly.
 
 **Rejected:** deleting the shipped focus and ARIA affordances from `src/`. They
 cost nothing to keep, and removing working code to satisfy a scope decision
 about *plans* would be a regression bought for no saving.
+
+## D38. D15's disabled-checkbox mechanism is superseded; its substance is not
+
+**Supersedes:** D15's clause "Disabled checkbox + tooltip with the `brew unpin`
+command".
+
+Pinned formulae remain unupgradable in-app and excluded from every plan — D15's
+substance is unchanged and not reopened. Only its mechanism is replaced. A pinned
+row now exposes `aria-disabled="true"` with activation kept inert and its reason
+attached as an accessible description, per `EXPERIENCE.md`'s Checkbox contract
+and `ARCHITECTURE-SPINE.md` AD-16.
+
+The reason is functional, not stylistic. D15 promised the `brew unpin` command
+would reach the user via a tooltip, and it never has:
+`src/components/manager/PackageRow.tsx:95` attaches it as `title` on the input
+that `:92` marks natively `disabled`, and disabled form controls dispatch no
+mouse events, so the tooltip does not render on hover. What ships is
+`disabled:opacity-40` (`:100`) — gray styling with the explanation unreachable,
+which is the "never relies on gray styling alone" case the same contract
+forbids. Story UX-PB.1d's removal of native `disabled` restores what D15 asked
+for; it is not a regression from it.
+
+**Rejected:** recording this as a style or accessibility change. D37 removed
+screen-reader support as a release criterion, and framing D38 that way would put
+it in scope for deletion by the next reader applying D37. The defect is that a
+mouse user hovering a pinned row gets nothing.

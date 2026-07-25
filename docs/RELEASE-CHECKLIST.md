@@ -46,16 +46,27 @@ and unattended.
    binary and refresh. That manager reports its failure and keeps its prior snapshot; the
    other five are unaffected.
 
-5. **The bulk paths do not execute without explicit confirmation.** Row checkboxes,
-   Manager headers, and Update Everything all stage into the draft plan and reach the
-   confirmation gate — verify each still does.
+5. **The bulk paths do not execute without explicit confirmation.** Today: a row
+   checkbox builds a transient selection (`src/store/packages.ts:17`, the `selection`
+   set) and `Add N to Plan`, a Manager header action, and `Update Everything` each open
+   `UpgradePlanSheet` with the exact commands before anything runs — verify each still
+   reaches that sheet, and that dismissing it runs nothing.
 
-   Two paths deliberately **bypass** the gate today and must not be reported as failures:
+   **Target state, not checkable yet:** D27–D30 replace this with a persistent draft
+   plan where the checkbox *is* membership (`ARCHITECTURE-SPINE.md` AD-28) and a
+   separate confirmation dialog is the gate. When Epic UX-PB ships, this step becomes
+   "row checkboxes, Manager headers and Update Everything all stage into the draft plan
+   and reach the confirmation gate."
+
+   Three paths deliberately **bypass** the gate today and must not be reported as failures:
    a row's own `Update Package` action (`src/components/manager/ManagerPane.tsx:145`,
-   commented "Single-package plan executes immediately — no sheet (SPEC §F5)") and a
-   Manager's self-update button (`src/components/manager/SelfUpdateCard.tsx:116`). Both
-   run one known command against one named target. D27–D30 routes them through the plan
-   too, but Epic UX-PB is unbuilt, so that is target state — not something to check here.
+   commented "Single-package plan executes immediately — no sheet (SPEC §F5)"), a
+   Manager's self-update button (`src/components/manager/SelfUpdateCard.tsx:116`), and a
+   Health issue's `Run fix` button (`src/components/manager/HealthBanner.tsx:43`). All three
+   run one known command against one named target, and `Run fix` additionally requires the
+   Manager's suggestion to be byte-equal to the product's own canonical command before the
+   button exists at all (`prd.md` FR-23). D27–D30 routes all three through the plan, but
+   Epic UX-PB is unbuilt, so that is target state — not something to check here.
 
 6. **An update run shows real output and fails without corrupting state.** Live output
    streams as the process runs. Cancel one mid-flight and relaunch: the interrupted
@@ -98,6 +109,23 @@ release; they cannot prevent one. Prevention lives in the automated checks above
    and in every `CopyableCommand`. These die if the Edit and Window submenus aren't
    re-declared, per `DECISIONS.md` D25a — that is a functional regression in copy/paste,
    not an accessibility check, and it is why this step survives.
+
+   - **9a. The application accelerators still fire.** *(~60 s)* ⌘R (refresh current, or
+     all from the Dashboard), ⌘⇧R (refresh all), ⌘⇧U (Update Everything), ⌘L (toggle the
+     Activity drawer — see below), ⌘F (focus search), and ⌘1–9 (navigation jump). Same
+     failure mode as ⌘X/⌘C/⌘V/⌘A above: `app.set_menu` replaces Tauri's default menu
+     wholesale (`DECISIONS.md` D25a), so an accelerator dropped from the re-declaration
+     dies silently with no error anywhere. `prd.md` §4.6 makes this checklist RP-2's
+     validation route, and RP-2 enumerates exactly these. This is a functional regression
+     check on shipped shortcuts, **not** an accessibility pass — D37 retired those and did
+     not retire this.
+
+     ⌘L is the one entry whose *shipping* behaviour and target state differ. At HEAD it
+     toggles the Activity drawer (`src/hooks/useKeyboard.ts:166`, `toggleDrawer()`), and
+     that is what to verify. `ARCHITECTURE-SPINE.md` AD-17 retires the drawer and redefines
+     ⌘L as a focus move into the Upgrade Plan sidecar region that neither toggles nor
+     navigates; Epic UX-PB is unbuilt, so do not check for that and do not report the
+     difference as a failure.
 
    **Keyboard navigation and screen-reader support are explicitly not release criteria.**
    Pack-Manager is a personal, single-user, mouse-driven utility. The former "Tab and arrow
