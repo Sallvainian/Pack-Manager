@@ -1,6 +1,6 @@
 # Pack-Manager Project Overview
 
-- **Date:** 2026-07-24
+- **Date:** 2026-07-25
 - **Type:** macOS desktop application
 - **Architecture:** Single Tauri bundle with a React interface and Rust native core
 
@@ -135,6 +135,8 @@ Existing authoritative/historical sources:
 
 The 28 `UX-PB` stories implementing Decisions D27–D30 (persistent Upgrade Plan, durable plan attempts, verification-gated Results/History, separate confirmation gate) are the primary build queue in `_bmad-output/implementation-artifacts/sprint-status.yaml`. That decided model is **not yet implemented** in the shipping code — `planAttemptId`, a `Verifying` status, and `InteractionRequired` do not exist in the current source.
 
+Nothing blocks starting that queue. `epics.md` records that the canonical design-token set which had blocked `UX-PB.1e` and `UX-PB.5d` "was decided and shipped (`docs/DECISIONS.md` D35), so both are startable."
+
 The Epics 1–6 rescope that `DECISIONS.md` D33 called for was applied to `epics.md` on 2026-07-25 and regenerated into `sprint-status.yaml`. Triage classified all 37 original entries as 6 keep, 19 merge, 12 retire (`_bmad-output/planning-artifacts/story-triage-2026-07-24.md`); the 31 merged and retired stories moved to `_bmad-output/archive/2026-07-24-scope-recalibration/planning/epics-1-6-triaged-out.md`, and Epics 1, 4, and 5 lost every story and were removed.
 
 Six survivors remain live and read `backlog`: 2.2 under Epic 2, 3.1/3.2/3.4/3.5 under Epic 3, and 6.5 under Epic 6. These are the triage's "real work with a verified gap" — not the retired gate's evidence production — and they are ordered after the UX-PB queue, which `epics.md` calls the primary build queue that "runs first". The original evidence-batch ordering is void, so the survivors carry no inter-epic dependencies. Most behavior described by the 31 archived stories already ships and is already tested; verify against the source before restoring any of them.
@@ -145,7 +147,7 @@ Six survivors remain live and read `backlog`: 2.2 under Epic 2, 3.1/3.2/3.4/3.5 
 - No frontend lint/format command is configured; a Playwright browser end-to-end suite (Chromium/WebKit) is configured and runs as a separate CI gate.
 - The interface is English-only.
 - Tauri CSP is currently `null`.
-- Minimum supported macOS is `15.0`; `notarytool` acceptance of that floor against the CI SDK is recorded OPEN in `DECISIONS.md` D31.
+- Minimum supported macOS is `15.0`. `DECISIONS.md` D31 recorded `notarytool` acceptance of that floor against the CI SDK as OPEN; D34 closed it by moving CI and release builds to `macos-15`, where the build SDK is no longer behind the declared floor.
 - Some older comments/spec text still reflect the pre-updater count of 17 commands/five events and conflicting historical mas status; use production registration and current fixtures as current implementation evidence.
 
 ---

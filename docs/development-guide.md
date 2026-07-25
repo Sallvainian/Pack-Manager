@@ -1,12 +1,12 @@
 # Pack-Manager Development Guide
 
-**Date:** 2026-07-24
+**Date:** 2026-07-25
 
 ## Prerequisites
 
 Pack-Manager is developed as one Tauri application with two toolchains:
 
-- macOS for the supported desktop target and real package-manager smoke tests. The shipped bundle declares `bundle.macOS.minimumSystemVersion` `15.0` (`DECISIONS.md` D31); CI builds on `macos-14` because a deployment target above the build SDK is a floor annotation, not an SDK requirement.
+- macOS for the supported desktop target and real package-manager smoke tests. The shipped bundle declares `bundle.macOS.minimumSystemVersion` `15.0` (`DECISIONS.md` D31); CI builds on `macos-15` (D34), which moved all three runner pins off the `macos-14` images GitHub began deprecating on 2026-07-06. The build SDK is no longer behind the declared floor.
 - Node.js and npm. `.nvmrc` pins Node 24 for local development and CI.
 - Stable Rust with Cargo. The crate uses Rust edition 2021; the repository does not include `rust-toolchain.toml`.
 - Tauri's macOS build prerequisites, including the Apple command-line build tools.

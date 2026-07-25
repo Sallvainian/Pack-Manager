@@ -1,6 +1,6 @@
 # Pack-Manager Contribution Guide
 
-**Date:** 2026-07-24
+**Date:** 2026-07-25
 
 Pack-Manager does not currently have a standalone `CONTRIBUTING.md`. This guide consolidates the active repository rules, architectural constraints, verification gates, and release conventions.
 
@@ -9,7 +9,7 @@ Pack-Manager does not currently have a standalone `CONTRIBUTING.md`. This guide 
 For product behavior:
 
 1. `docs/SPEC.md` is the authoritative contract.
-2. `docs/DECISIONS.md` explains the accepted design and rejected alternatives. A later explicit entry overrides an earlier one: D23a supersedes D23, D25 supersedes D20, D27–D30 define the target update experience, and D31–D33 recalibrate scope.
+2. `docs/DECISIONS.md` explains the accepted design and rejected alternatives, and now runs D1–D35. A later explicit entry overrides an earlier one: D23a supersedes D23, D25a supersedes D20's notarization stance, D27–D30 define the target update experience, D31–D33 recalibrate scope, D34 retires the `macos-14` runner pin, and D35 adopts the approved palette and the `outline`-based focus ring.
 3. If both are silent, choose the smallest behavior that fits existing patterns and record the decision when it is consequential.
 
 `AGENTS.md` governs workflow rules; `docs/SPEC.md` governs product behavior. Use `README.md` for current developer/operator commands, `docs/RELEASE-CHECKLIST.md` for what must hold before a release, and this generated documentation for codebase navigation. Treat `docs/IMPL_PLAN.md` as implementation history; some of its pre-implementation facts can be stale.

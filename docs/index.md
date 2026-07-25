@@ -3,7 +3,7 @@
 - **Type:** Single-part macOS desktop application
 - **Primary languages:** Rust and TypeScript
 - **Architecture:** React component/store interface over a command- and event-driven Tauri core
-- **Last updated:** 2026-07-24
+- **Last updated:** 2026-07-25
 
 ## Project Overview
 
@@ -18,7 +18,7 @@ Start with [project-overview.md](./project-overview.md) for the concise system s
 - **Native entry:** `src-tauri/src/main.rs` → `pack_manager_lib::run()` in `src-tauri/src/lib.rs`.
 - **Integration:** 20 typed Tauri commands and six typed events; no HTTP API.
 - **Persistence:** JSON settings, JSONL operation journal, structured logs, and line-flushed transcripts; no database.
-- **Tests:** Cargo tests (248 passing, 11 ignored) plus Vitest/Testing Library (23 files, 133 tests) and Playwright browser journeys; machine-dependent Rust tests are ignored by default.
+- **Tests:** Cargo tests (249 passing, 11 ignored) plus Vitest/Testing Library (23 files, 134 tests) and Playwright browser journeys; machine-dependent Rust tests are ignored by default.
 - **Deployment:** Universal macOS app, minimum macOS `15.0`, with release-please, GitHub Actions, signing/notarization, DMG/ZIP, and updater assets.
 
 ## Generated Documentation
@@ -46,7 +46,7 @@ Start with [project-overview.md](./project-overview.md) for the concise system s
 
 - [README](../README.md) — current features, stack, development commands, releases, logs, diagnostics, and limitations.
 - [Authoritative Specification](./SPEC.md) — product behavior, invariants, UX, architecture, IPC, tests, and packaging contract.
-- [Architecture Decisions](./DECISIONS.md) — accepted decisions, rejected alternatives, and rationale. D23a supersedes D23, D25 supersedes D20, D27–D30 define the target update experience, and D31–D33 recalibrate scope.
+- [Architecture Decisions](./DECISIONS.md) — accepted decisions, rejected alternatives, and rationale. Now runs D1–D35. D23a supersedes D23, D25a supersedes D20's notarization stance, D27–D30 define the target update experience, D31–D33 recalibrate scope, D34 moves CI and release builds to `macos-15`, and D35 adopts the approved palette and gives focus its own ring.
 - [Release Checklist](./RELEASE-CHECKLIST.md) — the ~15-minute manual pass and the two automated release checks that replaced the retired readiness gate.
 - [Implementation Plan](./IMPL_PLAN.md) — dependency-ordered implementation history and verification gates.
 - [Fixture Provenance](../dev/fixtures/README.md) — capture provenance, parser facts, synthetic-fixture policy, and backlog.
@@ -82,7 +82,7 @@ Start with [project-overview.md](./project-overview.md) for the concise system s
 
 ### Prerequisites
 
-- macOS and Apple command-line build tools. The shipped bundle declares a `15.0` floor; CI builds on `macos-14`.
+- macOS and Apple command-line build tools. The shipped bundle declares a `15.0` floor; CI builds on `macos-15` (D34).
 - Node.js/npm (Node 24 from `.nvmrc`).
 - Stable Rust/Cargo.
 - fnox through mise for a signed updater build.

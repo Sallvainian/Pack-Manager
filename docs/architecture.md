@@ -1,6 +1,6 @@
 # Pack-Manager Architecture
 
-- **Date:** 2026-07-24
+- **Date:** 2026-07-25
 - **Project type:** Single-part macOS desktop application
 - **Primary pattern:** React component/store interface over a command- and event-driven Rust/Tauri core
 
@@ -47,6 +47,16 @@ its 55 scenario contracts, and Epics 7-8 are retired in favor of
 [RELEASE-CHECKLIST.md](./RELEASE-CHECKLIST.md) plus two automated checks in
 `release.yml` (D33). None of that changes the architecture below; it changes
 what must be produced before shipping it.
+
+D34 and D35 then landed as build-environment and presentation changes rather
+than scope ones. D34 moves all three runner pins - `ci.yml` `rust`, `ci.yml`
+`build-smoke`, and `release.yml` `build` - from `macos-14` to `macos-15`,
+because GitHub began deprecating the macOS 14 images on 2026-07-06 and makes
+them fully unsupported after 2026-11-02; D20's rule that the runner stays on a
+stable image is unchanged, only which image is stable. D35 replaces the
+`theme.css` foundation stubs with the approved "Aurora Control Deck" palette
+and gives keyboard focus its own `--color-focus-ring` token, drawn as an
+`outline` rather than a `ring-*`. Neither alters the structure below.
 
 ## Architectural Invariants
 
@@ -310,7 +320,8 @@ The frontend centralizes copy in `src/lib/errors.ts` and turns operation transit
 - Settings and journal rewrites use atomic replacement.
 - Application updates are signature-verified by the configured Tauri updater key.
 - Update installation checks bundle-parent writability and falls back to manual installation rather than an administrator-password path.
-- Main-window permissions are scoped in `src-tauri/capabilities/default.json` to Tauri core and opener defaults.
+- `install_app_update` refuses in Rust while any operation is `Queued` or `Running`, naming the blocking operation ids in the error detail. The frontend quit guard remains the path that explains the refusal to the user, but it is no longer the only enforcement: the command kills every child process and restarts, so a caller that skipped the guard would destroy in-flight work and its journal tail. `Queued` counts as active because admission has already committed to the operation.
+- Main-window permissions are scoped in `src-tauri/capabilities/default.json` to three grants: `core:default`, `opener:default`, and `core:window:allow-start-dragging`. The third exists because `titleBarStyle` is `Overlay`, which puts the webview under the title bar so only `data-tauri-drag-region` elements can move the window.
 - `tauri.conf.json` currently sets CSP to `null`; this is an existing security constraint for changes involving external/web content.
 - Signing secrets remain encrypted through fnox locally and GitHub Secrets in CI.
 - `release.yml` and `test.yml` pin every third-party action by commit SHA. `release.yml` is the workflow that imports the Developer ID certificate, App Store Connect key, and minisign private key into the runner, so a floating action ref there is an exposure; `ci.yml` handles no secrets and is deliberately left floating.
@@ -364,7 +375,7 @@ See [source-tree-analysis.md](./source-tree-analysis.md) for the annotated tree 
 - Node 24 is pinned through `.nvmrc`; stable Rust is used in CI without a repository `rust-toolchain.toml` pin.
 - There is no configured frontend lint/format command. Playwright provides deterministic browser journeys across Chromium and WebKit.
 - The application is English-only and has no localization framework.
-- The declared macOS floor is `15.0`. Whether `notarytool` accepts `minos 15.0` against the CI runner's SDK is recorded as OPEN in `DECISIONS.md` D31 and is settled by a manual Release run, not by a real release.
+- The declared macOS floor is `15.0`, and CI now builds on `macos-15` (D34). This closed the question D31 left OPEN: with the build SDK no longer behind the declared floor, the `minos 15.0`-against-SDK-14.5 mismatch that `notarytool` acceptance was uncertain about no longer exists.
 - Current production registration has 20 commands and six events; some older comments/tests still say 17 commands or five events.
 - Fixture/spec history contains conflicting older statements about mas availability/verification. Treat current code and current captured fixtures as implementation evidence and reconcile authoritative prose before relying on a machine-specific mas status.
 - CSP is explicitly `null`; external-content features need a deliberate security design.

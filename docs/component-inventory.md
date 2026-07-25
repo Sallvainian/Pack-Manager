@@ -1,6 +1,6 @@
 # Pack-Manager Component Inventory
 
-- **Date:** 2026-07-24
+- **Date:** 2026-07-25
 - **Scope:** React interface, frontend state, local IPC seam, styling, and packaged assets
 
 ## Overview
@@ -118,6 +118,8 @@ Location: `src/components/dialogs/`
 
 Use these primitives before introducing feature-local equivalents so new UI remains aligned with the existing design tokens and accessibility behavior.
 
+Keyboard focus is drawn as a real `outline` in `--color-focus-ring`, never as a Tailwind `ring-*` and never in `--color-accent` (D35). `ring-*` compiles to `box-shadow`, which WebKit does not paint on native-appearance form controls — `<input type="checkbox">` and `<select>` — and the app ships inside WKWebView, so a ring there is invisible even while `:focus-visible` matches. Never add `outline-none` to a focusable element: Tailwind v4's `outline-none` genuinely sets `outline-style: none` (v3's no-op was renamed `outline-hidden`). One `ring-accent` deliberately survives at `src/components/manager/PackageRow.tsx:85`; it is the cross-manager navigation highlight, carries no `focus-visible:` prefix, and must stay distinct from focus.
+
 ## Frontend State
 
 Five independent Zustand stores live under `src/store/`:
@@ -143,7 +145,7 @@ The event channels are `detection:updated`, `snapshot:updated`, `op:status`, `op
 
 ## Styling, Assets, and Localization
 
-- `src/styles/theme.css` imports Tailwind CSS 4 and defines the dark-only design tokens for surfaces, text, status/severity colors, radii, system fonts, and reduced-motion behavior.
+- `src/styles/theme.css` imports Tailwind CSS 4 and defines the dark-only design tokens for surfaces, text, status/severity colors, radii, system fonts, and reduced-motion behavior. The values are the approved "Aurora Control Deck" palette adopted from the 2026-07-23 UX design in D35, which replaced the 2026-07-22 foundation stubs and added five tokens the stubs had no equivalent for: `--color-bg-shell`, `--color-focus-ring`, `--color-on-accent`, `--color-on-success`, and `--color-violet`. The three `--color-sev-*` tokens still mirror danger/warning/success exactly, so one table row cannot render two palettes.
 - The web interface has no image, web-font, or `public/` asset dependency.
 - `src-tauri/icons/` contains 17 generated packaging icons (15 PNG, one ICNS, one ICO; approximately 304 KiB).
 - `dev/icon/` contains the 1024-pixel source image and reproducible Python generator (approximately 54 KiB).
@@ -156,7 +158,7 @@ Frontend coverage uses these important test seams:
 - `src/test/fakeIpc.ts` for command calls, listeners, event emission, and listener-leak checks.
 - `src/test/fixtures.ts` for realistic typed manager/application state.
 - Shared `dev/fixtures/ipc/*.json` payloads for Rust–TypeScript contract drift detection.
-- Vitest, jsdom, React Testing Library, and fake timers for component, store, keyboard, dialog, updater, history, and operation behavior. The suite currently runs 23 files and 133 tests.
+- Vitest, jsdom, React Testing Library, and fake timers for component, store, keyboard, dialog, updater, history, and operation behavior. The suite currently runs 23 files and 134 tests.
 
 Playwright adds Chromium/WebKit browser journeys over the real React interface with a deterministic in-browser Tauri transport: four specs under `tests/e2e/` with page objects, faker-backed factories, and the IPC double in `tests/support/`. Machine-dependent smoke tests remain separate, ignored Rust integration tests.
 

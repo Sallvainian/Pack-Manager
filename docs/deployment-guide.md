@@ -1,11 +1,11 @@
 # Pack-Manager Deployment Guide
 
-- **Date:** 2026-07-24
+- **Date:** 2026-07-25
 - **Target:** Universal macOS application (`arm64` + `x86_64`), minimum macOS `15.0`
 
 ## Supported Target
 
-`src-tauri/tauri.conf.json` declares `bundle.macOS.minimumSystemVersion` `15.0`. Before that declaration the repository set no floor and inherited Tauri's `10.13` default, which is why v0.2.9 shipped an `LSMinimumSystemVersion` of `10.13` against an arm64 slice compiled `minos 11.0`. `DECISIONS.md` D31 records the reasoning and leaves one question open: whether `notarytool` accepts `minos 15.0` against the runner SDK. Settle it with a manual Release run, not with a real release.
+`src-tauri/tauri.conf.json` declares `bundle.macOS.minimumSystemVersion` `15.0`. Before that declaration the repository set no floor and inherited Tauri's `10.13` default, which is why v0.2.9 shipped an `LSMinimumSystemVersion` of `10.13` against an arm64 slice compiled `minos 11.0`. `DECISIONS.md` D31 records the reasoning and left one question open — whether `notarytool` accepts `minos 15.0` against the runner SDK. D34 closed it: the `build` job now runs on `macos-15`, so the build SDK is no longer behind the declared floor and the mismatch the question was about no longer exists.
 
 The build stays universal and `latest.json` still publishes both `darwin-aarch64` and `darwin-x86_64` pointing at the one archive, but verification is Apple silicon only. Intel is best-effort and unverified (`DECISIONS.md` D32).
 
@@ -63,7 +63,7 @@ After merge, release-please creates `vX.Y.Z` and publishes the GitHub Release. T
 
 ### 3. Universal Build
 
-The macOS 14 build job:
+The `macos-15` build job (D34; it ran on `macos-14` until GitHub began deprecating those images):
 
 1. Installs Node 24 and stable Rust.
 2. Adds both Apple Rust targets.
