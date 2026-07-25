@@ -1,5 +1,5 @@
 # generated: 2026-07-24T16:47:19
-# last_updated: 2026-07-24T16:47:19
+# last_updated: 2026-07-24T21:40:00
 # project: Pack-Manager
 # project_key: NOKEY
 # tracking_system: file-system
@@ -40,20 +40,29 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 #
-# NOTE ON ux-pb: The 'Product Behavior Prerequisite' (UX-PB) is approved product
-# work that must complete before affected Stories in Epics 3-7 can enter evidence
-# implementation. It is tracked here as group 'epic-ux-pb' so all 28 sub-stories
-# are visible; the epics.md notes it is not a ninth closure batch.
+# NOTE ON ux-pb: 'epic-ux-pb' is the primary build queue - the 28 stories
+# implementing Decisions D27-D30 (persistent Upgrade Plan, durable plan
+# attempts, verification-gated Results/History, separate confirmation gate).
+#
+# NOTE ON epics 1-6: retained but UNSCHEDULED pending rescope into normal
+# development stories (2026-07-24 scope recalibration, DECISIONS D33).
+# Triage complete: 6 keep, 19 merge, 12 retire. These 37 entries were authored
+# as evidence production for the retired readiness gate; most of the behavior
+# they describe is already implemented and tested in the shipping code.
+# 'backlog' here does NOT mean queued.
+#
+# NOTE ON epics 7-8: retired. Release readiness is docs/RELEASE-CHECKLIST.md
+# plus two automated checks in release.yml. See DECISIONS D33.
 
 generated: 2026-07-24T16:47:19
-last_updated: 2026-07-24T16:47:19
+last_updated: 2026-07-24T21:40:00
 project: Pack-Manager
 project_key: NOKEY
 tracking_system: file-system
 story_location: "{project-root}/_bmad-output/implementation-artifacts"
 
 development_status:
-  # epic-ux-pb: Product Behavior Prerequisite (UX-PB): Finalize the Upgrade Plan lifecycle
+  # epic-ux-pb: The Upgrade Plan redesign (Decisions D27-D30)
   epic-ux-pb: backlog
   ux-pb-1a-persistent-draft-domain-with-single-entry-membership-and-rust-rebuild: backlog
   ux-pb-1b-sidecar-lifecycle-and-navigation-persistent-visibility: backlog
@@ -145,29 +154,3 @@ development_status:
   6-6-reject-hostile-or-private-diagnostic-inputs: backlog
   6-7-preserve-settings-and-native-utility-actions-across-failure: backlog
   epic-6-retrospective: optional
-
-  # epic-7: Validate the Installed Accessible App and Explicit Updater Journey
-  epic-7: backlog
-  7-1-deliver-asr-02-updater-control-extensions: backlog
-  7-2-accept-the-locked-evidence-contract-and-append-transport: backlog
-  7-3-freeze-the-criterion-acceptance-profile: backlog
-  7-4-freeze-one-immutable-signed-candidate: backlog
-  7-5-qualify-the-candidate-release-lane: backlog
-  7-6-validate-packaged-accessibility-and-bounded-presentation: backlog
-  7-7-validate-real-updater-state-and-authorized-download: backlog
-  7-8-validate-explicit-update-active-operation-refusal-and-relaunch: backlog
-  7-9-refuse-privileged-installation-on-a-non-writable-bundle: backlog
-  7-10-validate-application-update-triggers-and-state-continuity: backlog
-  7-11-validate-standard-macos-menu-behavior: backlog
-  epic-7-retrospective: optional
-
-  # epic-8: Attest the Unchanged Release and Produce a Reproducible Evidence Handoff
-  epic-8: backlog
-  8-1-attest-icon-source-and-packaged-resources: backlog
-  8-2-prove-fresh-install-and-finder-dock-launch-on-both-architectures: backlog
-  8-3-attest-universal-signed-notarized-stapled-updater-complete-trust: backlog
-  8-4-retain-the-first-clean-forced-offline-quality-run: backlog
-  8-5-prove-default-test-isolation-beyond-browser-fetch: backlog
-  8-6-attest-cross-asset-authenticity-and-keep-no-sign-smoke-separate: backlog
-  8-7-complete-and-replay-the-evidence-ledger-for-trace-handoff: backlog
-  epic-8-retrospective: optional
