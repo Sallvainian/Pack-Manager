@@ -283,6 +283,19 @@ jobs:
             rm -rf "$probe"
           fi
 
+          # Prove the detached signature validates against the pubkey the
+          # shipping app actually embeds. Nothing else checks this: a rotated
+          # or mismatched TAURI_SIGNING_PRIVATE_KEY still builds, signs with
+          # Apple, notarizes, staples and publishes green, and every installed
+          # client then fails verification and stops updating. app_update.rs
+          # logs that failure at WARN so offline laptops do not nag every six
+          # hours, which means nobody is ever told.
+          jq -r '.plugins.updater.pubkey' src-tauri/tauri.conf.json | base64 -d > "$RUNNER_TEMP/updater.pub"
+          brew list minisign >/dev/null 2>&1 || brew install minisign
+          command -v minisign >/dev/null || { echo "::error::minisign unavailable"; exit 1; }
+          minisign -V -p "$RUNNER_TEMP/updater.pub" -x "$UPDATER_TGZ.sig" -m "$UPDATER_TGZ" \
+            || { echo "::error::updater signature does not verify against the configured pubkey"; exit 1; }
+
           # latest.json — the updater endpoint. Both darwin targets point at
           # the single universal archive: tauri-plugin-updater resolves its
           # target from `cfg!(target_arch)`, so the running slice of the fat
@@ -338,6 +351,26 @@ jobs:
           fi
           printf 'Uploading %s\n' "${files[@]}"
           gh release upload "$ATTACH_TO_TAG" "${files[@]}" --clobber
+
+      # latest.json is written before the asset it references is uploaded, so
+      # nothing until now has confirmed the published endpoint is reachable,
+      # names this release, and points at a file that exists. Manual runs
+      # publish nothing, so there is no endpoint for them to check.
+      - name: Verify published updater endpoint
+        if: inputs.attach_to_tag != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/latest.json"
+          curl -fsSL --retry 5 --retry-delay 3 "$URL" -o "$RUNNER_TEMP/published.json"
+          PUBLISHED=$(jq -r .version "$RUNNER_TEMP/published.json")
+          if [ "$PUBLISHED" != "$VERSION" ]; then
+            echo "::error::latest.json reports $PUBLISHED, expected $VERSION"; exit 1
+          fi
+          ASSET=$(jq -r '.platforms["darwin-aarch64"].url' "$RUNNER_TEMP/published.json")
+          curl -fsIL --retry 5 --retry-delay 3 "$ASSET" >/dev/null \
+            || { echo "::error::updater asset URL is not reachable: $ASSET"; exit 1; }
+          echo "Published updater endpoint verified: $PUBLISHED"
 
       - name: Upload artifacts (manual runs)
         if: github.event_name == 'workflow_dispatch'
