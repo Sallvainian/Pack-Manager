@@ -824,7 +824,7 @@ As a Pack-Manager user, I want each Package and Manager item to show its own hon
 ### Story UX-PB.3d: Verification-gated Results with outcome taxonomy
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.3c; D29-D30; AD-16 (verification-gated success; post-exit fresh acquisition); AD-25 (a failed verification refresh leaves the Last-good Snapshot in place)  
+**Dependencies:** UX-PB.3c; D29-D30; AD-16 (verification-gated success; post-exit fresh acquisition); AD-18 (UX-PB.4a owns the single durable terminal write; this story renders Results and never writes the record); AD-25 (a failed verification refresh leaves the Last-good Snapshot in place)  
 **Blocks:** UX-PB.3e, UX-PB.3g; Story 6.5
 
 As a Pack-Manager user, I want the plan to become Results only after affected state is verified so that success is earned, not assumed from a process exit.
@@ -844,8 +844,8 @@ As a Pack-Manager user, I want the plan to become Results only after affected st
 **Then** the item does not declare success — it stays `Verifying` until it resolves, then reports verification failure with its evidence, and is never colored successful on the strength of the exit code alone.
 
 **Given** an attempt reaching terminal state (Results persistence failure)
-**When** the transformed persistent Results / terminal outcome cannot be written
-**Then** the failure to persist is surfaced honestly, the visible Results are not presented as durably recorded, and no fabricated success is shown.
+**When** the single durable terminal write owned by UX-PB.4a fails
+**Then** the failure to persist is surfaced honestly, the visible Results are not presented as durably recorded, and no fabricated success is shown. This story renders and announces Results; it never writes the durable record itself. Exactly one durable record exists per `planAttemptId` and UX-PB.4a writes it (AD-18) — a second write here would append a duplicate to an append-only journal with no rule for which record is authoritative.
 
 ### Story UX-PB.3e: Failure guidance and safe next step before Retry
 
