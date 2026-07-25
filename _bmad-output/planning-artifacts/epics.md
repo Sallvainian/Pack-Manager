@@ -167,8 +167,13 @@ restated here:
 - **Real-versus-simulated honesty** — `ARCHITECTURE-SPINE.md` AD-3: the committed
   fixtures in `dev/fixtures/ipc/` prove payload shape on both sides and never
   dispatch anything through Tauri, so no story may claim event-delivery coverage
-  from a fixture or from the browser double. The native Tauri harness is Deferred
-  there, with Story 6.5 as its only live consumer.
+  from a fixture or from the browser double. Proving delivery waits on the native
+  Tauri harness, which `ARCHITECTURE-SPINE.md` records as **OPEN — owner Story
+  6.5; shape named, not yet adopted**, not as a bare deferral. **AD-26** governs
+  it, because the macOS route runs an embedded WebDriver server *inside* the
+  application. A compliant shape exists — the automation surface excluded from
+  release bits at compile time — so Story 6.5 is buildable; what remains open is
+  the adoption itself, an AD-20 security-reviewed change.
 - **Behavior-present verification** before scheduling a test gap — see Scope
   Controls above.
 
@@ -257,7 +262,7 @@ longer absorbs application-update state. One documented residual remains —
 as evidence of a code defect.
 
 - DR-1 is CLOSED by `docs/DECISIONS.md` **D31**: the minimum supported macOS version is 15.0, declared as `bundle.macOS.minimumSystemVersion` in `src-tauri/tauri.conf.json` and shipped in v1.0.0. Nothing is blocked on it.
-- DR-2 is RESTATED by **D33**: its substance survives without the gate framing. Automated 4.5:1 contrast and reduced-motion checks belong in the existing Playwright/Vitest lane; one manual VoiceOver pass joins `docs/RELEASE-CHECKLIST.md`. Accessibility here is product quality, not evidence ceremony. Neither automated check exists yet, so this is an obligation on whichever story adds them, not a description of current coverage.
+- DR-2 is RESTATED by **D33**: its substance survives without the gate framing. Automated 4.5:1 contrast and reduced-motion checks belong in the existing Playwright/Vitest lane; one manual VoiceOver pass joins `docs/RELEASE-CHECKLIST.md`. Accessibility here is product quality, not evidence ceremony. Reduced motion is already covered and runs in CI — `src/styles/theme.css` honors `@media (prefers-reduced-motion: reduce)` and `tests/e2e/browser-style-contract.spec.ts` emulates `{ reducedMotion: "reduce" }` and asserts transitions and animations resolve to `0s`, on every push and pull request to `main` via `.github/workflows/test.yml`. Automated 4.5:1 contrast does **not** exist; that same spec disclaims it. Contrast is therefore the outstanding obligation on whichever story adds it, while reduced motion is a regression surface to preserve, not a gap to schedule (`ARCHITECTURE-SPINE.md` AD-1, AD-11).
 - DR-3 is NARROWED by **D32**: the release still builds universal, but the obligation to verify on physical Intel hardware is dropped. Verification is Apple silicon only; Intel remains best-effort and unverified.
 - DR-4 is DISSOLVED by **D33** along with the gate that defined it. There is no P0/P1 threshold, no Acceptance Profile, and no gate decision. Release readiness is `docs/RELEASE-CHECKLIST.md` plus the automated updater-signature and published-endpoint checks in `release.yml`.
 
@@ -277,7 +282,7 @@ parallel risk register:
 | Concern | Governed by |
 | --- | --- |
 | Manager output or oracle drift; a parser proving an obsolete format | AD-4 (the manager's own `outdated` verdict is the sole authority; fixture provenance) |
-| Suites green while the real command/event boundary is broken | AD-3 (committed contract fixtures; delivery coverage explicitly unproven and awaiting the deferred native harness) |
+| Suites green while the real command/event boundary is broken | AD-3 (committed contract fixtures; delivery coverage explicitly unproven) and AD-26 (a native automation surface never reaches release bits — the harness that would prove delivery is OPEN with Story 6.5 as its owner, not deferred) |
 | Stale, failed, or misleading UI state authorizing the wrong action | AD-16, AD-17 (no entry point executes; no rebuild enlarges membership; verification gates success) |
 | Process output, locks, cancellation, timeout, or PID reuse going dishonest | AD-4, AD-5 (complete lock-set rule; output fidelity floor; historical PGIDs never signalled) |
 | Persistence, History, or diagnostics losing evidence or following hostile paths | AD-18, AD-19 (journal never defaulted away; symlinks rejected; disclosure not widened) |
@@ -299,13 +304,14 @@ dependencies.
 
 | Decision or dependency | Current state | Accountable role | Effect on implementation entry |
 | --- | --- | --- | --- |
-| Product Behavior Prerequisite UX-PB.1..UX-PB.5 | `APPROVED TARGET — NOT IMPLEMENTED` | Product/UX/Architecture accept; Development implements | Nothing is blocked from starting — Epic UX-PB is the primary build queue and runs first. Any story or test text authored against immediate row execution, direct self-update execution, the Activity drawer, Operation-row History, or active `autoOpenDrawer` behavior is superseded by D27-D30. |
+| Product Behavior Prerequisite UX-PB.1..UX-PB.5 | `APPROVED TARGET — NOT IMPLEMENTED` | Product/UX/Architecture accept; Development implements | Epic UX-PB is the primary build queue and runs first, and nothing blocks starting it **except UX-PB.1e and UX-PB.5d**, which are blocked on the canonical design-token set in the row below. Any story or test text authored against immediate row execution, direct self-update execution, the Activity drawer, Operation-row History, or active `autoOpenDrawer` behavior is superseded by D27-D30. |
+| Canonical design-token set | `OPEN` — needs an owner decision | UX decides; Development implements | **Blocks UX-PB.1e and UX-PB.5d** (`ARCHITECTURE-SPINE.md:944`). `src/styles/theme.css` ships one palette and `tests/e2e/browser-style-contract.spec.ts` asserts it on every push and PR to `main`, while `DESIGN.md` and `EXPERIENCE.md` specify another plus a dedicated `focusRing` that `docs/SPEC.md`'s accent-coloured ring contradicts. Both stories are bound to build from the UX sources, so whichever lands first either rewrites the tokens and breaks the CI style contract on `main` — the same lane AD-11 relies on for reduced motion — or keeps the shipping values and ships focus rings `EXPERIENCE.md` forbids. The token set and the focus mechanism are decided together, then the CI assertion moves with them in one change. Not a story's call and not architecture's alone. |
 | DR-1 — minimum supported macOS | `CLOSED` — D31 | Resolved 2026-07-24 | None. 15.0 declared and shipped in v1.0.0. Whether `notarytool` accepts `minos 15.0` against the CI SDK is OPEN and is settled by a manual Release run, never by assertion. |
-| DR-2 — packaged accessibility method | `RESTATED` — D33 | Existing Playwright/Vitest lane + release checklist | None. An obligation on whichever story adds the two automated checks, which do not exist yet. |
+| DR-2 — packaged accessibility method | `RESTATED` — D33 | Existing Playwright/Vitest lane + release checklist | None. Reduced motion is already automated and runs in CI (`tests/e2e/browser-style-contract.spec.ts` via `.github/workflows/test.yml`); automated 4.5:1 contrast does not exist and is the one outstanding obligation, on whichever story adds it. |
 | DR-3 — physical Intel requirement | `NARROWED` — D32 | Resolved 2026-07-24 | None. Universal build retained; verification Apple silicon only. |
 | DR-4 — P0 gate/retry policy | `DISSOLVED` — D33 | Retired with the gate | None. |
 | Named assignees and calendar dates | `REMOVED` — D33 | n/a | None. The `Assignee` and `Calendar date` fields were removed from every surviving story on 2026-07-25. |
-| Native Tauri E2E harness and runner | `DEFERRED` | Architecture accepts; Development implements | Story 6.5's "Real native Tauri E2E plus artifact inspection" test level is its only live consumer. Any choice must satisfy `ARCHITECTURE-SPINE.md` AD-2 and AD-3. |
+| Native Tauri E2E harness and runner | `OPEN` — owner Story 6.5; shape named, not yet adopted | Architecture accepts; Development implements | None. Story 6.5's "Real native Tauri E2E plus artifact inspection" test level needs no renegotiation: `ARCHITECTURE-SPINE.md` **AD-26** names a compliant shape — `tauri-driver` driven directly does not cover macOS, `@wdio/tauri-service` does by running an embedded WebDriver server inside the app, and that surface is excluded from release bits at **compile time** (`#[cfg(debug_assertions)]`), never by a runtime selector. Any choice must satisfy AD-2, AD-3, and AD-26; adopting the plugin is an AD-20 security-reviewed change, and the CrabNebula fork alternative carries a paid macOS API key. |
 | Controlled child-helper language | `DEFERRED` | Development | No live story requires one. Any choice must satisfy AD-4 and cannot add a production shell-command surface. |
 | Plan-attempt journal filename and serde shape | `DEFERRED` | Development | Owned by Story UX-PB.2c. AD-18 fixes ownership, location, durability, and failure mode; the exact filename and field list are the story's. |
 
@@ -343,7 +349,7 @@ the following binding requirements:
 
 **This table is a historical revision record, not a live instruction.** It
 records the prior wording that D27-D30 superseded on 2026-07-24. Every story area
-it names except 3.1, 3.4, 3.5, and 6.5 was archived on 2026-07-25 — Stories 3.3,
+it names except 3.1, 3.2, 3.4, 3.5, and 6.5 was archived on 2026-07-25 — Stories 3.3,
 3.6, 4.1, 4.6, 5.2, 5.4, 5.5, 6.3, 6.4, and 6.7 along with every Epic 7 and Epic 8
 story, when Epics 1, 4, 5, 7, and 8 were removed. The live contracts are the 28
 Epic UX-PB stories below, whose local text was rewritten directly so the
@@ -555,14 +561,15 @@ As a Pack-Manager user, I want the Upgrade Sidecar to appear, persist, and close
 **When** I remove the last item
 **Then** the sidecar closes, the draft returns to empty, and nothing lingers in Activity or History.
 
-**Given** an in-progress draft when the app crashes or is force-quit
+**Given** an in-progress draft when Pack-Manager is quit cleanly, crashes, or is force-quit
 **When** Pack-Manager relaunches
-**Then** the draft's canonical membership is reconstructed into the sidecar, or — if it cannot be recovered — the sidecar returns to empty with no fabricated membership and nothing executes; a draft is never surfaced as Activity or History.
+**Then** it starts with an empty draft and a hidden sidecar — the draft is session-scoped and never written to disk, so membership is never reconstructed, never partially restored, and never fabricated, and nothing executes on relaunch
+**And** a draft is never surfaced as Activity or History.
 
 ### Story UX-PB.1c: Remaining draft entry points as independent removable items
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.1a; D27-D30; AD-16; AD-17  
+**Dependencies:** UX-PB.1a; D27-D30; AD-16; AD-17; AD-23 (per-member provenance and tombstones)  
 **Blocks:** UX-PB.1d, UX-PB.1e  
 
 As a Pack-Manager user, I want selected-Package, Manager-header, Manager-wide, and `Update Everything` actions to all feed the same draft as independent removable items so that every entry point stages into one plan and no global toggle bypasses it.
@@ -577,9 +584,10 @@ As a Pack-Manager user, I want selected-Package, Manager-header, Manager-wide, a
 **When** I remove it
 **Then** only that Manager self-update leaves the plan, Package items in the same Manager group are unaffected, and Rust dedups and rebuilds the authenticated preview from the remaining canonical identities.
 
-**Given** a draft seeded by `Update Everything` as an `AllEligible` intent
+**Given** a draft seeded by `Update Everything`, whose expansion was frozen into concrete members at the moment I invoked it — each carrying `Bulk { scope: Everything }` provenance that is never re-evaluated
 **When** I remove any item
-**Then** the draft converts to an `Explicit` intent of the surviving PackageRefs and Manager self-update identities and rebuilds the authenticated preview from the backend, never from edited display text.
+**Then** that one member leaves the draft and a tombstone records the removal, so no later bulk expansion of any scope re-adds it; the surviving PackageRefs and Manager self-update identities keep their own per-member provenance, and Rust rebuilds the authenticated preview from those canonical identities, never from edited display text
+**And** no whole-intent `kind` is stored or converted — there is no `AllEligible` value to convert from and no `Explicit` value to convert to; a kind, where shown, is derived from member origins.
 
 **Given** two entry classes mutating the same draft in close succession
 **When** both mutations resolve
@@ -611,7 +619,7 @@ As a Pack-Manager user, I want pinned, current, excluded, and unavailable Packag
 ### Story UX-PB.1e: Standardized Manager workspace presentation
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.1c; D27-D30; AD-16; AD-17  
+**Dependencies:** UX-PB.1c; D27-D30; AD-16; AD-17; AD-25 (Last-good Snapshot retention on refresh failure)  
 **Blocks:** Story 3.1  
 
 As a Pack-Manager user, I want each Manager Header and Card to present standardized identity, version, status, ownership, counts, and deltas so that every Manager reads consistently and its self-update staging is obvious.
@@ -653,7 +661,7 @@ As a Pack-Manager user, I want the one-use preview identity and the durable conf
 ### Story UX-PB.2b: Atomic admission mints one planAttemptId and fails a second attempt closed
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.2a; AD-3; AD-16; AD-18; D29-D30  
+**Dependencies:** UX-PB.2a; AD-3; AD-16; AD-18; AD-25 (a Manager failure is contained and never destroys a Last-good Snapshot); D29-D30  
 **Blocks:** UX-PB.2c, UX-PB.2d, UX-PB.2e  
 
 As a Pack-Manager user, I want confirming a reviewed plan to atomically create exactly one durable attempt identity so that every Operation it launches shares one reconstructible identity and no two confirmed attempts can ever run at once.
@@ -816,7 +824,7 @@ As a Pack-Manager user, I want each Package and Manager item to show its own hon
 ### Story UX-PB.3d: Verification-gated Results with outcome taxonomy
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.3c; D29-D30; AD-16 (verification-gated success; post-exit fresh acquisition)  
+**Dependencies:** UX-PB.3c; D29-D30; AD-16 (verification-gated success; post-exit fresh acquisition); AD-25 (a failed verification refresh leaves the Last-good Snapshot in place)  
 **Blocks:** UX-PB.3e, UX-PB.3g; Story 6.5
 
 As a Pack-Manager user, I want the plan to become Results only after affected state is verified so that success is earned, not assumed from a process exit.
@@ -927,7 +935,7 @@ As a Pack-Manager user, I want each plan I confirm to become exactly one immutab
 ### Story UX-PB.4b: Read-only Activity replay of a History row
 
 **Primary concern:** Product Behavior  
-**Dependencies:** D29-D30; AD-16; UX-PB.4a  
+**Dependencies:** D29-D30; AD-16; AD-24 (Retry derives its own intent; revealing the scope executes nothing); UX-PB.4a  
 **Blocks:** UX-PB.4c, UX-PB.4d  
 
 As a Pack-Manager user, I want opening a History row to route Activity into read-only replay so that I can inspect exactly what a prior attempt did instead of piecing together unrelated commands.
@@ -937,7 +945,7 @@ As a Pack-Manager user, I want opening a History row to route Activity into read
 **Given** a completed History row for a confirmed `planAttemptId`
 **When** I open it
 **Then** Activity enters a clearly labeled read-only replay that reconstructs the attempt's Manager groups, Package/version changes, Manager self-updates, exact commands, Operation outcomes, errors, timings, and retained output
-**And** no control in the replay can mutate, re-run, or execute anything.
+**And** no control in the replay can mutate, re-run, or execute anything, with exactly one carve-out: the non-executing `Retry` affordance UX-PB.4d offers from a History entry. Invoking it reveals the failed-item scope inline inside the replay and executes nothing; the replayed attempt and its records stay immutable, and any execution still goes only through `Create new plan`, the derived `RetryIntent`, and the ordinary preview and confirmation path.
 
 **Given** a History row whose persisted attempt is corrupted or missing
 **When** I try to open its replay
@@ -964,7 +972,7 @@ As a Pack-Manager user, I want a replay I open during a live upgrade to stay cle
 ### Story UX-PB.4d: Retry scope preview and linked new attempt
 
 **Primary concern:** Product Behavior  
-**Dependencies:** D29; AD-16 (Retry mints a new linked `planAttemptId` and preserves the original failure); UX-PB.4b, UX-PB.2b  
+**Dependencies:** D29; AD-16 (Retry mints a new linked `planAttemptId` and preserves the original failure); AD-24 (derived `RetryIntent`; the persistent draft has exactly one author); UX-PB.4b, UX-PB.2b  
 **Blocks:** Story 6.5  
 
 As a Pack-Manager user, I want Retry to first show the failed-item scope and then create a new linked attempt so that I can re-run only what failed while the original result stays untouched.
@@ -973,7 +981,7 @@ As a Pack-Manager user, I want Retry to first show the failed-item scope and the
 
 **Given** a terminal Results or History entry with failed items and Retry available
 **When** I invoke Retry
-**Then** it first reveals the proposed failed-item scope inline with `Cancel` and `Create new plan`; `Create new plan` rebuilds current canonical intent into a new reviewable draft, and confirming that draft creates a new attempt with a fresh `planAttemptId` linked by `retryOfPlanAttemptId` and a `Retry of plan from <time>` History entry
+**Then** it first reveals the proposed failed-item scope inline with `Cancel` and `Create new plan`; `Create new plan` composes a derived `RetryIntent` in Rust — the source attempt's reviewed intent restricted to its failed members, canonically rebuilt against current eligibility and argv — and takes that separate reviewable object straight to preview and confirmation without ever writing to, merging with, or emptying the one persistent draft, and confirming it creates a new attempt with a fresh `planAttemptId` linked by `retryOfPlanAttemptId` and a `Retry of plan from <time>` History entry
 **And** the original failed result stays immutable and reachable through `View previous result`.
 
 **Given** Retry has exposed the failed-item scope
@@ -1034,7 +1042,7 @@ As a Pack-Manager user, I want the persistent Upgrade Plan to present one delibe
 ### Story UX-PB.5b: Dialog-only disable control with atomic `skipUpgradePlanConfirmation` persistence and Settings migration
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.5a; D28; FR-17; AD-19; Settings migration  
+**Dependencies:** UX-PB.5a; D28; FR-17; AD-19; AD-21 (`skipUpgradePlanConfirmation` is declared plan-inert); AD-22 (admit, then persist the rider); Settings migration  
 **Blocks:** UX-PB.5c; Story 3.4  
 
 As a Pack-Manager user, I want to deliberately disable the final confirmation from the dialog and restore it from Settings so that I can remove friction without ever losing a safe default.
@@ -1046,8 +1054,13 @@ As a Pack-Manager user, I want to deliberately disable the final confirmation fr
 **Then** only this dialog contains the `Disable upgrade plan command execution confirmation` control, its safety explanation, and Settings-restoration guidance, and the base plan never surfaces that control.
 
 **Given** the dialog with `Disable upgrade plan command execution confirmation` selected
-**When** I choose the final `Confirm N Updates`
-**Then** `skipUpgradePlanConfirmation: true` is written atomically, the new value takes effect only after persistence succeeds, and the plan is admitted.
+**When** I choose the final `Confirm N Updates` and admission succeeds
+**Then** the ordering is validate, admit through the scheduler's revision-checked transaction, then persist the rider once admission has returned — `skipUpgradePlanConfirmation: true` is written atomically only after the plan is admitted, and it becomes active only after that write succeeds
+**And** the opt-out never precedes the admission it rides on; if that atomic save then fails, the admitted attempt stands, the prior `false` preference is retained as both active and persisted state, and the failure is surfaced inline.
+
+**Given** the dialog with `Disable upgrade plan command execution confirmation` selected
+**When** I choose the final `Confirm N Updates` and admission is rejected
+**Then** nothing is persisted and nothing becomes active — the confirmation gate stays armed for a run I never got — and the dialog retains my selection so the choice is not silently lost.
 
 **Given** Settings
 **When** the confirmation preference renders
@@ -1143,7 +1156,7 @@ So that a slow or disabled step never creates misleading global state.
 
 - FR and requirement links: FR-3; FR-17
 - Required test level: Unit plus component
-- Governing invariants: AD-4
+- Governing invariants: AD-4, AD-25
 - Dependencies: deterministic adapters and fake time
 
 **Acceptance Criteria:**
@@ -1157,6 +1170,11 @@ So that a slow or disabled step never creates misleading global state.
 **When** controlled time reaches success, timeout, or error outcomes
 **Then** the correct Manager-specific terminal state and actionable detail appear
 **And** peers continue independently without real network access or wall-clock sleeps.
+
+**Given** a Manager that has already produced a successful snapshot, and a later refresh whose detection, parse, network, timeout, or persistence path fails
+**When** the failure resolves and recovered-parse output is available
+**Then** the failure stays contained to that Manager, its Last-good Snapshot is retained and labeled with its own timestamp and the exact failure alongside a `Retry refresh` affordance, and the recovered output **merges** into the inventory already parsed from the successful refresh outputs
+**And** the snapshot is never replaced by an empty one and never by an outdated-only overlay — which would make every up-to-date Package vanish — the merge never un-pins a row, and health and staleness presentation read from the snapshot's real timestamp with no invented or interpolated value substituted.
 
 ## Epic 3: Keep Package Choice, Plans, and Settings Exact and Understandable
 
@@ -1273,8 +1291,9 @@ So that support evidence is complete, inspectable, and actionable.
 **Story Contract:**
 
 - FR and requirement links: FR-18
-- Required test level: Real native Tauri E2E plus artifact inspection
-- Governing invariants: AD-3, AD-4, AD-5, AD-16, AD-18
+- Required test level: Real native Tauri E2E plus artifact inspection. Satisfiable as written — **AD-26** names a compliant shape and no renegotiation is needed.
+- Governing invariants: AD-3, AD-4, AD-5, AD-16, AD-18, AD-26
+- Harness constraint (AD-26): the native automation surface is excluded from release bits at **compile time**, never by a runtime selector, and the harness must drive the **production composition** — the same registered commands and events, the same handlers, the same serialization. No delivery coverage may be claimed from a fixture, from the browser double, or from a harness that introduces a test-only command, a second composition root, or a different registration set.
 - Dependencies: disposable logs/transcripts/journal
 
 **Acceptance Criteria:**
