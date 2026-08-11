@@ -486,7 +486,7 @@ FR-12: Triaged out (was Epic 5) — Preserve structured execution, null stdin, a
 
 FR-13: Triaged out (was Epic 5) — Expose correlated live Operation state and output.
 
-FR-14: Triaged out (was Epic 5) — Handle stalls, cancellation, timeout, and shutdown honestly.
+FR-14: **Partly revived by a later decision.** The quit-guard limb is **Epic 6 — Story 6.6**. The `Triaged out (was Epic 5)` status came from the D33 rescope of 2026-07-24; **D30 and AD-30 both postdate it** (2026-07-25) and require the guard, and `prd.md` FR-14 carries it as a requirement with the AD-30 architecture binding. The stall, cancellation, and timeout limbs stay as the triage left them, pending the broader FR reassignment the 2026-07-25 implementation-readiness report raised as its item 4.
 
 FR-15: Epic 6 — Preserve reconstructible History, transcripts, journals, and crash evidence.
 
@@ -602,7 +602,7 @@ As a Pack-Manager user, I want one eligible Package to become persistent draft-p
 ### Story UX-PB.1b: Sidecar lifecycle and navigation-persistent visibility
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.1a; D27-D30; AD-16; AD-17; AD-28 (this story renders the `Updates` / `Managers` / `Commands` counts, and the count a batch reports is defined there — it is the size of the concrete identity set the batch carried, computed from the snapshot the user was looking at); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** UX-PB.1a; D27-D30; AD-16; AD-17; AD-28 (this story renders the `Updates` / `Managers` / `Commands` counts, and the count a batch reports is defined there — it is the size of the concrete identity set the batch carried, computed from the snapshot the user was looking at); **AD-30** (a quit that would orphan a live child process is guarded at **one** enforcement point, and its active set is `Queued` ∪ `Running` — the relaunch behavior below describes state after a *guarded* quit, and Story 6.6 builds that guard; this story does not build it and must not add a second one); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** UX-PB.1d, UX-PB.1e  
 
 As a Pack-Manager user, I want the Upgrade Sidecar to appear, persist, and close in step with the draft so that my proposed plan always has a stable reviewable home and no empty drawer clutters the workspace.
@@ -822,7 +822,7 @@ As a Pack-Manager user, I want cancelling the plan to stop only that attempt's w
 ### Story UX-PB.2f: Keep legacy Operations honest without inferred plan grouping
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.2a; AD-16; AD-18 (a record without a `planAttemptId` stays an individually labeled legacy Operation, and a record that loses its counterpart under shared retention reads as legacy rather than as corrupt); D29; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** UX-PB.2a; AD-16; AD-18 (a record without a `planAttemptId` stays an individually labeled legacy Operation, and a record that loses its counterpart under shared retention reads as legacy rather than as corrupt); D29; **AD-30** (a quit that would orphan a live child process is guarded at **one** enforcement point, and its active set is `Queued` ∪ `Running` — an Operation abandoned by an *unguarded* quit is not the legacy shape this story labels, so the honest-labeling rules here presume Story 6.6's guard rather than substituting for it); AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 **Blocks:** None  
 
 As a Pack-Manager user, I want Operations that predate the attempt model to stay honestly labeled as legacy so that older records are never fabricated into plans that never existed.
@@ -840,7 +840,7 @@ As a Pack-Manager user, I want Operations that predate the attempt model to stay
 ### Story UX-PB.3a: Confirmed sidecar as the single active plan summary
 
 **Primary concern:** Product Behavior  
-**Dependencies:** UX-PB.2 complete (PB.2a-f); D27-D30; AD-16; AD-17; finalized UX spines; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** UX-PB.2 complete (PB.2a-f); D27-D30; AD-16; AD-17; finalized UX spines; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls). **UX-PB.5a is deliberately *not* a dependency:** the trigger above is atomic admission, which UX-PB.2b provides, so this story does not wait on the Confirmation Dialog and must not be resequenced behind it. Keying the trigger to the dialog instead leaves this story undefined on the D28 confirmation-off path, where UX-PB.5c guarantees no dialog opens — do not restore that wording  
 **Blocks:** UX-PB.3b  
 
 As a Pack-Manager user, I want the sidecar I confirmed to become the one live summary of the admitted attempt so that I follow a single plan from review into execution without a new surface appearing.
@@ -848,7 +848,7 @@ As a Pack-Manager user, I want the sidecar I confirmed to become the one live su
 **Acceptance Criteria:**
 
 **Given** a confirmed plan whose atomic admission returned one durable `planAttemptId`
-**When** final confirmation closes the Confirmation Dialog
+**When** atomic admission completes and returns that `planAttemptId` — reached either through the Confirmation Dialog or, when `skipUpgradePlanConfirmation` is `true`, through the `Run N Updates` bypass that opens no dialog (UX-PB.5c)
 **Then** the same Upgrade Sidecar transforms in place into the one active plan summary for that `planAttemptId`, and no second surface opens
 **And** **no story is obliged to build a status-announcement channel** (AD-17, D37): "the status channel announces plan start" was a required obligation in the prior wording and is now **optional**. If a channel exists there is exactly **one**, owned alongside the sidecar region — two live regions narrating one attempt is a defect, not additive coverage — and that convergence rule survives D37 because it is about not building two of something
 **And** a safety-critical attempt state — the stall handoff and `Interaction required` — reaches the user through a **visible** surface and never depends on an announcement channel (AD-17). Below 720 usable CSS pixels, where the owning surface may be stacked behind another, that state surfaces in a persistent, non-occludable indicator that routes to it.
@@ -1080,7 +1080,7 @@ As a Pack-Manager user, I want Retry to first show the failed-item scope and the
 ### Story UX-PB.4e: Legacy Operation History honest labeling
 
 **Primary concern:** Product Behavior  
-**Dependencies:** D29; AD-16 (legacy honesty — no inferred plan grouping); AD-18; AD-29 (an attempt record that loses its counterpart is legacy, and `Interrupted` requires a **genuine** absence — a terminal record present but unreadable is reported as unreadable evidence, never silently reclassified); UX-PB.4a, UX-PB.2f; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
+**Dependencies:** D29; AD-16 (legacy honesty — no inferred plan grouping); AD-18; AD-29 (an attempt record that loses its counterpart is legacy, and `Interrupted` requires a **genuine** absence — a terminal record present but unreadable is reported as unreadable evidence, never silently reclassified); **AD-30** (a quit that would orphan a live child process is guarded at **one** enforcement point, and its active set is `Queued` ∪ `Running` — an attempt cut short by an *unguarded* quit is not the genuine absence AD-29 requires, so `Interrupted` labeling here presumes Story 6.6's guard); UX-PB.4a, UX-PB.2f; AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)  
 
 As a Pack-Manager user, I want legacy Operation records that predate plan attempts to stay honestly labeled so that older history remains readable without being faked into plans it never had.
 
@@ -1404,7 +1404,7 @@ So that support evidence is complete, inspectable, and actionable.
 
 - FR and requirement links: FR-18
 - Required test level: Real native Tauri E2E plus artifact inspection. Satisfiable as written — **AD-26** names a compliant shape and no renegotiation is needed.
-- Governing invariants: AD-3, AD-4, AD-5, AD-16, AD-18, AD-26, **AD-29** (the archive carries the **raw journal lines**, never a synthesized record — this story's assertion that the exported plan-attempt records carry scope, exact commands, verification facts and results is satisfied by the record **set** for a `planAttemptId` and cannot be satisfied by any single record, because AD-29's admission/terminal split makes such a record impossible. A folded attempt view may be added as an **additional** entry marked as derived; it never replaces the raw lines and is never written back to the journal), **AD-27** (this story renders the diagnostics action, and AD-27 revision 10 widened its `Binds` to name Story 6.5 explicitly — an earlier enumeration omitted it and this document faithfully mirrored the omission. Focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, and never `outline-none`; verify the added control at runtime)
+- Governing invariants: AD-3, AD-4, AD-5, AD-16, AD-18, AD-26, **AD-29** (the archive carries the **raw journal lines**, never a synthesized record — this story's assertion that the exported plan-attempt records carry scope, exact commands, verification facts and results is satisfied by the record **set** for a `planAttemptId` and cannot be satisfied by any single record, because AD-29's admission/terminal split makes such a record impossible. A folded attempt view may be added as an **additional** entry marked as derived; it never replaces the raw lines and is never written back to the journal), **AD-27** (this story renders the diagnostics action, and AD-27 revision 10 widened its `Binds` to name Story 6.5 explicitly — an earlier enumeration omitted it and this document faithfully mirrored the omission. Focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, and never `outline-none`; verify the added control at runtime), **AD-30** (a quit that would orphan a live child process is guarded at **one** enforcement point, and its active set is `Queued` ∪ `Running` — the interrupted-run evidence this export carries is evidence of a run whose quit reached that guard; Story 6.6 builds it, and this story neither builds nor duplicates it)
 - Harness constraint (AD-26): the native automation surface is excluded from release bits at **compile time**, never by a runtime selector, and the harness must drive the **production composition** — the same registered commands and events, the same handlers, the same serialization. No delivery coverage may be claimed from a fixture, from the browser double, or from a harness that introduces a test-only command, a second composition root, or a different registration set.
 - Dependencies: disposable logs/transcripts/journal
 
@@ -1423,4 +1423,39 @@ So that support evidence is complete, inspectable, and actionable.
 **Given** Export diagnostics and Open Logs actions
 **When** native command/opener success and failure are controlled
 **Then** the UI exposes actionable outcomes
+
+### Story 6.6: Guard a Quit That Would Orphan a Live Child Process
+
+As a Pack-Manager user,
+I want a quit that would abandon running or queued work to ask me first,
+So that work is never silently discarded and the app never leaves child processes behind.
+
+**Story Contract:**
+
+- FR and requirement links: FR-14 (the quit-guard limb, revived by D30 and AD-30 after the D33 rescope triaged it out); FR-21 (its shipping `Queued` ∪ `Running` refusal predicate is the source of truth AD-30 takes, and AD-30 binds FR-21 in return — the two active sets may not drift apart)
+- Required test level: Real native Tauri E2E for the window-close and `⌘Q` paths, since the enforcement point is a native window/menu event and no browser double exercises it (**AD-26** governs the harness). The OS-shutdown limb is verified at the unit level against the kill hook.
+- Governing invariants: **AD-30** (the whole story), AD-3, AD-4, AD-5
+- Dependencies: none — this story guards the **shipping** operation queue and needs nothing from Epic UX-PB. It does not use `planAttemptId`, the persistent draft, or any D27–D30 surface, and it may be built at any point.
+
+**Acceptance Criteria:**
+
+**Given** at least one Operation is `Queued` or `Running`
+**When** a **user-initiated** quit is requested — an OS window-close request or `⌘Q`
+**Then** both paths resolve to the **same** enforcement point the application-update path already uses — one predicate, one dialog, one refusal — and the user is presented an explicit choice rather than having the work silently discarded
+**And** the guard's active set is `Queued` ∪ `Running`: **queued counts as running**, because admission has already committed to the work and a quit would drop it unstarted
+**And** that active set stays **identical** to FR-21's application-update refusal — a change to either predicate is an AD-30 change, not a local one
+**And** no rollback is promised: partially completed Manager work stays partially completed, and the guard surfaces the choice rather than offering to undo.
+
+**Given** the quit guard is presented and the user chooses to quit anyway
+**When** the app exits
+**Then** every child process is terminated before exit — children never outlive the app.
+
+**Given** at least one Operation is `Queued` or `Running`
+**When** the quit is **OS-initiated** — a system shutdown or logout
+**Then** **no dialog is presented**; the guard is best-effort only and runs the existing kill hook — cancel every running Operation, then **await the bounded idle wait**, because `cancel_all` only flips the cancellation tokens and the runner tasks perform the `SIGTERM` → grace → `SIGKILL` work, so a shutdown path that does not await it exits before the children die
+**And** the logout is not blocked to argue with the user: losing the run is the accepted cost, and this asymmetry with the user-initiated case is deliberate rather than an oversight.
+
+**Given** a second code path that could decide on its own whether to quit
+**When** it is introduced
+**Then** it routes to the same enforcement point rather than deciding for itself — a second deciding path is the defect **AD-30** names, and it is how the current build ended up with a `QuitGuardDialog` its host renders and nothing but the application-update path calls.
 
