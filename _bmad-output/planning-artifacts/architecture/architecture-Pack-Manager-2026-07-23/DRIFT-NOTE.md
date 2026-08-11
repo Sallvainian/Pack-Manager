@@ -1,4 +1,4 @@
-# Drift note — ARCHITECTURE-SPINE.md revision 3 → 11
+# Drift note — ARCHITECTURE-SPINE.md revision 3 → 12
 
 **Date:** 2026-07-25 · **Intent:** update · **Run folder:** this directory ·
 **Memlog:** `.memlog.md`. Each run's entries are bounded by its own
@@ -1087,3 +1087,85 @@ records the supersession — only a decision can supersede a decision." `docs/DE
 **D38** does exactly that, at `:583` — "D15's disabled-checkbox mechanism is superseded;
 its substance is not" — landed in commit `d7a7696`. Recorded here rather than fixed: a
 full re-verification of that row is its own pass, and this run was scoped to two defects.
+
+---
+
+## 2i. Revision 12 — the maintainer-edits row, closed
+
+**Date:** 2026-08-11 · **Intent:** update, targeted · **Scope:** the one row revision 11
+left open, which is the pass §2h said would be "its own." No `AD` was created, retired,
+renumbered, or given a new rule; the inventory is unchanged at 22 live ids (1–5, 11, 12,
+16–30). `lint_spine.py` returns `total_findings: 0`. Neither diagram was touched.
+
+### The defect was revision 11's, one row down
+
+The row read `**OPEN — record only; workflow-unowned files**`. Every edit it listed had
+landed on 2026-07-25 in commit `d7a7696` ("docs: record D38 and apply the six maintainer
+edits"), which touched exactly the three files the row names. **Its own worklist already
+said so:** `MAINTAINER-EDITS-2026-07-25.md` carries the header "Status: all six applied
+2026-07-25 (maintainer)". The row had not read it.
+
+This is the same shape as §2h's defect 1 — a row still commissioning work that landed —
+and the evidence here was more direct, because defect 1 required reading a separate
+proposal's frontmatter while this one required reading the row's own linked file.
+
+### All seven claims, re-verified against the committed files
+
+Verified item by item against the committed files rather than against `d7a7696`'s account
+of itself, which is the discipline this register demands. Working tree = `HEAD`.
+
+| Claim | Verdict |
+| --- | --- |
+| D15's supersession unrecorded — "only a decision can supersede a decision" | **Discharged.** `DECISIONS.md:583` is **D38**, "D15's disabled-checkbox mechanism is superseded; its substance is not", with `:585` naming the superseded clause verbatim. A decision did supersede a decision. |
+| D37's "Not yet applied" counts "wrong in all three columns" | **Discharged.** D37 now carries no counts and no columns — it names sections ("In `epics.md` they are FR-19, NFR-6, Story UX-PB.1d, Story UX-PB.5d, UX-PB.3a's plan-start announcement, and the DR-2 restatement's claim"), and the spine is absent, its limb already discharged. |
+| D36's title claims on-fill tokens "plural" | **Discharged.** `DECISIONS.md:488` reads "Bright fills use the palette's dark ink; `--color-on-accent` gets consumers" — singular, named. |
+| Checklist step 5 states D27 target state as verifiable today | **Discharged.** `:55` heads it "**Target state, not checkable yet:**"; `:58` frames the staging sentence as what the step *becomes* when Epic UX-PB ships. |
+| Checklist "validates no application accelerator" | **Discharged.** Step **9a** at `:113`; `:118` closes the loop by name — "`prd.md` §4.6 makes this checklist RP-2's validation route, and RP-2 enumerates exactly these". |
+| (Edit 6, from the `bmad-prd` gate) bypass list undercounts by one | **Discharged.** `:61` reads "**Three** paths deliberately bypass the gate today", naming `HealthBanner.tsx:43`. |
+| SPEC §0.1 never named F5 | **Discharged.** `SPEC.md:47`, inside §0.1 — "F5's transient-selection-plus-`Add N to Plan` model is superseded", citing AD-28 and D27. |
+| SPEC §4.11 still lists `⌘U` and the `Esc` rung | **Discharged by design** — see below. |
+
+### Two are discharged in a shape a later run could misread as unfinished
+
+Both are recorded in the row so a regeneration pass does not "fix" them back into defects.
+
+**§4.11 keeps its stale keyboard line under a superseded marker rather than a rewrite**
+(`:296`, "Retired: `Cmd+U upgrade selected` and the `Esc` *clear selection* rung"). That
+is the correct end state, not a half-measure: restating requirements inside a demoted file
+is precisely what created the two-authority problem `prd.md` §0.1 exists to end, so
+rewriting §4.11 would rebuild the condition the marker resolves.
+
+**Step 9a verifies `⌘L` as the *shipping* drawer toggle**, not AD-17's focus move. The
+`see below` pointer resolves at `:122`–`:128`, which names the shipping sink
+(`src/hooks/useKeyboard.ts:166`, `toggleDrawer()`), names AD-17's replacement, and says
+"do not check for that and do not report the difference as a failure". This file verifies
+the shipping build; it is the same shipping-vs-target split step 5 already uses. Writing
+either behaviour alone gives a step that fails every release or gets waved through.
+
+### One fact survives and owes no edit
+
+`--color-on-success` (`src/styles/theme.css:32`) still has **zero** consumers — repo-wide
+its only other occurrence is a *comment* at `tests/e2e/browser-style-contract.spec.ts:317`
+— while `--color-on-accent` has **three** via `text-on-accent` (`Button.tsx:7`, `:13`,
+`UpdateStatusItem.tsx:63`). The row had cited this as evidence D36's title overclaimed.
+D36's title was narrowed to name `--color-on-accent` alone, so it is now accurate
+**because of** the unused token rather than despite it. An unused design token is a code
+fact under AD-1, not a document divergence, and no file needs changing. Recorded so the
+row is not reopened for it.
+
+### Not done, and why
+
+**The Reviewer Gate was not run**, and this time that was a decision rather than a
+constraint: the owner weighed it against the change class and chose to skip. Revision 12
+creates no invariant — it flips one register row from `OPEN` to `RESOLVED` and records
+what was verified. Revision 10's six lenses remain the last full pass, now three revisions
+back. What did run: `lint_spine.py` (0 findings), an inventory check (22 `AD`s, unchanged;
+zero `[ASSUMPTION]`, `TODO`, `TBD`, or template comments), table integrity on the replaced
+row, and verification of every claim against its cited file this session.
+
+**`MAINTAINER-EDITS-2026-07-25.md` is now spent but still reads as a worklist.** Its
+header records that all six landed, but its body is ready-to-apply drafts, and **Edit 4
+must not be applied verbatim** — it quotes the retiring `ActivityDrawer` behaviour, which
+is exactly the amendment `d7a7696` made when it landed step 9a. Stamping each draft
+applied in place would close it. Recorded rather than done: the file is run-folder output,
+not a spine deliverable. Revisit condition: whenever a maintainer next opens it.
