@@ -1,4 +1,4 @@
-# Drift note — ARCHITECTURE-SPINE.md revision 3 → 10
+# Drift note — ARCHITECTURE-SPINE.md revision 3 → 11
 
 **Date:** 2026-07-25 · **Intent:** update · **Run folder:** this directory ·
 **Memlog:** `.memlog.md`. Each run's entries are bounded by its own
@@ -1000,3 +1000,90 @@ run against the UX inputs (`EXPERIENCE.md`, `DESIGN.md`) — those divergences a
 recorded from the other lenses' findings rather than swept directly; no additional
 human-facing rendering was produced; and the close step's `bmad-spec` routing was
 offered in conversation but not recorded here until now.
+
+---
+
+## 2h. Revision 11 — two recorded defects, and a third the fix uncovered
+
+**Date:** 2026-08-06 · **Intent:** update, targeted · **Scope:** two defects other runs
+recorded and routed here. No `AD` was created, retired, renumbered, or given a new rule;
+the AD inventory is unchanged at 22 live ids (1–5, 11, 12, 16–30). `lint_spine.py`
+returns `total_findings: 0`. Neither diagram was touched.
+
+### Defect 1 — the `epics.md` residuals row still read OPEN after its own run landed
+
+The row said `**OPEN — record only; do not edit epics.md here**`. The run it commissioned
+had already landed: commit `0960aab`, under
+`sprint-change-proposal-2026-07-25-spine-rev10-residuals.md` (`status: applied`). Left
+alone, the row tells a builder the file it governs is still divergent — the same class of
+error as the D36 passages that row itself was written to correct.
+
+Closed as **RESOLVED**, verified item by item against the committed `epics.md` rather
+than against the proposal's account of itself. `git status` returns zero lines for that
+path, so working tree = `HEAD` = `0960aab`. All seventeen items landed. Counts by
+`grep -c`: **AD-28 0 → 14**, **AD-29 0 → 17**, **AD-18 7 → 15**, **AD-27 32 → 39**, spine
+line-number citations **0**, `⌘U` 1 (the negation). `Cancelling` survives at six lines,
+every one a negation or the ordering warning.
+
+**The verification caught two errors in the row's own text**, which is why it was worth
+doing as a re-check rather than a rubber stamp:
+
+| The row said | Reality |
+| --- | --- |
+| "a `Clear` action and an `Esc` rung AD-28 deletes" | Not symmetrical. AD-28's rule text names **`Clear`** inside the closed scope-wide removal taxonomy, so `Clear` survives with a changed meaning — a membership removal, not a selection clear. Deleting it would have left a named shape in a closed taxonomy with no story owning it. **The rule text governs the row.** `Esc` is genuinely deleted and carries no replacement sink. |
+| "Those are the only two occurrences in `epics.md`" | Three. The count measured backticked capital-`C`; FR-13's inventory entry carried the word lowercase. A run trusting the count leaves one behind. |
+
+Two items in the row were never `epics.md`'s and stay open under their own owners:
+`EXPERIENCE.md` (→ `bmad-ux` Update, never a hand edit) and `docs/SPEC.md` §4.11 (→ the
+maintainer-edits row). Three more were left alone deliberately by the correct-course run
+and are **not** unapplied residuals — the `UX Design Requirements` pointer bullet, the
+self-declared historical amendment table, and the FR/NFR inventory, demoted under a
+PRD-authority header rather than excised.
+
+### Defect 2 — AD-28's `Esc` rule contradicted itself inside one bullet
+
+The bullet opened with "the cascade drops from three rungs to two and keeps close-dialog"
+and corrected itself four lines later with "There is no surviving second rung … so the
+cascade is close-dialog alone." Two builders could obey the same bullet and ship
+different cascades. The opening clause was quoting `prd.md` FR-6's **pre-AD-17** wording;
+the correction is current and agrees with AD-17's own `Esc` rule and with FR-6 as it now
+reads. Recorded by the `bmad-prd` run's memlog and by the correct-course run
+(§5 item 1, "the spine fix belongs to `bmad-architecture`"), both of which followed the
+current clause and left the spine alone rather than hand-editing workflow output.
+
+Rewritten to state the end state once — **close-dialog alone** — while keeping every
+load-bearing clause: why the rung is deleted rather than re-pointed (a re-pointed `Esc`
+mass-writes tombstones and poisons a draft against `Update Everything`), and `prd.md`
+FR-6's rule that `Esc` is **narrowed, not deleted**, so no story author removes the
+surviving rung along with the two that go.
+
+### Found while fixing defect 2 — a stale PRD divergence asserted in two places
+
+The bullet closed by recording `prd.md` RP-2's "(toggle the activity surface)"
+parenthetical as a live PRD divergence, and the **maintainer edits** row repeated it.
+Both are false as of this revision: `grep -c "toggle the activity surface"` on `prd.md`
+returns **0**, and RP-2 now reads "`⌘L` is a focus move, not a toggle. Planned — D27–D30
+for the behavior; the registration ships." A `bmad-prd` Update corrected it after
+revision 10 was written.
+
+Corrected in both places, because carrying a verifiably false claim forward inside the
+rule being fixed would have been a defect of this run's own making. The maintainer-edits
+listing was **also a routing error**: `prd.md` is `bmad-prd` output, not a
+workflow-unowned file, so it never belonged in a row whose whole premise is "files no
+workflow owns."
+
+### Not done, and why
+
+**The Reviewer Gate was not run.** The session forbids spawning subagents unless the user
+asks, so the rubric walker and the `finalize_reviewers` lenses were skipped rather than
+run degraded. What did run: `lint_spine.py` (0 findings), an inventory check (22 `AD`s,
+unchanged; zero `[ASSUMPTION]`, `TODO`, `TBD`, or template comments), and table-integrity
+and citation checks on both edits. **The last full gate remains revision 10's six
+lenses**, which predate these three corrections. Offered to the owner rather than assumed.
+
+**The rest of the maintainer-edits row was not re-verified**, and at least one more of its
+claims is stale: it says D15's mechanism clause is overridden by AD-16 with "nothing
+records the supersession — only a decision can supersede a decision." `docs/DECISIONS.md`
+**D38** does exactly that, at `:583` — "D15's disabled-checkbox mechanism is superseded;
+its substance is not" — landed in commit `d7a7696`. Recorded here rather than fixed: a
+full re-verification of that row is its own pass, and this run was scoped to two defects.
