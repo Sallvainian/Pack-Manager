@@ -2,7 +2,7 @@
 title: Pack-Manager
 status: final
 created: 2026-07-25
-updated: 2026-07-25
+updated: 2026-08-18
 ---
 
 # PRD: Pack-Manager
@@ -136,14 +136,14 @@ This group carries the product's two hardest-won correctness rules. Both look li
 
 #### FR-1: Detect supported Managers
 
-**Status:** Shipping.
+**Status:** Partial. Detection, ownership evidence, coherent replacement, and Finder/Dock launch all ship. The D40 install-hint extension — hints for all six Managers and the all-absent guidance panel — is Planned, owned by Story 2.5 (added 2026-08-18 by `sprint-change-proposal-2026-08-18.md`). Named inline below.
 
 The user can see which of the six Managers are present on the machine, at launch and on demand, without configuring anything.
 
 **Consequences (testable):**
 - All six Managers are probed at launch and on an explicit Re-detect action.
 - Each present Manager reports its resolved path, version where available, ownership classification, and a human-readable evidence string.
-- Absence is a normal state — rendered as "Not installed" with a copyable install hint where one is known — never an error.
+- Absence is a normal state — rendered as "Not installed" with a copyable install hint — never an error. **Planned — D40 (Story 2.5):** the hint is known for **all six** Managers, not only mas (today `detect.rs`'s `install_hint` returns one only for mas); hints are static, copy-only commands through the existing `CopyableCommand` treatment — never an executing Install button, which D40 rejects on the installer non-goal, SM-3's no-privilege promise, and the no-shell boundary — and a machine where all six Managers are absent gets a Dashboard guidance panel (no package managers found; install one yourself, Homebrew is the usual first; then `Refresh All`) that never reads as `Warning`, because absence is not failure — with `Update Everything` disabled with a stated reason while nothing is installed.
 - Detection succeeds when the app is launched from Finder or the Dock, not only from a terminal.
 - One coherent detection result replaces the previous one; a partial result never overwrites a complete one.
 - Detection details appear in the Environment Report and in the diagnostics export.
@@ -291,7 +291,7 @@ Execution proceeds only when the submitted plan matches both the reviewed plan a
 
 #### FR-9: Admit multi-group plans atomically
 
-**Status:** Shipping.
+**Status:** Partial. Atomic all-or-none admission, conflict serialization, the concurrency cap, queue explanations, and the D22 no-retry contention rule all ship. The one-active-attempt rule is the Planned — D30 consequence below, owned by Story UX-PB.2b. Retagged from Shipping on 2026-08-18 under §9.2's rule — see §9.3.
 
 A confirmed plan is admitted all-or-none. The user is never left with a partially submitted bulk update.
 
@@ -482,7 +482,7 @@ One action produces one support bundle that explains the machine without disclos
 
 #### FR-19: Provide one coherent macOS interface
 
-**Status:** Shipping for the current navigation model. The D30 navigation changes — Activity as a first-class destination, the Results surface, and one-plan-per-row History — are Planned.
+**Status:** Partial. Shipping for the current navigation model; the D30 navigation changes — Activity as a first-class destination (Story UX-PB.3b), the Results surface (UX-PB.3d), and one-plan-per-row History (UX-PB.4a) — are Planned. Retagged from Shipping-prose on 2026-08-18 under §9.2's rule — see §9.3.
 
 The app reads as one focused macOS control surface, not six command wrappers in a window.
 
@@ -524,8 +524,8 @@ Pointer-facing explanations of *why* a Package is ineligible also stay; only the
 The user learns about a new version without asking, and the download does not interrupt their work.
 
 **Consequences (testable):**
-- Checks run at launch, every six hours, and on demand from the application menu.
-- A newer authorized release downloads automatically in the background. Automatic **download** is required behavior, not an optional outcome — installation is the machine mutation, and that stays user-gated.
+- Checks run at launch, every six hours, and on demand from the application menu — the two automatic triggers hold while `Check for application updates automatically` (FR-17's eighth setting, default on) is enabled; the menu check is always available (D39 records the gate).
+- A newer authorized release found by any check downloads automatically in the background. Automatic **download** is required behavior, not an optional outcome — installation is the machine mutation, and that stays user-gated.
 - Checking, available, downloading, ready, and failure states are visible.
 - Only a *manual* check may surface a notification. An automatic check that finds nothing, or that fails while offline, stays invisible, and a repeated payload for the same terminal state does not re-notify.
 - Package work remains understandable and uninterrupted throughout.
@@ -734,12 +734,7 @@ Calibrated to what this project is. D33 established the scale on observable evid
 
 ## 9. Open Questions
 
-1. **Does a downloaded application update survive a relaunch that was not the update restart?** RP-1 requires that failed or interrupted downloads never present as Ready, but the persistence expectation for a *successful* pending download across an ordinary quit is unstated.
-2. **What is the first-run experience for a machine with none of the six Managers installed?** Every empty state is defined per-Manager; the all-absent case is not.
-3. **Can the user clear or delete History entries?** Automatic retention is defined (newest 1,000). User-initiated deletion is not.
-4. **Does the diagnostics export get a preview or redaction step before the user shares it?** Contents are enumerated and the inherited environment is excluded, but there is no review-before-share affordance.
-
-All four are non-blocking: each can be resolved during the epic that touches it. This document carries **no phase-blockers**.
+All four questions this section carried were closed on 2026-08-18 by `docs/DECISIONS.md` **D39–D42** — see §9.3 for each closure and where its consequences landed. This document carries **no phase-blockers** and, as of 2026-08-18, **no open questions**.
 
 **Closed since the first draft:** what happens on quit with work *queued* but not running, and on an OS-initiated shutdown. Both are decided by `ARCHITECTURE-SPINE.md` AD-30 and are recorded in FR-14 — see §9.2.
 
@@ -767,7 +762,7 @@ Two consequences carried into this document:
 - **FR-14's quit promise** was unqualified over all quits, asserting a choice AD-30 deliberately withholds on OS-initiated shutdown. Now scoped, with the carve-out and its reason stated.
 - **FR-18 was `Shipping` with a closed contents list**, so an implementer could ship an archive with no plan-attempt records and believe the requirement met. It now carries a Planned — D29 limb for that journal's raw lines.
 
-**The rule behind that last one is general, and is stated here once rather than per-FR.** A requirement whose consequences include a **Planned** limb is **Partial**, never Shipping — §0's definition admits no third reading, and a Shipping tag over an unbuilt consequence is exactly the trap FR-18 set. Applying it cost RP-2 its Shipping tag in this pass (⌘L's sink and ⌘A's re-point are both Planned). **FR-9 and FR-19 have the same shape and are not yet reconciled** — FR-9 is tagged Shipping while carrying a `Planned — D30` consequence, and FR-19's status is prose that reads Shipping over a limb the FR marks unmet. Both are recorded rather than silently retagged: retagging them is a requirements change, and the next Update should make it deliberately.
+**The rule behind that last one is general, and is stated here once rather than per-FR.** A requirement whose consequences include a **Planned** limb is **Partial**, never Shipping — §0's definition admits no third reading, and a Shipping tag over an unbuilt consequence is exactly the trap FR-18 set. Applying it cost RP-2 its Shipping tag in this pass (⌘L's sink and ⌘A's re-point are both Planned). **FR-9 and FR-19 had the same shape and were recorded here unreconciled** — FR-9 was tagged Shipping while carrying a `Planned — D30` consequence, and FR-19's status was prose that read Shipping over a limb the FR marked unmet. Both were recorded rather than silently retagged, because retagging is a requirements change to make deliberately. **Discharged 2026-08-18:** the owner directed the retag and both now read Partial. One deliberate exception remains: FR-23 keeps its Shipping tag over its `Planned — D27–D30` routing bullet, because the owner directed that tag explicitly when the FR was authored (its constraint on what becomes runnable ships in full; the Planned bullet describes Epic UX-PB's future re-routing of the call site, not an unmet limb of the constraint). Reconciling FR-23's tag with this rule is an owner call, recorded here rather than made silently.
 
 **A Reviewer Gate then ran against this pass and found six more defects, all corrected here.** Four were stale-baseline damage predating the Update: the PRD asserted the 4.5:1 contrast fix and its CI guard were uncommitted and absent from `HEAD`, when `a201fb0` had landed both and three further commits followed — FR-19, NFR-6 and §7.1 all said so, and all three are corrected, with the code baseline re-stamped from `5972109` to `1ac959e`; the D37 reconciliation queue named four artifacts when two were already done; FR-11 certified two identity-area elements that exist nowhere in `src/`; and **health fixes shipped with no requirement anywhere in §4** — now FR-23. Two came from the Update itself: RP-2 gained normative prose while tagged Shipping, and FR-6's evidence table over-read `upgradeAll()` as a divergent predicate when its Manager-wide scope is deliberate and self-consistent with the count its own label reports. The gate also refuted six findings, including the sharpest available criticism — that this PRD had become downstream of the architecture while claiming primacy — on the ground that this very section rules *against* an AD and routes the fix out.
 
@@ -775,9 +770,23 @@ Two consequences carried into this document:
 
 ---
 
+### 9.3 Closed by `docs/DECISIONS.md` D39–D42 (owner decisions, 2026-08-18)
+
+All four remaining open questions were resolved by dated owner decisions; per §0, a decision later than 2026-07-25 supersedes anything here. Recorded so no future reader re-litigates them. The recommendations were adversarially verified against `HEAD` before the owner accepted them.
+
+**Q1 — Does a downloaded application update survive a relaunch that was not the update restart? CLOSED by D39: no, and that is the decided behavior, not a gap.** The payload is process-scoped memory (`app_update.rs` holds it in `AppUpdater.downloaded`, never on disk; a fresh process constructs at `Idle` with no restore path), so `Ready` is always re-derived by the live process. Recovery is the launch check and six-hour heartbeat while `autoCheckForUpdates` (default on) holds; with it off, the manual menu check — consistent with opting out, not a defect. RP-1 is unchanged: the saved trigger policy still survives a normal relaunch; only in-flight download state is ephemeral.
+
+**Q2 — What is the first-run experience for a machine with none of the six Managers installed? CLOSED by D40, owner-modified.** No onboarding flow. Six muted `Not installed` cards, each carrying a copyable install hint — mas's treatment extended to all six — plus a disabled `Update Everything` and a Dashboard guidance panel that never reads `Warning`, because absence is not failure. An executing Install button is rejected by D40 (installer non-goal §6, SM-3, no shell surface, FR-23's closed immediate-execution set). Realized by **Story 2.5**, added to Epic 2 by `sprint-change-proposal-2026-08-18.md`; FR-1 now carries the Planned limb and is retagged Partial under §9.2's rule.
+
+**Q3 — Can the user clear or delete History entries? CLOSED by D41: no.** No per-row delete, no Clear History, no retention knob; automatic compaction to the newest 1,000 records stays the only pruning. History rows are immutable evidence (D29) and failure legibility is a success metric (SM-4). The one genuine deletion motive — keeping an entry out of a shared diagnostics bundle — is a sharing concern answered by Q4's closure, never by destroying local evidence. Out-of-band deletion of `operations.jsonl` remains possible and unsupported: History and Interrupted reconstruction promise nothing after it, while the application itself still starts and contains the loss (NFR-2, AD-19).
+
+**Q4 — Does the diagnostics export get a preview or redaction step before the user shares it? CLOSED by D42: no.** The guarantee is construction-time — closed allowlist, inherited environment excluded, symlink substitution rejected (FR-18, NFR-5) — and the product has no transmit path (§6). The review affordance is the local ZIP plus the visible timestamped path and success/failure both invocation points must show, which is Story 6.5's acceptance criterion rather than new work. The honest residue — the home path and command output the archive legitimately carries — is named rather than denied: FR-18's closed allowlist is what bounds it today, and AD-18's per-field disclosure review keeps any future field from widening it.
+
+**FR-9 and FR-19 retagged to Partial (owner-directed, 2026-08-18).** §9.2 recorded both as Shipping over Planned limbs and instructed that the retag be made deliberately rather than silently; the owner so directed in this pass. FR-9's shipping substance (atomic admission, serialization, the cap, queue reasons, D22) and FR-19's (the current navigation model, palette, contrast guard, focus mechanism, floors) are unchanged — only the tags now follow §9.2's Partial-never-Shipping rule, with the Planned limbs' owning stories named inline. FR-23's Shipping tag stands as §9.2's one recorded exception, per the owner's original direction.
+
 ## 10. Review Record and Judgment Calls
 
-No `[ASSUMPTION]` tags were needed. Every requirement in this document traces to a named source — `docs/SPEC.md`, `docs/DECISIONS.md` D1–D37, `epics.md` FR/NFR lines 53–450, `ARCHITECTURE-SPINE.md` revision 10, `EXPERIENCE.md`, `DESIGN.md`, or verification against `src/` and `src-tauri/`. Code claims were first verified at `5972109` and re-verified at `1ac959e` during the revision-10 Update pass; where the two disagree, `1ac959e` governs and §9.2 records what moved. Where a source was wrong, §0.1 records the correction rather than assuming past it. Where a source was silent, §9 records the gap rather than filling it.
+No `[ASSUMPTION]` tags were needed. Every requirement in this document traces to a named source — `docs/SPEC.md`, `docs/DECISIONS.md` D1–D42, `epics.md` FR/NFR lines 53–450, `ARCHITECTURE-SPINE.md` revision 10, `EXPERIENCE.md`, `DESIGN.md`, or verification against `src/` and `src-tauri/`. Code claims were first verified at `5972109` and re-verified at `1ac959e` during the revision-10 Update pass; where the two disagree, `1ac959e` governs and §9.2 records what moved. The 2026-08-18 Update pass (§9.3, FR-1, FR-20) verified its code claims against that day's `HEAD`. Where a source was wrong, §0.1 records the correction rather than assuming past it. Where a source was silent, §9 records the gap rather than filling it.
 
 This document went through a reviewer gate on 2026-07-25: seven reconcilers, one per source input, and six review lenses including the quality-rubric walker, with every finding facing an adversarial verifier required to open the cited file and default to refuting. The gate raised 62 findings across the review lenses alone, of which 53 were refuted. Its verdict was *Good*, with **downstream usability** the one thin dimension — the handoff, not the thinking. Everything it confirmed has been applied, including two criticals: FR-7 had removed a safety gate without carrying the three compensations that were the price of removing it, and FR-14 described a quit guard that is not wired to anything. Reviewer output is preserved in this folder as `reconcile-*.md` and `review-*.md`.
 
