@@ -1,0 +1,169 @@
+{
+  "workflow_version": "1.2.0",
+  "timestamps": {
+    "started": "2026-07-25T09:14:35-0400",
+    "last_updated": "2026-07-25T09:47:30-0400",
+    "completed": "2026-07-25T09:47:30-0400"
+  },
+  "mode": "full_rescan",
+  "scan_level": "deep",
+  "project_root": "/Users/sallvain/Projects/Pack-Manager",
+  "project_knowledge": "/Users/sallvain/Projects/Pack-Manager/docs",
+  "completed_steps": [
+    {
+      "step": "step_1",
+      "status": "completed",
+      "timestamp": "2026-07-25T09:16:10-0400",
+      "summary": "Re-derived classification independently of the archived value: package.json has no workspaces key, src-tauri/Cargo.toml has no [workspace] table, and no client/server/api/packages/apps directories exist; the desktop row's key_file_patterns matched on package.json + src-tauri/Cargo.toml + src-tauri/tauri.conf.json. Cargo package header reads name = \"pack-manager\", version = \"1.0.1\", edition = \"2021\". User confirmed: monolith, 1 part 'pack-manager', project_type_id=desktop, root /Users/sallvain/Projects/Pack-Manager. Two structural notes: documentation-requirements.csv holds 11 data rows (wc -l = 12 with header), not the 12 the workflow prose claims; and new top-level directories agents/, attachments/, tickets/ each contain 0 files, so the tree reads clean only because git does not track empty directories."
+    },
+    {
+      "step": "step_2",
+      "status": "completed",
+      "timestamp": "2026-07-25T09:16:40-0400",
+      "summary": "Inventoried 94 tracked markdown files (git ls-files '*.md'): 20 outside _bmad-output/ and 74 within it. User directed three focus areas: (1) re-ground against the 31 files changed since the prior scan - design tokens/focus ring across src/components/primitives + src/styles/theme.css, the window-drag fix, src-tauri/src/commands.rs, capabilities/default.json, ci.yml/release.yml; (2) propagate the 1.0.0 -> 1.0.1 version bump through every doc claim; (3) re-read docs/SPEC.md and docs/DECISIONS.md, both changed 08:22 today, and re-ground dependent claims."
+    },
+    {
+      "step": "step_3",
+      "status": "completed",
+      "timestamp": "2026-07-25T09:22:00-0400",
+      "summary": "Tech stack re-grounded from package-lock.json (lockfileVersion 3) and src-tauri/Cargo.lock. Every dependency version is UNCHANGED from the prior scan - git diff 6f21be4..HEAD on package.json, src-tauri/Cargo.toml, and src-tauri/tauri.conf.json shows the version line as the only edit in each. Resolved versions: React/react-dom 19.2.8, TypeScript 7.0.2, Vite 8.1.5, @vitejs/plugin-react 6.0.4, Tailwind + @tailwindcss/vite 4.3.3, Zustand 5.0.14, @tanstack/react-virtual 3.14.8, Vitest 4.1.10, RTL 16.3.2, jest-dom 7.0.0, jsdom 29.1.1, @playwright/test 1.61.1, faker 10.5.0, @tauri-apps/api 2.11.1, cli 2.11.4, @types/react 19.2.17, @types/react-dom 19.2.3; Rust: tauri 2.11.5, tauri-build 2.6.3, tokio 1.53.1, tauri-plugin-updater 2.10.1, tauri-plugin-opener 2.5.4, nix 0.31.3, uuid 1.24.0, serde 1.0.229, serde_json 1.0.151, thiserror 2.0.19, tracing 0.1.44, chrono 0.4.45, anyhow 1.0.104, which 8.0.5, dirs 6.0.0. Cargo.lock still holds 547 locked crates. THE ONE CHANGE: app version 1.0.0 -> 1.0.1 across package.json, package-lock.json root, src-tauri/Cargo.toml, src-tauri/Cargo.lock, src-tauri/tauri.conf.json (release-please, 8a4cf6a)."
+    },
+    {
+      "step": "step_4",
+      "status": "completed",
+      "timestamp": "2026-07-25T09:26:00-0400",
+      "summary": "Conditional analysis per the desktop row (requires_api_scan=false, requires_data_models=false, requires_state_management=true, requires_ui_components=true, requires_deployment_config=true, requires_asset_inventory=true, requires_hardware_docs=false). Counts re-verified: 37 non-test TSX modules under src/components/ across 8 feature folders (activity, dashboard, dialogs, history, manager, primitives, settings, shell), 39 counting src/App.tsx and src/main.tsx; 5 Zustand stores + store/index.ts; 20 registered commands (lib.rs invoke_handler) and 6 event constants (events.rs) - both UNCHANGED; 34 Rust modules under src-tauri/src; 23 Vitest files; 4 Playwright specs; 6 workflows; 17 packaging icons; 24 parser fixtures + 15 ipc fixtures. CHANGED: Rust test attributes 259 -> 260 (169 #[test] + 91 #[tokio::test]), 11 still #[ignore] - the +1 is commands.rs app_update_is_refused_while_an_operation_is_queued_or_running. FIVE SUBSTANTIVE SOURCE CHANGES found in the 6f21be4..HEAD diff, each contradicting a current doc claim: (1) src-tauri/capabilities/default.json now grants a THIRD permission, core:window:allow-start-dragging; (2) install_app_update now enforces refusal in Rust via refuse_app_update_while_busy - the documented 'frontend convention only' gap is closed; (3) ci.yml rust/build-smoke and release.yml build all moved macos-14 -> macos-15 (D34), which also closes D31's OPEN notarization question; (4) theme.css adopted the 'Aurora Control Deck' palette (D35) - every colour value changed and five tokens were added (--color-bg-shell, --color-focus-ring, --color-on-accent, --color-on-success, --color-violet); (5) focus is now drawn as outline-2/outline-focus-ring, never ring-*, across 20 components, because WebKit does not paint box-shadow on native-appearance form controls. DECISIONS.md now runs D1-D35 (37 entries counting D23a and D25a), not D1-D33."
+    },
+    {
+      "step": "step_5",
+      "status": "completed",
+      "timestamp": "2026-07-25T09:30:00-0400",
+      "summary": "source-tree-analysis.md verified rather than rewritten. git diff --name-status 6f21be4..HEAD returns zero A/D entries outside _bmad-output/ - every change since the prior scan was a modification to an existing file - so the annotated tree is structurally unchanged. Path validation re-run: 33 fully-qualified paths resolve, and the entries that a naive existence check flags are bare filenames used in prose (commands.rs, queue.rs, ci.yml) or resolve once qualified (dev/fixtures/ipc/app_state.json, src/components/primitives/, src-tauri/src/managers/parse/, src/store/index.ts). The one apparent miss, public/, is cited at line 211 as ABSENT - 'The React interface has no public/ directory' - and is correct."
+    },
+    {
+      "step": "step_6",
+      "status": "completed",
+      "timestamp": "2026-07-25T09:33:00-0400",
+      "summary": "development-guide.md, deployment-guide.md, and contribution-guide.md re-verified and corrected. Every documented command still resolves to a real package.json script (dev, build, preview, test, test:e2e, test:e2e:typecheck, test:e2e:headed, test:e2e:debug, test:e2e:ui, test:e2e:report, test:e2e:install, test:e2e:install:ci, test:rust, tauri) or a real cargo invocation. CORRECTED for D34: development-guide.md line 9 and deployment-guide.md line 66 both said the build runs on macOS 14; all three pins now read macos-15. deployment-guide.md's Supported Target paragraph no longer leaves the notarytool question open - D34 closed it. Re-confirmed unchanged: Node 24 via .nvmrc, the base64-decode-then-minisign updater check, both darwin keys in latest.json, attach_to_tag repair mode, SHA-pinning in release.yml/test.yml versus floating tags in ci.yml, CSP null, minimumSystemVersion 15.0, and the non-standard top-level allowScripts block that nothing reads."
+    },
+    {
+      "step": "step_8",
+      "status": "completed",
+      "timestamp": "2026-07-25T09:35:00-0400",
+      "summary": "architecture.md corrected at three points. (1) The decisions preamble gained a D34/D35 paragraph: D34 moves all three runner pins to macos-15 and leaves D20's stable-image rule intact, D35 adopts the Aurora Control Deck palette and the dedicated focus ring; neither alters structure. (2) Security and Trust Boundaries: the capability claim said permissions are scoped 'to Tauri core and opener defaults', which the third grant core:window:allow-start-dragging falsified - now stated as three grants with the titleBarStyle Overlay reason (verified at src-tauri/tauri.conf.json:20). A new bullet records that install_app_update now refuses in Rust while any operation is Queued or Running. (3) Current Constraints: the notarytool OPEN item was replaced with D34's closure of it."
+    },
+    {
+      "step": "step_9",
+      "status": "completed",
+      "timestamp": "2026-07-25T09:38:00-0400",
+      "summary": "project-overview.md and component-inventory.md corrected. project-overview.md's limitation bullet no longer reports notarytool acceptance as OPEN; it records D31 raising it and D34 closing it. component-inventory.md gained the D35 palette provenance on the theme.css bullet (five added tokens named, sev-mirror relationship preserved), a new focus-mechanism paragraph under Reusable Primitives explaining why focus is an outline and never a ring-* (WebKit does not paint box-shadow on native-appearance form controls inside WKWebView) with the outline-none warning and the one deliberate surviving ring-accent at src/components/manager/PackageRow.tsx:85 - verified verbatim as 'highlighted ? \"ring-2 ring-inset ring-accent\" : \"\",' and the only ring-accent in src/. Its Vitest figure moved 133 -> 134 tests to match the measured run."
+    },
+    {
+      "step": "step_10",
+      "status": "completed",
+      "timestamp": "2026-07-25T09:40:00-0400",
+      "summary": "index.md updated at four points: the DECISIONS link description now records D1-D35 with D34 and D35 summarized (and corrects 'D25 supersedes D20' to D25a, which is where docs/DECISIONS.md:144 actually places the supersession); Prerequisites now says CI builds on macos-15; the Quick Reference test line moved from 248 passing/133 tests to 249 passing/134 tests. All eight generated docs had their Date/Last updated header moved from 2026-07-24 to 2026-07-25. No incomplete-documentation markers were introduced, so no _(To be generated)_ entries exist."
+    },
+    {
+      "step": "step_11",
+      "status": "completed",
+      "timestamp": "2026-07-25T09:46:00-0400",
+      "summary": "Validation passed: 8/8 generated docs present (1,711 lines); 0 strict and 0 fuzzy incomplete markers; 51/51 unique relative links resolve; no trailing whitespace; state file is valid JSON. All code gates green: Vitest 23 files/134 tests passed, tsc --noEmit passed, test:e2e:typecheck passed, Vite build passed (92 modules), cargo fmt --check passed, cargo clippy --all-targets -D warnings passed, cargo test --locked 249 passed / 0 failed / 11 ignored. Cross-checks against the changed planning artifacts: ARCHITECTURE-SPINE.md AD-16 still exists and is still 'Upgrade Plan intent and confirmed Plan Attempts are distinct durable domains', so architecture.md:22's citation stands; sprint-status.yaml holds 42 keys of which 38 are backlog (four epic keys + 28 ux-pb stories + six Epic 2/3/6 survivors), so the docs' 28+6 claim stands; epics.md:458 still reads 'Epic UX-PB is the primary build queue and runs first; the six surviving Epic 1-6 stories carry no inter-epic dependencies', and only Epics UX-PB, 2, 3, and 6 have headings. One addition made from epics.md:307: D35 shipped the canonical design-token set that had blocked UX-PB.1e and UX-PB.5d, so nothing now blocks starting the UX-PB queue. At the review gate the user chose Finalize."
+    },
+    {
+      "step": "step_12",
+      "status": "completed",
+      "timestamp": "2026-07-25T09:47:30-0400",
+      "summary": "Full rescan (deep) complete. docs/index.md remains the primary AI development entry point. All eight generated docs changed this run: seven for content corrections and all eight for the date header."
+    }
+  ],
+  "current_step": "completed",
+  "findings": {
+    "project_classification": {
+      "repository_type": "monolith",
+      "parts_count": 1,
+      "primary_language": "Rust and TypeScript",
+      "architecture_type": "Integrated Tauri desktop application",
+      "primary_technology": "Tauri 2 desktop app with a React 19 + TypeScript interface and a Rust native core",
+      "architecture_summary": "Single bundled application; React and Rust layers connected through local Tauri IPC commands and events"
+    },
+    "user_context": "Full rescan (deep) triggered by four commits landing after the prior run completed at 00:41: 03e03fa (window-drag fix), 8a4cf6a (release 1.0.1), c8c1f9a, 5972109. 31 files under src/, src-tauri/, tests/, .github/ changed and the app version moved 1.0.0 -> 1.0.1. Focus: the changed-file surface, version-bump propagation, and SPEC.md/DECISIONS.md drift.",
+    "technology_stack": [
+      {
+        "part_id": "pack-manager",
+        "tech_summary": "app 1.0.1; Tauri 2.11.5 + Rust 2021 native core (547 locked crates); React 19.2.8, TypeScript 7.0.2, Vite 8.1.5, Tailwind 4.3.3, Zustand 5.0.14, TanStack React Virtual 3.14.8; tests: Vitest 4.1.10, RTL 16.3.2, Playwright 1.61.1, cargo tests; macOS floor 15.0, built on macos-15. Every dependency version unchanged from the 2026-07-25T00:41 scan; only the app version moved."
+      }
+    ],
+    "conditional_analysis": {
+      "state_management": "5 Zustand stores (managers, packages, operations, ui, appUpdate) plus store/index.ts derived selectors; Rust AppState; file-backed settings/journal",
+      "ui_components": "37 non-test TSX modules under src/components/ across 8 feature folders; 39 TSX files counting src/App.tsx and src/main.tsx",
+      "ipc_surface": "20 registered #[tauri::command] handlers; 6 event channels (detection:updated, snapshot:updated, op:status, op:output, op:stalled, appUpdate:status)",
+      "assets": "17 packaging icons under src-tauri/icons + dev/icon/icon-1024.png and generate_icon.py",
+      "localization": "English-only; no i18n framework",
+      "deployment_config": "6 workflows under .github/workflows plus dependabot.yml; all three macOS runner pins now macos-15"
+    },
+    "changes_since_last_scan": {
+      "baseline": "6f21be4 (the prior doc run's last commit); HEAD 5972109",
+      "code": "31 files under src/, src-tauri/, tests/, .github/ - all modifications, zero additions or deletions. capabilities/default.json gained core:window:allow-start-dragging; commands.rs gained refuse_app_update_while_busy plus its unit test; theme.css took the Aurora Control Deck palette and five new tokens; 20 components moved focus from ring-* to outline-*; AppLayout gained a 38px data-tauri-drag-region strip; browser-style-contract.spec.ts moved its assertions to outline and added a selection-versus-focus test; ci.yml and release.yml moved to macos-15; .gitignore stopped ignoring **/.memlog.md.",
+      "version": "1.0.0 -> 1.0.1 across all five release-please-owned version files (8a4cf6a)",
+      "decisions": "DECISIONS.md gained D34 (macos-15 runners; closes D31's OPEN notarization question) and D35 (palette adoption + dedicated outline focus ring). It now runs D1-D35, 37 entries counting D23a and D25a.",
+      "planning": "epics.md residual pile cleared (5972109) and the architecture spine reached revision 9 with a DRIFT-NOTE and 20 review files; sprint-status.yaml is unchanged at 38 backlog entries."
+    },
+    "final_summary": {
+      "generated_files": 8,
+      "files_changed_this_run": 8,
+      "primary_entry_point": "docs/index.md",
+      "verification_summary": "Vitest 23 files/134 tests passed; tsc --noEmit passed; test:e2e:typecheck passed; Vite build passed (92 modules); cargo fmt --check passed; cargo clippy --all-targets -D warnings passed; cargo test --locked 249 passed, 0 failed, 11 ignored; doc validation passed (8/8 files, 1,711 lines, 0 incomplete markers strict+fuzzy, 51/51 relative links resolve, 0 trailing whitespace, state file valid JSON)",
+      "open_risks": "_bmad-output/project-context.md is mid-regeneration by a concurrent session (status: in-progress, pending_update discovered 2026-07-25T09:13) and still asserts 'App version 1.0.0' at line 49 while its own line 25 records the move to 1.0.1; it also still carries the retired 'frontend convention only' app-update gap, the macos-14 pin, the D1-D33 range, and the capability set of two. Rust toolchain remains unpinned (no rust-toolchain.toml) while Node is pinned to 24. Tauri CSP is null. D27-D30 remain decided but unimplemented. Older prose retains pre-updater 17-command/5-event counts and conflicting historical mas status. docs/RELEASE-CHECKLIST.md carries an uncommitted edit documenting the new Rust guard; its citation to commands.rs:810 was verified correct and the file was left untouched.",
+      "next_checks": "Let the in-flight bmad-generate-project-context run finish and confirm it applied all five drift corrections. Run npm run test:e2e for the browser journeys, which this scan did not execute - the style contract spec changed substantially and its new selection-versus-focus test has not been run here. Run cargo test -- --ignored for real-machine detection and Homebrew behavior. D34 removed the reason for the manual notarization Release run the prior scan recommended."
+    }
+  },
+  "outputs_generated": [
+    "project-scan-report.json",
+    "index.md",
+    "project-overview.md",
+    "architecture.md",
+    "component-inventory.md",
+    "source-tree-analysis.md",
+    "development-guide.md",
+    "deployment-guide.md",
+    "contribution-guide.md"
+  ],
+  "resume_instructions": "Full rescan (deep) complete on 2026-07-25 at 09:47. All eight generated docs were rewritten or corrected this run. Begin future brownfield planning from docs/index.md. Prior scan state archived at docs/.archive/project-scan-report-2026-07-25T091107.json",
+  "project_types": [
+    {
+      "part_id": "pack-manager",
+      "project_type_id": "desktop",
+      "display_name": "Pack-Manager Desktop Application",
+      "root_path": "/Users/sallvain/Projects/Pack-Manager"
+    }
+  ],
+  "validation_status": {
+    "last_validated": "2026-07-25T09:46:00-0400",
+    "validation_errors": [],
+    "checks_passed": [
+      "All 8 generated docs plus project-scan-report.json exist (1,711 lines total)",
+      "51 unique relative links across all 8 docs resolve",
+      "All fully-qualified paths named in the source-tree-analysis annotated tree exist; public/ is correctly cited as absent",
+      "No incomplete-documentation markers remain (strict or fuzzy)",
+      "No trailing whitespace in generated docs",
+      "project-scan-report.json parses as valid JSON",
+      "Vitest: 23 files and 134 tests passed",
+      "TypeScript no-emit check passed under TypeScript 7.0.2",
+      "Playwright TypeScript project check passed",
+      "Vite production build passed (92 modules) under Vite 8.1.5",
+      "cargo fmt --check passed",
+      "cargo clippy --all-targets with warnings denied passed",
+      "cargo test --locked: 249 passed, 0 failed, 11 ignored"
+    ],
+    "documented_risks": [
+      "_bmad-output/project-context.md is mid-regeneration by a concurrent session and carries five now-stale claims plus an internal 1.0.0/1.0.1 contradiction",
+      "Rust toolchain is not repository-pinned (no rust-toolchain.toml); Node is pinned to 24 via .nvmrc",
+      "Tauri CSP is null",
+      "The D27-D30 upgrade experience is decided but not implemented",
+      "Older comments/prose retain pre-updater 17-command/5-event counts and conflicting historical mas availability statements",
+      "npm run test:e2e was not executed this run; browser-style-contract.spec.ts changed substantially",
+      "RESOLVED by D34: notarytool acceptance of the declared minos 15.0 floor, which D31 left OPEN"
+    ]
+  }
+}
