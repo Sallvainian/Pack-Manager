@@ -605,3 +605,97 @@ for; it is not a regression from it.
 screen-reader support as a release criterion, and framing D38 that way would put
 it in scope for deletion by the next reader applying D37. The defect is that a
 mouse user hovering a pinned row gets nothing.
+
+## D39. A pending application-update download is process-scoped; Ready is always re-derived
+
+Resolved 2026-08-18. Closes `prd.md` §9 Q1 ("Does a downloaded application
+update survive a relaunch that was not the update restart?"). Answer: **no —
+and that is the decided behavior, not a gap.**
+
+The downloaded payload is a `Vec<u8>` held in `AppUpdater.downloaded`
+(`app_update.rs`), never written to disk; a fresh process constructs at
+`Idle` with no restore path, and the frontend slice is a non-persisted mirror
+of the latest event. A `Ready` state is therefore always earned by the live
+process, never restored from a stale artifact — the same fail-closed reading
+RP-1 already applies to failed and interrupted downloads. Recovery costs
+nothing: the launch check and 6-hour heartbeat re-check and re-download in the
+background while `autoCheckForUpdates` is on (the default); with it off,
+recovery is the manual menu check, which is consistent with having opted out.
+The saved trigger policy still persists across relaunch (RP-1); only in-flight
+download state is ephemeral. **Rejected:** persisting the payload to disk (a
+restored Ready trusts a stale artifact against RP-1 and NFR-1); persisting
+plus re-verifying at launch (verification machinery for a payload the updater
+will happily re-fetch — SM-C1/SM-C2); leaving the question open.
+
+## D40. Absent Managers get copyable install hints; an executing Install button is refused
+
+Resolved 2026-08-18, owner-modified. Closes `prd.md` §9 Q2 ("What is the
+first-run experience for a machine with none of the six Managers
+installed?").
+
+No onboarding wizard and no special first-run screen. The all-absent case
+composes existing states: six muted `Not installed` cards, `Update
+Everything` disabled with a reason, and the reserved no-Managers System
+Summary / State Panel state — never `Warning`, because absence is normal and
+not failure. That panel's copy carries the actionable guidance, e.g. `No
+package managers found. Install one yourself — Homebrew is the usual first —
+then click Refresh All.`
+
+**Owner modification (2026-08-18):** every absent Manager card carries a
+copyable install hint, extending mas's existing treatment to all six — FR-1's
+"install hint where one is known" becomes known for all six. This is the
+copy-to-terminal handoff the product already uses (D14), never execution.
+Indicative commands, to be verified against current official docs when built:
+brew → the official Homebrew installer one-liner; mise → `brew install mise`;
+npm → `mise use -g node@lts` (npm ships with Node); uv → `mise use -g uv`;
+rustup → the official rustup installer one-liner; mas → `brew install mas`
+(unchanged).
+
+**Rejected:** an executing Install button — installing software is a named
+non-goal (`prd.md` §6: "A package installer or uninstaller… Nothing else."),
+Homebrew's installer requires a sudo password while no privilege path exists
+anywhere in this product (SM-3, FR-12), the installer is a curl-into-shell
+script while no shell surface exists to run it, and the button would be a
+fourth immediate-execution kind, which FR-23 forbids growing. Rejected:
+context-aware hint suppression while brew is absent (cleverness the panel
+copy already covers — a `brew install mise` hint beneath "Homebrew is the
+usual first" explains itself).
+
+## D41. History is not user-deletable; automatic retention is the only pruning
+
+Resolved 2026-08-18. Closes `prd.md` §9 Q3 ("Can the user clear or delete
+History entries?"). Answer: **no** — no per-row delete, no Clear History, no
+retention knob.
+
+History rows are immutable evidence (D29: one immutable entry per confirmed
+attempt) and failure legibility is a success metric (SM-4). Compaction to the
+newest 1,000 records already bounds growth. The one genuine deletion motive —
+keeping an entry out of a shared diagnostics bundle — is a sharing concern
+answered by D42's export decision, not by destroying local evidence.
+Deleting `operations.jsonl` out-of-band remains possible and unsupported —
+History and reconstruction promise nothing after it, though the app still
+starts and contains the loss (NFR-2, AD-19). **Rejected:** per-row delete and bulk clear
+(destroys the crash/`Interrupted` evidence the journal exists to protect, and
+multiplies the dangling-retry-lineage degradation that compaction already
+forces UX-PB.4d to tolerate honestly); a retention setting (SM-C2 surface for
+a single-user tool).
+
+## D42. Diagnostics export ships as-built with a visible path; no preview or redaction step
+
+Resolved 2026-08-18. Closes `prd.md` §9 Q4 ("Does the diagnostics export get
+a preview or redaction step before the user shares it?"). Answer: **no.**
+
+The privacy guarantee is construction-time: a closed allowlist of contents,
+inherited environment excluded, symlink substitution rejected (FR-18, NFR-5),
+and the product has no transmit path at all (`prd.md` §6: nothing is reported
+anywhere). The review affordance is the local ZIP itself plus the visible
+timestamped path and success/failure that both invocation points must show —
+already Story 6.5's acceptance criterion, not new work. Honest residue, named
+rather than denied: `report.json` and transcripts disclose the home path and
+command output; AD-18 bounds exactly that ("never ambient environment or user
+paths beyond what the existing entries already disclose") and its per-field
+disclosure review is the mechanism that keeps the residue bounded.
+**Rejected:** a preview pane or confirmation dialog (surface guarding a share
+action the product never performs); automatic redaction (falsifies the
+raw-lines evidence mandate — AD-29 — and fails open by nature); an in-app
+share flow (new egress, new trust boundary).
