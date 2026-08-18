@@ -1,5 +1,5 @@
 # generated: 2026-07-24T16:47:19
-# last_updated: 2026-08-11T00:00:00
+# last_updated: 2026-08-18T00:00:00
 # project: Pack-Manager
 # project_key: NOKEY
 # tracking_system: file-system
@@ -64,12 +64,20 @@
 # THIS KEY WAS ADDED BY HAND. Do not regenerate this file with sprint_plan.py to
 # pick it up — the generate step drops all 30 Epic UX-PB keys.
 #
+# NOTE ON 2-5: added 2026-08-18 under sprint-change-proposal-2026-08-18.md,
+# implementing docs/DECISIONS.md D40 (owner-modified closure of prd.md section 9
+# Q2): copyable install hints on all six absent Manager cards plus all-absent
+# first-run guidance; an executing Install button was rejected. New owner scope
+# postdating the D33 rescope, like 6-6. THIS KEY WAS ADDED BY HAND. Do not
+# regenerate this file with sprint_plan.py to pick it up - the generate step
+# drops all 30 Epic UX-PB keys.
+
 # NOTE ON epics 7-8: retired. epics.md: "Release readiness is a short manual
 # checklist plus automated checks in the release pipeline, not a closure epic
 # and not an evidence lane. See `docs/RELEASE-CHECKLIST.md`."
 
 generated: 2026-07-24T16:47:19
-last_updated: 2026-08-11T00:00:00
+last_updated: 2026-08-18T00:00:00
 project: Pack-Manager
 project_key: NOKEY
 tracking_system: file-system
@@ -111,6 +119,7 @@ development_status:
   # epic-2: Make Detection and Refresh Fail Independently and Recover Usefully
   epic-2: backlog
   2-2-prove-refresh-phases-and-per-manager-timeouts: backlog
+  2-5-offer-copyable-install-guidance-for-absent-managers: backlog
   epic-2-retrospective: optional
 
   # epic-3: Keep Package Choice, Plans, and Settings Exact and Understandable

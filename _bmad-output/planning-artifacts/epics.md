@@ -460,7 +460,7 @@ Epics 1, 4, and 5 were removed on 2026-07-25 when the story triage recorded in
 another story. FRs that named them are marked `Triaged out` and point to the archive.
 The requirements themselves remain authoritative in `docs/SPEC.md`.
 
-FR-1: Triaged out (was Epic 4) — Prove Manager detection and refresh through the shared production-native boundary.
+FR-1: **Partly revived by a later decision.** The install-hint limb is **Epic 2 — Story 2.5**: `docs/DECISIONS.md` D40 (2026-08-18) postdates the D33 rescope and extends "install hint where one is known" to all six Managers, plus the all-absent first-run guidance. The `Triaged out (was Epic 4)` status stays for the detection-proving limbs — Prove Manager detection and refresh through the shared production-native boundary.
 
 FR-2: Triaged out (was Epic 1) — Restore trustworthy Manager-reported truth using the corrected live `mas` oracle.
 
@@ -527,7 +527,7 @@ Users can detect and refresh every supported Manager with clear phase, absence, 
 
 **Primary FR ownership:** FR-3, FR-16  
 **Cross-cutting FRs:** FR-1, FR-2, FR-17  
-**Retained stories:** 2.2. The other three were triaged out on 2026-07-25 (D33); see `_bmad-output/archive/2026-07-24-scope-recalibration/planning/epics-1-6-triaged-out.md`.
+**Retained stories:** 2.2, plus 2.5 — added 2026-08-18 by `sprint-change-proposal-2026-08-18.md`, implementing D40. The other three were triaged out on 2026-07-25 (D33); see `_bmad-output/archive/2026-07-24-scope-recalibration/planning/epics-1-6-triaged-out.md`.
 
 ### Epic 3: Keep Package Choice, Plans, and Settings Exact and Understandable
 
@@ -1268,6 +1268,38 @@ So that a slow or disabled step never creates misleading global state.
 **When** the failure resolves and recovered-parse output is available
 **Then** the failure stays contained to that Manager, its Last-good Snapshot is retained and labeled with its own timestamp and the exact failure alongside a `Retry refresh` affordance, and the recovered output **merges** into the inventory already parsed from the successful refresh outputs
 **And** the snapshot is never replaced by an empty one and never by an outdated-only overlay — which would make every up-to-date Package vanish — the merge never un-pins a row, and health and staleness presentation read from the snapshot's real timestamp with no invented or interpolated value substituted.
+
+### Story 2.5: Offer Copyable Install Guidance for Absent Managers
+
+Added 2026-08-18 by `sprint-change-proposal-2026-08-18.md`, implementing `docs/DECISIONS.md` **D40**. Like Story 6.6, this postdates the D33 rescope: it is new scope decided by the owner, not a resurrected triage story.
+
+As a Pack-Manager user,
+I want every absent Manager to show a copyable install command, and an all-absent machine to tell me where to start,
+So that a Manager I lack — or a machine with none at all — hands me the terminal command instead of a dead end.
+
+**Story Contract:**
+
+- FR and requirement links: FR-1 (the install-hint limb, extended by D40 from "where one is known" to all six)
+- Required test level: Unit plus component
+- Governing invariants: AD-4 (hints are static data through existing typed surfaces; no new process effect), AD-27 (focus is a 2px `outline` in `--color-focus-ring` on any added control; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)
+- Governing decisions: **D40** (copyable hints, never an executing Install button — installer non-goal, SM-3 no-privilege, no shell surface, and FR-23's closed immediate-execution set may not grow); D14 (copy-to-terminal is the product's handoff ethos)
+- Dependencies: none — buildable now; no Epic UX-PB surface is involved. The existing `installHint` render paths (`Sidebar.tsx`, `ManagerCard.tsx`, `ManagerPane.tsx`) are reused, not rebuilt.
+
+**Acceptance Criteria:**
+
+**Given** any of the six Managers is detected absent
+**When** its Dashboard card, sidebar entry, and Manager workspace absent state render
+**Then** each shows that Manager's copyable install command through the existing `CopyableCommand` treatment (extending the mas behavior to all six), the command is copy-only, nothing in the app can execute it, and no `Install` button or other execution affordance exists (D40)
+**And** the absent presentation still explains that Refresh All / Re-detect picks the Manager up after installation.
+
+**Given** the indicative commands recorded in D40 (brew → the official Homebrew installer one-liner; mise → `brew install mise`; npm → `mise use -g node@lts`; uv → `mise use -g uv`; rustup → the official rustup installer one-liner; mas → `brew install mas`)
+**When** the hints are implemented
+**Then** each shipped hint is verified against that Manager's current official installation documentation, and hints are static per-Manager strings — no context-aware suppression or rewriting based on which other Managers are present, per D40's rejected-alternatives record.
+
+**Given** a machine where all six Managers are absent
+**When** detection completes
+**Then** the Dashboard presents a state panel carrying D40's guidance — no package managers were found, the user installs one themselves (Homebrew is the usual first), and `Refresh All` re-detects afterward — the system never reads as an error or `Warning` for absence alone, and `Update Everything` stays disabled with a reason.
+
 
 ## Epic 3: Keep Package Choice, Plans, and Settings Exact and Understandable
 
