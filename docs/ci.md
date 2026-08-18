@@ -5,7 +5,7 @@ Pack-Manager uses two ordinary verification workflows:
 - `.github/workflows/ci.yml` checks Rust, the React/Vite application, and a main-branch Tauri bundle smoke build.
 - `.github/workflows/test.yml` checks Playwright browser journeys without changing the established Rust/web pipeline.
 
-Release automation remains separate. See [`deployment-guide.md`](./deployment-guide.md) for release-please, signing, notarization, and updater artifacts.
+Release automation remains separate. See `AGENTS.md` and `.github/workflows/release.yml` for release-please, signing, notarization, and updater artifacts.
 
 ## Playwright Triggers
 

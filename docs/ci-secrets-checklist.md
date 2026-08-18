@@ -16,4 +16,4 @@ Do not create placeholder secrets for this workflow. If a future browser test ne
 
 ## Release Workflows
 
-Signing, notarization, and updater credentials belong to the release workflows, not the Playwright workflow. Their names and operational checks are documented in [`deployment-guide.md`](./deployment-guide.md). Never copy their values into this checklist, logs, test artifacts, or workflow source.
+Signing, notarization, and updater credentials belong to the release workflows, not the Playwright workflow. Their names and operational checks live in `.github/workflows/release.yml`. Never copy their values into this checklist, logs, test artifacts, or workflow source.
