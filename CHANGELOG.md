@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/Sallvainian/Pack-Manager/compare/v1.0.1...v1.0.2) (2026-08-18)
+
+
+### Bug Fixes
+
+* **ui:** use the palette's dark ink on bright accent fills ([a201fb0](https://github.com/Sallvainian/Pack-Manager/commit/a201fb0f5b49787c9232e78d6f182d844b777f2d))
+
 ## [1.0.1](https://github.com/Sallvainian/Pack-Manager/compare/v1.0.0...v1.0.1) (2026-07-25)
 
 
