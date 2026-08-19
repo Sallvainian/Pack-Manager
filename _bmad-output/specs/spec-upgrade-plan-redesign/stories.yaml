@@ -1,0 +1,325 @@
+# Story Breakdown for SPEC-upgrade-plan-redesign.
+# One entry per epics.md story key; epics.md holds the binding acceptance criteria,
+# sprint-status.yaml holds status (keys are the `ux-pb-<id>-<slug>` form of these ids).
+# List order is execution order and satisfies every gate in story-map.md.
+
+- id: "1a"
+  title: "Persistent draft domain with single-entry membership and Rust rebuild"
+  description: >-
+    Opens CAP-1: one eligible Package row becomes membership in the single persistent
+    draft Upgrade Plan, with Rust rebuilding the exact command and nothing executing.
+    Retires the transient selection set that makes unstaged execution possible today.
+  spec_checkpoint: true
+  invoke_dev_with: >-
+    Wave 1 opener. A Package checkbox IS membership - there is no transient selection
+    set, and the live `selection` set in src/store/packages.ts retires with this story
+    (AD-28). The frontend never authors or edits executable command text; Rust rebuilds
+    from canonical intent (AD-16, AD-24). Blocks UX-PB.1b, UX-PB.1c, and Story 3.5 in
+    the sibling spec spec-shipped-behavior-gaps.
+
+- id: "1b"
+  title: "Sidecar lifecycle and navigation-persistent visibility"
+  description: >-
+    CAP-2: the Upgrade Sidecar opens on the first staged item, survives Dashboard and
+    Manager navigation unchanged, and closes on the last removal. The draft is
+    session-scoped and never written to disk.
+  invoke_dev_with: >-
+    Presumes Story 6.6's quit guard (AD-30) - the relaunch behavior describes state
+    after a *guarded* quit. Story 6.6 builds that guard; do not add a second
+    enforcement point here. Blocks UX-PB.1d, UX-PB.1e.
+
+- id: "1c"
+  title: "Remaining draft entry points as independent removable items"
+  description: >-
+    Completes CAP-1 across the other entry points - count-labeled header checkbox,
+    Manager-header Update Manager, Manager-wide action, and Update Everything - each
+    staging independently removable items into the same draft. No global toggle bypasses it.
+  invoke_dev_with: >-
+    Target is zero immediate-execution kinds; growing that set is a new decision
+    breaching SM-2. Blocks UX-PB.1d, UX-PB.1e.
+
+- id: "1d"
+  title: "Ineligible-control inertness with a pointer-reachable explanation"
+  description: >-
+    CAP-3: pinned, current, excluded, and unavailable Packages stay inert on every
+    activation path and explain themselves on pointer interaction. The header checkbox
+    denominator counts only eligible rows matching the active filter, off-screen ones included.
+  invoke_dev_with: >-
+    Use aria-disabled="true", never native `disabled` - a natively disabled control
+    dispatches no mouse events, which kills the pointer-reachable reason (D38, AD-16).
+    Gray styling alone is not sufficient. The four plain-language reason strings are in
+    epics.md UX-PB.1d. Blocks Story 3.2 in spec-shipped-behavior-gaps.
+
+- id: "1e"
+  title: "Standardized Manager workspace presentation"
+  description: >-
+    CAP-4: every Manager Header and Card presents standardized description, path,
+    installed version, status, ownership, counts, and self-update delta, with a staged
+    self-update showing IN PLAN plus a named Remove action.
+  done_checkpoint: true
+  invoke_dev_with: >-
+    Counts render in `34 managed packages · 8 package updates` order (AD-25). A failed
+    refresh retains the timestamped last-good snapshot with Retry refresh and invents no
+    health value. Wave 1 ends here - UX-PB.2a gates on 1a-1e all being complete. Blocks
+    Story 3.1 in spec-shipped-behavior-gaps.
+
+- id: "2a"
+  title: "Distinct one-use preview planId and durable planAttemptId identity types"
+  description: >-
+    Opens CAP-5: the one-use preview planId and the durable planAttemptId become
+    separate, non-interchangeable branded types across the Rust wire, domain,
+    persistence, and TypeScript boundaries.
+  spec_checkpoint: true
+  invoke_dev_with: >-
+    Wave 2 opener; gates on 1a-1e complete. Type-level tests must reject cross-assignment
+    at every boundary - a short-lived authorization can never masquerade as the permanent
+    record. Blocks UX-PB.2b, UX-PB.2f.
+
+- id: "2b"
+  title: "Atomic admission mints one planAttemptId and fails a second attempt closed"
+  description: >-
+    Completes CAP-5: execute_plan atomically mints exactly one attempt with its Operation
+    ids all-or-none, and a second confirmation fails closed while one attempt is active.
+    Cross-Manager concurrency continues inside the active attempt.
+  invoke_dev_with: >-
+    This atomic admission is the trigger UX-PB.3a keys on - not the 5a dialog. One
+    confirmed attempt at a time; concurrency inside it goes through the existing lock-set
+    scheduler (D30, D4). Blocks UX-PB.2c, UX-PB.2d, UX-PB.2e.
+
+- id: "2c"
+  title: "Persist reviewed intent and the exact command snapshot durably"
+  description: >-
+    Opens CAP-6: the admission record persists the reviewed scope, the exact command
+    snapshot, and timestamps at mint time, so recovery and history reconstruct without
+    rebuilding executable input from display text.
+  invoke_dev_with: >-
+    Writes the admission record ONLY - UX-PB.2e owns the terminal-record write. Exactly
+    two append-only attempt-journal records with one append authority; appends gate
+    nothing, so an append failure is surfaced and never fatal to admission (AD-29, AD-18).
+    A snapshot that reads back corrupted is refused as an execution source.
+
+- id: "2d"
+  title: "Correlate every Operation, event, and durable record by planAttemptId"
+  description: >-
+    Completes CAP-6: every Operation, event, transcript, and durable record produced by a
+    confirmed attempt carries that attempt's planAttemptId, so its progress, output, and
+    evidence reconstruct as one coherent whole.
+  invoke_dev_with: >-
+    Attempt state is derived from the record fold, never persisted - no PlanAttempt.state
+    field exists. Blocks UX-PB.2e.
+
+- id: "2e"
+  title: "Plan-level cancellation that skips unstarted work and escalates running process groups"
+  description: >-
+    Opens CAP-7: Cancel plan stops only that attempt - unstarted work becomes Skipped and
+    running work escalates through existing process-group mechanics straight to a terminal
+    state, with no second confirmation and no rollback promise.
+  invoke_dev_with: >-
+    This story owns the terminal-record append, inside the transition's own critical
+    section - NOT UX-PB.4a, which lands two waves later and would read every intervening
+    terminal attempt as Interrupted (AD-29). It ships in wave 2 rather than with 3g
+    because the no-Cancelling correction is wire surface: no `Cancelling` state at any
+    level and OpStatus gains no variant, as one atomic AD-3 change across the Rust enum,
+    src/lib/ipc/types.ts, guards, and dev/fixtures/ipc/ - it cannot be retrofitted once
+    later stories build on the enum. Partially failed escalation reports honestly rather
+    than fabricating outcomes.
+
+- id: "2f"
+  title: "Keep legacy Operations honest without inferred plan grouping"
+  description: >-
+    CAP-8 at the record layer: Operations predating the attempt model stay readable and
+    individually labeled as legacy, never grouped or inferred into plan attempts that
+    never existed.
+  done_checkpoint: true
+  invoke_dev_with: >-
+    Wave 2 ends here - UX-PB.3a gates on 2a-2f all being complete. No fabricated grouping
+    for plan-like legacy records (AD-18, AD-29).
+
+- id: "3a"
+  title: "Confirmed sidecar as the single active plan summary"
+  description: >-
+    Opens CAP-9: on admission the same sidecar transforms in place into the one live
+    summary of the admitted attempt, so the user follows a single plan from review into
+    execution with no second surface appearing.
+  spec_checkpoint: true
+  invoke_dev_with: >-
+    Wave 3 opener; gates on 2a-2f complete. Trigger is the atomic admission from
+    UX-PB.2b, never the UX-PB.5a dialog - keying it to the dialog leaves it undefined on
+    the confirmation-off path (5c). Blocks UX-PB.3b.
+
+- id: "3b"
+  title: "Full Activity as detailed view of the same attempt"
+  description: >-
+    Continues CAP-9: full Activity is a deeper view of the very same planAttemptId shown
+    in the sidecar, rendering one shared state rather than two different executions.
+  invoke_dev_with: >-
+    Sidecar and Activity render one shared state - not two stores. Blocks UX-PB.3c.
+
+- id: "3c"
+  title: "Per-item live progress states"
+  description: >-
+    Completes CAP-9: each Package and Manager item shows its own honest queued, waiting,
+    running, verifying, or terminal state, with safety-critical state reaching the user
+    visibly rather than through an announcement channel.
+  invoke_dev_with: >-
+    A stream disconnect keeps the last honest state and surfaces the interruption; a
+    status update never moves focus. Safety-critical state (stall handoff, Interaction
+    required) must be visible, never announcement-dependent (AD-17). Blocks UX-PB.3d,
+    UX-PB.3f.
+
+- id: "3d"
+  title: "Verification-gated Results with outcome taxonomy"
+  description: >-
+    Opens CAP-10: the attempt becomes Results only after affected-Manager refresh
+    verification, using the closed outcome taxonomy. Success is earned by verification,
+    never assumed from a process exit code.
+  invoke_dev_with: >-
+    A successful exit stays `Verifying` until verification resolves and is never colored
+    successful on exit code alone. A failed verification refresh leaves the Last-good
+    Snapshot in place. Blocks UX-PB.3e, UX-PB.3g, and Story 6.5 in
+    spec-shipped-behavior-gaps.
+
+- id: "3e"
+  title: "Failure guidance and safe next step before Retry"
+  description: >-
+    Completes CAP-10: a failed item presents What happened and What to do next before a
+    secondary Retry, so the user fixes the real cause instead of repeating a doomed attempt.
+  invoke_dev_with: >-
+    Deterministic failures must not be framed as retry-fixable. Blocks UX-PB.4a-4e.
+
+- id: "3f"
+  title: "Trusted Interaction-required classifier"
+  description: >-
+    CAP-11: Interaction required appears only when a closed Manager-specific classifier or
+    an explicit native signal recognizes a known prompt; all other null-stdin silence
+    follows the ordinary 120-second stall path.
+  invoke_dev_with: >-
+    No regex or heuristic guessing may convert a stall into a recognized prompt or the
+    reverse. Unmatched output at the stall threshold shows exactly Keep waiting / Copy
+    command / Cancel plan (D30). Blocks UX-PB.4a-4e.
+
+- id: "3g"
+  title: "Two labeled cancellation scopes"
+  description: >-
+    Completes CAP-7 at the surface: the primary cancel action clearly stops the whole
+    plan, with an Operation-only cancel reserved for a deliberate diagnostic, so the scope
+    of what is being stopped is always unambiguous.
+  done_checkpoint: true
+  invoke_dev_with: >-
+    Still no `Cancelling` state at any level - not wire, not derived presentation, not an
+    event. The terminal-record write already belongs to UX-PB.2e; this story is
+    presentation and labeling. Wave 3 ends here - UX-PB.4a gates on 3a-3g complete.
+
+- id: "4a"
+  title: "One immutable History row per confirmed attempt"
+  description: >-
+    Opens CAP-12: each confirmed attempt folds to exactly one immutable History row with
+    nested Operation evidence and verified-outcome wording, replacing scattered
+    per-command rows.
+  spec_checkpoint: true
+  invoke_dev_with: >-
+    Wave 4 opener; gates on 3a-3g complete. This story READS and FOLDS the two
+    attempt-journal records and never writes one (AD-29) - UX-PB.2e owns the terminal
+    write. The fold is idempotent by planAttemptId so duplicate records never replay as
+    extra rows; admission+terminal folds to the outcome and admission-only to
+    `Interrupted`. `Interrupted` requires genuine record absence - an unreadable terminal
+    record is reported as unreadable evidence, not as Interrupted. Blocks UX-PB.4b, UX-PB.4e.
+
+- id: "4b"
+  title: "Read-only Activity replay of a History row"
+  description: >-
+    Continues CAP-12: opening a History row routes Activity into read-only replay of that
+    attempt, so a prior attempt can be inspected exactly as it ran.
+  invoke_dev_with: >-
+    Replay mutates nothing and executes nothing. Blocks UX-PB.4c, UX-PB.4d.
+
+- id: "4c"
+  title: "Live and replay coexistence with the live attempt primary"
+  description: >-
+    Completes CAP-12: a replay opened during live work stays clearly secondary, so the one
+    running attempt never looks paused or lost while a past one is being inspected.
+  invoke_dev_with: >-
+    Leaf of the UX-PB.4 spine - no dependent sub-story.
+
+- id: "4d"
+  title: "Retry scope preview and linked new attempt"
+  description: >-
+    CAP-13: Retry first reveals the failed-item scope, then Create new plan composes a
+    derived RetryIntent in Rust - restricted to failed members, canonically rebuilt - that
+    goes straight to preview and confirmation without touching the persistent draft.
+  invoke_dev_with: >-
+    Confirming mints a fresh planAttemptId linked by retryOfPlanAttemptId; the original
+    failed result stays immutable and reachable via View previous result. A rebuild
+    failure (item now pinned, current, or removed) is explained and admits nothing.
+    Dangling lineage is surfaced, never silently repaired (AD-24). Blocks Story 6.5 in
+    spec-shipped-behavior-gaps.
+
+- id: "4e"
+  title: "Legacy Operation History honest labeling"
+  description: >-
+    Completes CAP-8 at the History surface: legacy Operation records render visibly
+    distinct with Operation-level detail, keeping older history readable without faking it
+    into plans it never had.
+  done_checkpoint: true
+  invoke_dev_with: >-
+    Wave 4 ends here - UX-PB.5e gates on wave 4 because History must exist before
+    separation can be asserted.
+
+- id: "5a"
+  title: "Separate final confirmation gate with the `Confirm N Updates` action and `Proceed with Upgrade Plan?` dialog"
+  description: >-
+    Opens CAP-14: Confirm N Updates opens the Proceed with Upgrade Plan? dialog showing
+    the exact commands with Change Plan and a final confirmation, so a review step always
+    stands between staging and execution.
+  spec_checkpoint: true
+  invoke_dev_with: >-
+    Wave 5 opener, but it gates on waves 1-2 only - not on wave 3 or 4. Nothing executes
+    before final confirmation. This is the SM-2 promise: no Package or Manager update ever
+    runs that the user did not see staged first; a single violation is a P0 defect. Blocks
+    UX-PB.5b, UX-PB.5d.
+
+- id: "5b"
+  title: "Dialog-only disable control with atomic `skipUpgradePlanConfirmation` persistence and Settings migration"
+  description: >-
+    Continues CAP-14: the disable control exists only inside the confirmation dialog and
+    persists skipUpgradePlanConfirmation atomically only after admission succeeds, with
+    Settings able to reverse it.
+  invoke_dev_with: >-
+    The rider never precedes its admission, and a failed save leaves `false` both active
+    and persisted. The setting is plan-inert, so persisting it never expires the plan it
+    rode on (AD-21, AD-22). Blocks UX-PB.5c and Story 3.4 in spec-shipped-behavior-gaps.
+
+- id: "5c"
+  title: "Confirmation-disabled bypass with expanded commands and native rebuild/stale-validation-gated run"
+  description: >-
+    Completes CAP-14: with confirmation disabled the path auto-expands commands, shows a
+    persistent Confirmation is off warning, relabels to Run N Updates, and keeps the
+    native rebuild and stale check - removing the dialog never removes the real safety.
+  invoke_dev_with: >-
+    Stale validation blocks the bypass run until re-review. Leaf of the confirmation branch.
+
+- id: "5d"
+  title: "Responsiveness of the confirmation and safety surfaces at the size and zoom floors"
+  description: >-
+    CAP-15: Plan, Confirmation, Activity, and Results stay fully visible and operable at
+    900 x 600 and 150-200% zoom, entering the stacked layout below 720 usable CSS pixels
+    with a visible Back route and a persistent non-occludable safety indicator.
+  invoke_dev_with: >-
+    Focus is a real 2px `outline` with outline-offset in --color-focus-ring, never `ring-*`
+    and never `outline-none` - WKWebView does not paint box-shadow on native-appearance
+    controls, so a ring-based focus state is invisible there (AD-27, D35). Verify the focus
+    state at runtime, not just in the stylesheet. No safety action may clip, overlap, or
+    require two-dimensional scrolling at the floors; reduced motion suppresses transitions.
+
+- id: "5e"
+  title: "Application-update presentation kept separate from Package plans and History"
+  description: >-
+    CAP-16: the app's own update surfaces only as the restrained Pack-Manager Update Ready!
+    badge linking to the Settings card, and never enters Package plans, Activity, Results,
+    or History - replay included.
+  done_checkpoint: true
+  invoke_dev_with: >-
+    Gates on wave 4 - History must already exist for the separation to be assertable.
+    Update-state transitions during live or replayed Package work must never inject into
+    those surfaces. The Settings card shows the one-line warning-yellow to success-green
+    version delta.

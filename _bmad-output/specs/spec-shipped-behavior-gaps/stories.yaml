@@ -1,0 +1,130 @@
+# Story Breakdown for SPEC-shipped-behavior-gaps.
+# One entry per epics.md story key; epics.md holds the binding acceptance criteria,
+# sprint-status.yaml holds status (keys are the `<id>-<slug>` form of these ids).
+# List order is execution order: the three stories with no UX-PB dependency first,
+# then the five gated ones in the order their cross-spec blocker actually clears.
+# Blockers named below live in the sibling spec _bmad-output/specs/spec-upgrade-plan-redesign/.
+# Ordering was verified by topological sort over all 36 stories in both specs.
+
+- id: "6-6"
+  title: "Guard a Quit That Would Orphan a Live Child Process"
+  description: >-
+    CAP-7: a user-initiated quit with any Operation Queued or Running routes to the single
+    enforcement point the application-update path already uses and presents an explicit
+    choice, while an OS-initiated shutdown gets no dialog and runs the awaited kill hook.
+  spec_checkpoint: true
+  invoke_dev_with: >-
+    Buildable now - no UX-PB dependency, and UX-PB.1b, 2f, and 4e all presume this guard
+    exists rather than building one, so landing it early unblocks their assumptions. The
+    active set is `Queued` union `Running` and must stay IDENTICAL to FR-21's
+    application-update refusal set in commands.rs and activeOps in
+    src/store/operations.ts - changing either predicate is an AD-30 change, not a local
+    one. Both quit paths hit one predicate, one dialog, one refusal. The shutdown path
+    must await the bounded idle wait so SIGTERM -> grace -> SIGKILL actually completes.
+    Promise no rollback.
+
+- id: "2-2"
+  title: "Prove Refresh Phases and Per-Manager Timeouts"
+  description: >-
+    CAP-1: each Manager's refresh shows its correct phase order, enforces its own timeout
+    so a hung Manager gives up alone while peers finish, and merges recovered parse output
+    into the already-parsed inventory.
+  invoke_dev_with: >-
+    Buildable now - no UX-PB dependency. parse_recovery must MERGE the recovered overlay
+    into the already-parsed inventory; replacing it drops every up-to-date row from the
+    table. The merge must never blank up-to-date rows and never un-pin a row. The disabled
+    Homebrew-metadata path omits only that phase, not the others. A retained Last-good
+    Snapshot carries its real timestamp and the exact failure beside Retry refresh - never
+    an invented health value (FR-3, FR-17, AD-4, AD-25).
+
+- id: "2-5"
+  title: "Offer Copyable Install Guidance for Absent Managers"
+  description: >-
+    CAP-8: every absent Manager's Dashboard card, sidebar entry, and workspace state shows
+    that Manager's copyable install command through the existing CopyableCommand paths,
+    and an all-absent machine gets a Dashboard guidance panel.
+  done_checkpoint: true
+  invoke_dev_with: >-
+    Buildable now - no UX-PB dependency. Copy-only: no Install button and no execution
+    affordance anywhere. D40 explicitly refused an executing installer (installer is a
+    non-goal, and there is no sudo or shell path in this app). Extend mas's existing
+    treatment to all six Managers. The all-absent Dashboard must not read `Warning` for
+    absence alone, and Update Everything stays disabled with a stated reason (FR-1
+    install-hint limb, D40, D14).
+
+- id: "3-5"
+  title: "Preserve Exact Batched Plan Membership and Row Plan Actions"
+  description: >-
+    CAP-5: toggle, shift-range, tri-state header checkbox, Cmd-A, Space, and Cmd-click act
+    directly on draft membership as one batched operation carrying concrete canonical
+    identities plus the snapshot token.
+  spec_checkpoint: true
+  invoke_dev_with: >-
+    Blocked by UX-PB.1a (wave 1), which retires the transient selection set this story
+    acts against. A 400-row range over virtualized rows must be ONE round trip resolved
+    against the projection's ordered filtered set - all-or-none in application, narrowing
+    in resolution, with dropped refs reported. Never send a predicate for Rust to
+    re-expand (AD-28, NFR-3). Cmd-A stays native on Dashboard, History, and Settings where
+    there is no Package list; Esc is close-dialog only. A single-row removal writes a
+    tombstone that no later bulk expansion re-adds.
+
+- id: "3-1"
+  title: "Present Complete Package State and Manager Detail"
+  description: >-
+    CAP-2: every Package row is understandable without relying on color, uv executables are
+    expandable and searchable, and npm's self state lives only in its Manager Card and
+    Header where Update Manager stages and never executes.
+  invoke_dev_with: >-
+    Blocked by UX-PB.1e (wave 1) - the standardized Manager presentation must land first.
+    npm keeps its four ordinary Package rows while its self-update appears as IN PLAN /
+    Remove in the header only (FR-2, FR-5, FR-6, FR-10, FR-11, FR-19).
+
+- id: "3-2"
+  title: "Enforce Pinned and Greedy Eligibility"
+  description: >-
+    CAP-3: pinned rows stay inert with the correct explained reason across every entry path
+    and filter, and greedy-only casks are grouped separately, collapsed, default-excluded,
+    and enter a plan only through explicit opt-in with visible disclosure.
+  invoke_dev_with: >-
+    Blocked by UX-PB.1d (wave 1) - the inertness mechanism and reason strings come from
+    there. Use aria-disabled, never native `disabled` (D38, AD-16). Greedy-only casks are
+    identified by the two-call set difference, never an in-JSON heuristic (D7). No
+    membership path - row, header, Manager-wide, or Update Everything - may add a pinned
+    or default-excluded cask.
+
+- id: "3-4"
+  title: "Validate Every Settings Control and Environment Report"
+  description: >-
+    CAP-4: every Settings control validates, persists atomically before activation, and
+    shows Saving, Saved, or failure honestly, with skipUpgradePlanConfirmation as a
+    first-class persisted control and a complete Environment Report with visible Copy outcomes.
+  invoke_dev_with: >-
+    Blocked by UX-PB.5b. Despite its wave-5 label, 5b clears EARLY: UX-PB.5a gates on
+    waves 1-2 only, so the whole confirmation branch can run alongside wave 3 - which is
+    why this story precedes 6-5 rather than running last.
+    5b establishes skipUpgradePlanConfirmation and its atomic
+    persistence; this story makes it first-class in Settings. A failed save changes neither
+    active nor persisted state and never reads `Saved`. Log-level changes apply live only
+    after persistence. A stale autoOpenDrawer value is tolerated as inactive legacy, not
+    migrated or resurrected (FR-17, AD-19, AD-27).
+
+- id: "6-5"
+  title: "Export Exact Native Diagnostics and Visible Outcomes"
+  description: >-
+    CAP-6: Export diagnostics produces the documented timestamped ZIP - report.json, newest
+    three app logs, newest 25 transcripts, operations.jsonl, and the raw plan-attempt
+    record sets correlated by planAttemptId - proven through the production native command.
+  done_checkpoint: true
+  spec_checkpoint: true
+  invoke_dev_with: >-
+    Blocked by UX-PB.3d (wave 3) and UX-PB.4d (wave 4) - the plan-attempt records it
+    archives do not exist until those land. This is the last story in either spec to
+    unblock: 4d sits at the far end of the critical path, so 6-5 runs last overall. The harness must be AD-26-compliant: an
+    automation surface excluded from release bits at COMPILE time, never by a runtime
+    selector, driving the production composition - and adopting it is an AD-20
+    security-reviewed change. No delivery coverage may be claimed from fixtures or the
+    browser double. The archive carries the admission/terminal record SET per attempt,
+    never a synthesized single record; inherited environment values stay excluded;
+    permission failures surface real errors instead of silence. Per D42 there is no
+    preview or redaction step - the construction-time allowlist plus the visible ZIP path
+    is the review affordance.
