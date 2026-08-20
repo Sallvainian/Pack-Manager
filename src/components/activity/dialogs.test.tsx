@@ -185,4 +185,36 @@ describe("quit_guard_lists_ops_and_cancels_all", () => {
     expect(logged.args.message).not.toContain("[object Object]");
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
+
+  it("shows a persistent error toast when a confirmed update cannot restart", async () => {
+    fakeIpc.respond("confirm_app_update", () => {
+      throw {
+        code: "self_update_unavailable",
+        message: "Operations did not stop before the update deadline.",
+        detail: "restart refused",
+      };
+    });
+    act(() =>
+      useUiStore
+        .getState()
+        .openDialog({ kind: "quitGuard", opIds: [OP_ID], reason: "update" }),
+    );
+    render(<DialogHost />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel operations and restart" }));
+
+    await vi.waitFor(() => expect(useUiStore.getState().toasts).toHaveLength(1));
+    const toast = useUiStore.getState().toasts[0];
+    expect(toast).toMatchObject({ kind: "error", persistent: true });
+    expect(toast.message).toContain("Update restart failed");
+    expect(toast.message).toContain("restart refused");
+    expect(toast.message).not.toContain("[object Object]");
+
+    await vi.waitFor(() => expect(fakeIpc.called("log_frontend_event")).toBe(true));
+    const logged = fakeIpc.callsFor("log_frontend_event")[0].args as {
+      args: { message: string };
+    };
+    expect(logged.args.message).toContain("restart refused");
+    expect(logged.args.message).not.toContain("[object Object]");
+  });
 });

@@ -34,6 +34,7 @@ export function QuitGuardDialog({ opIds, reason = "quit" }: QuitGuardDialogProps
   const byId = useOperationsStore((s) => s.byId);
   const detection = useManagersStore((s) => s.detection);
   const closeDialog = useUiStore((s) => s.closeDialog);
+  const pushToast = useUiStore((s) => s.pushToast);
 
   const resolveName = (id: ManagerId) => managerInfo(detection, id)?.displayName ?? id;
   const entries = opIds.map((id) => ({ id, op: byId[id] }));
@@ -58,9 +59,13 @@ export function QuitGuardDialog({ opIds, reason = "quit" }: QuitGuardDialogProps
       // The explicit backend sink repeats cancellation, awaits the bounded
       // drain, then installs. Resolves only on failure; success restarts.
       void confirmAppUpdate().catch((e) => {
-        void logFrontendEvent("error", `update install failed: ${describeError(e)}`).catch(
-          () => undefined,
-        );
+        const detail = describeError(e);
+        pushToast({
+          kind: "error",
+          message: `Update restart failed: ${detail}`,
+          persistent: true,
+        });
+        void logFrontendEvent("error", `update install failed: ${detail}`).catch(() => undefined);
       });
     } else {
       // Wait for every cancellation request to settle, but a failed request
