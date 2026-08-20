@@ -831,7 +831,14 @@ fn reserve_app_update_admission(queue: &Queue) -> Result<(), IpcError> {
 /// until every queued/running record has reached a terminal state.
 async fn prepare_confirmed_app_update(state: &AppState) -> Result<(), IpcError> {
     state.shutdown().await;
-    refuse_app_update_while_busy(&state.queue.records())
+    let result = refuse_app_update_while_busy(&state.queue.records());
+    if result.is_err() {
+        // A timed-out drain leaves the shutdown latch closed. The update did
+        // not install or restart, so restore normal admission before returning
+        // control to the still-running app.
+        state.queue.reopen_admission();
+    }
+    result
 }
 
 fn install_downloaded_update(state: &AppState) -> Result<(), IpcError> {
@@ -1152,6 +1159,74 @@ mod tests {
             crate::ipc::OpStatus::Cancelled
         );
     }
+
+    #[tokio::test(start_paused = true)]
+    async fn failed_confirmed_update_preparation_reopens_admission() {
+        let h = stuck_harness();
+        let detection =
+            |manager: ManagerId, program: &str, managed_by: ManagedBy| DetectStatus::Present {
+                binary_path: PathBuf::from(program),
+                canonical_path: PathBuf::from(program),
+                version: Some("1.0.0".into()),
+                managed_by,
+                evidence: format!("test {manager}"),
+            };
+        let stuck_id = h
+            .state
+            .queue
+            .submit(
+                queue::make_refresh_submission(
+                    ManagerId::Npm,
+                    &detection(ManagerId::Npm, "/fake/npm", ManagedBy::Mise),
+                    &Settings::default(),
+                    &h.env,
+                )
+                .unwrap(),
+            )
+            .await
+            .unwrap();
+        for _ in 0..100 {
+            if h.state.queue.record(&stuck_id).unwrap().status == crate::ipc::OpStatus::Running {
+                break;
+            }
+            tokio::task::yield_now().await;
+        }
+        assert_eq!(
+            h.state.queue.record(&stuck_id).unwrap().status,
+            crate::ipc::OpStatus::Running
+        );
+
+        let error = prepare_confirmed_app_update(&h.state)
+            .await
+            .expect_err("an unresponsive child must fail the bounded preparation");
+        assert_eq!(error.code, ErrorCode::SelfUpdateUnavailable);
+
+        let later_id = h
+            .state
+            .queue
+            .submit(
+                queue::make_refresh_submission(
+                    ManagerId::Brew,
+                    &detection(ManagerId::Brew, "/fake/brew", ManagedBy::Standalone),
+                    &Settings::default(),
+                    &h.env,
+                )
+                .unwrap(),
+            )
+            .await
+            .unwrap();
+        for _ in 0..100 {
+            if h.state.queue.record(&later_id).unwrap().status == crate::ipc::OpStatus::Running {
+                break;
+            }
+            tokio::task::yield_now().await;
+        }
+        assert_eq!(
+            h.state.queue.record(&later_id).unwrap().status,
+            crate::ipc::OpStatus::Running,
+            "the failed update preparation must not wedge future submissions"
+        );
+    }
     use std::sync::{Arc, Mutex, RwLock};
 
     use crate::events::{AppEvent, VecSink};
@@ -1221,6 +1296,12 @@ mod tests {
         _dir: tempfile::TempDir,
     }
 
+    struct StuckHarness {
+        state: AppState,
+        env: ToolEnv,
+        _dir: tempfile::TempDir,
+    }
+
     fn make_exec(path: &std::path::Path) {
         use std::os::unix::fs::PermissionsExt;
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
@@ -1279,6 +1360,55 @@ mod tests {
             sink,
             env,
             bin,
+            _dir: dir,
+        }
+    }
+
+    fn stuck_harness() -> StuckHarness {
+        let dir = tempfile::tempdir().unwrap();
+        let bin = dir.path().join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let env = ToolEnv::from_entries(
+            dir.path().join("home"),
+            vec![bin],
+            PathSource::StaticFallback,
+        )
+        .with_candidate_root(dir.path().join("candidates"));
+        let runner: Arc<dyn crate::process::CommandRunner> = Arc::new(PendingDetectionRunner {
+            started: Arc::new(tokio::sync::Notify::new()),
+        });
+        let sink = Arc::new(VecSink::new());
+        let registry = Arc::new(Registry::new());
+        let plan_coordinator = Arc::new(Mutex::new(crate::state::PlanCoordinator::default()));
+        let queue = Queue::new(QueueDeps {
+            runner: runner.clone(),
+            sink: sink.clone(),
+            registry: registry.clone(),
+            journal: Arc::new(Journal::new(dir.path().join("operations.jsonl"))),
+            ops_dir: dir.path().join("ops"),
+            refresh_factory: None,
+            route_recheck: None,
+            plan_coordinator: plan_coordinator.clone(),
+            max_concurrency: queue::MAX_CONCURRENCY,
+            aging_guard: queue::AGING_GUARD,
+        });
+        let state = AppState {
+            settings: Arc::new(RwLock::new(Settings::default())),
+            settings_path: Arc::new(dir.path().join("settings.json")),
+            tool_env: Arc::new(RwLock::new(env.clone())),
+            detection: Arc::new(RwLock::new(None)),
+            registry,
+            queue,
+            journal_records: Arc::new(RwLock::new(Vec::new())),
+            runner,
+            sink: sink.clone(),
+            logging: Arc::new(Mutex::new(None)),
+            app_update: Arc::new(crate::app_update::AppUpdater::new("0.0.0-test", sink)),
+            plan_coordinator,
+        };
+        StuckHarness {
+            state,
+            env,
             _dir: dir,
         }
     }

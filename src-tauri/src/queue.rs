@@ -948,8 +948,18 @@ impl Queue {
     pub async fn wait_until_idle(&self, timeout: Duration) -> bool {
         let deadline = Instant::now() + timeout;
         loop {
-            if self.active().is_empty() {
+            let active = self.active();
+            if active.is_empty() {
                 return true;
+            }
+            if self.shared.closing.load(Ordering::SeqCst) {
+                // Submissions can arrive after cancel_all's initial snapshot.
+                // The admission latch keeps them from spawning; repeatedly
+                // enqueueing cancellation here finalizes them instead of
+                // forcing the grace period to elapse with unreachable records.
+                for record in active {
+                    self.cancel(&record.op_id);
+                }
             }
             if Instant::now() >= deadline {
                 return false;
@@ -3161,6 +3171,26 @@ mod tests {
         assert!(!spawned.iter().any(|args| args == &["upgrade", "abseil"]));
         assert_eq!(status_of(&h, &queued), OpStatus::Cancelled);
         running_gate.notify_one();
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn shutdown_drain_cancels_work_submitted_after_initial_snapshot() {
+        let h = harness();
+
+        h.queue.cancel_all();
+        let late = h
+            .queue
+            .submit(refresh_sub(ManagerId::Npm, "/fake/npm", ManagedBy::Mise))
+            .await
+            .unwrap();
+        assert_eq!(status_of(&h, &late), OpStatus::Queued);
+
+        assert!(
+            h.queue.wait_until_idle(Duration::from_secs(7)).await,
+            "late queued work must be finalized inside the bounded drain"
+        );
+        assert_eq!(status_of(&h, &late), OpStatus::Cancelled);
+        assert!(h.fake.calls().is_empty(), "late work must never spawn");
     }
 
     /// Forces the shutdown race in which a scheduler pump has observed an

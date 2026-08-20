@@ -3,7 +3,7 @@ title: 'Guard a Quit That Would Orphan a Live Child Process'
 type: 'feature'
 created: '2026-08-19'
 status: 'done'
-review_loop_iteration: 1
+review_loop_iteration: 2
 followup_review_recommended: false
 context:
   - '_bmad-output/specs/spec-shipped-behavior-gaps/SPEC.md'
@@ -140,6 +140,8 @@ Read-only evidence (verified in `~/.cargo/registry`, do not modify):
 - [x] [Review][Patch] Add the new `confirm_quit` command and `quit:requested` event to the exact IPC contract documentation. [docs/SPEC.md:481] — fixed
 - [x] [Review][Patch] Sequence app-update cancellation and installation through an explicit backend drain before installing. [src/components/dialogs/QuitGuardDialog.tsx:57] — fixed after PR review
 - [x] [Review][Patch] Reserve idle scheduler admission atomically so an operation cannot start between the app-update busy check and installation. [src-tauri/src/commands.rs] — fixed after PR review
+- [x] [Review][Patch] Reopen queue admission when confirmed app-update preparation times out or otherwise fails, so the still-running app cannot leave later submissions permanently queued. [src-tauri/src/commands.rs] — fixed after PR review; regression and full Rust gate passed
+- [x] [Review][Patch] Reissue cancellation during the shutdown drain for work submitted after `cancel_all` took its initial snapshot. [src-tauri/src/queue.rs] — fixed after PR review; regression and full Rust gate passed
 - [x] [Review][Defer] Make the pre-existing all-or-nothing event subscription recover when one listener registration fails, so a transient failure cannot disable the quit-confirmation surface for the whole session. [src/lib/ipc/events.ts:152] — deferred, pre-existing
 - [x] [Review][Patch] Normalize the new deferred-work entries to the ledger's `source_spec` / `summary` / `evidence` schema. [_bmad-output/implementation-artifacts/deferred-work.md:43] — fixed
 - [x] [Review][Patch] Remove the superseded untracked TEA red-phase snippets, worker payloads, and result marker instead of committing stale instructions alongside their verified live replacements. [_bmad-output/test-artifacts:1] — fixed; live tests remain authoritative
@@ -204,10 +206,12 @@ Read-only evidence (verified in `~/.cargo/registry`, do not modify):
 
 - 2026-08-19: Implemented the shared `Queued | Running` guard, native quit routing, one quit-dialog event path, cancellation-before-confirm behavior, and an awaited bounded shutdown drain. Added Rust, frontend, IPC-contract, and browser-double regression coverage. No rollback behavior was added.
 - 2026-08-19: Applied PR #48 follow-up review: added an explicit confirmed-update drain, atomically reserved update admission, and corrected active-operation copy.
+- 2026-08-19: Applied PR #48 second review pass: reopened admission after failed update preparation and made shutdown drains cancel late-arriving work.
 
 ## Review Triage Log
 
 - PR #48 Claude Code Review: applied the app-update sequencing suggestion and queued/running copy correction; the final verdict reported no merge blocker.
+- PR #48 Claude Code Review iteration 2: applied the admission-reopen blocker and the late-submission cancellation suggestion; both received focused Rust regressions and the full Rust gate passed.
 
 ## Design Notes
 
@@ -240,6 +244,6 @@ Read-only evidence (verified in `~/.cargo/registry`, do not modify):
 
 Status: done
 Implementation: complete; no rollback behavior introduced.
-Automated verification: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, and `cargo test --locked` passed after PR follow-up fixes (257 passed, 9 ignored); `npx tsc --noEmit`, `npx vitest run` (144 passed), `npm run build`, `npm run test:e2e:typecheck`, the full two-engine Playwright suite (22 passed), and the focused quit-guard Playwright suite (6 passed) passed; `npm run tauri build -- --debug --no-sign` passed after all review fixes.
+Automated verification: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, and `cargo test --locked` passed after PR follow-up fixes (259 passed, 9 ignored); `npx tsc --noEmit`, `npx vitest run` (144 passed), `npm run build`, `npm run test:e2e:typecheck`, the full two-engine Playwright suite (22 passed), and the focused quit-guard Playwright suite (6 passed) passed; `npm run tauri build -- --debug --no-sign` passed after all review fixes.
 Native verification: the real debug app exposed the `Quit Pack-Manager` menu item; idle `⌘Q` and the red close button exited without a guard; `⌘Q` during an isolated read-only Refresh All opened the guard; `Keep running` dismissed it and kept the app open; `Cancel operations and quit` finalized the operations and exited cleanly; a post-exit process check found no surviving Pack-Manager or isolated-operation children. The red close path and `⌘W` share the same source-reviewed adapter. A real macOS logout/terminate was deliberately not invoked because it would disrupt the user session; that path was verified structurally through the shared backend quit predicate and shutdown drain.
 Planning baseline revision: `408d1bfdb329357ae11b17cf068ef958fa7f9b6d`
