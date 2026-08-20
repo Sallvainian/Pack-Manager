@@ -203,7 +203,7 @@ Read-only evidence (verified in `~/.cargo/registry`, do not modify):
 ## Spec Change Log
 
 - 2026-08-19: Implemented the shared `Queued | Running` guard, native quit routing, one quit-dialog event path, cancellation-before-confirm behavior, and an awaited bounded shutdown drain. Added Rust, frontend, IPC-contract, and browser-double regression coverage. No rollback behavior was added.
-- 2026-08-19: Applied PR #48 follow-up review: added an explicit confirmed-update drain, atomically reserved update admission, corrected active-operation copy, and refreshed the review workflow's Node action.
+- 2026-08-19: Applied PR #48 follow-up review: added an explicit confirmed-update drain, atomically reserved update admission, and corrected active-operation copy.
 
 ## Review Triage Log
 
