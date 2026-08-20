@@ -1,5 +1,5 @@
 //! Event surface (SPEC §5.9 events table, plus `appUpdate:status` per
-//! DECISIONS D25): `EventSink` trait, the event payload structs, `VecSink` for
+//! DECISIONS D25, plus `quit:requested` per AD-30): `EventSink` trait, the event payload structs, `VecSink` for
 //! tests, the batching emitter (`op:output` flushed every 50ms / 64 lines /
 //! 8KiB, whichever first), and the Tauri-backed sink. Core logic emits through
 //! `EventSink` and never touches `tauri::AppHandle`.
@@ -70,6 +70,14 @@ pub struct OpStalledEvent {
     pub silent_for_secs: u64,
 }
 
+/// Payload emitted when a user-initiated quit is refused because package
+/// Operations are queued or running.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QuitRequestedEvent {
+    pub op_ids: Vec<String>,
+}
+
 // ---------------------------------------------------------------------------
 // AppEvent + EventSink
 // ---------------------------------------------------------------------------
@@ -80,8 +88,9 @@ pub const EVENT_OP_STATUS: &str = "op:status";
 pub const EVENT_OP_OUTPUT: &str = "op:output";
 pub const EVENT_OP_STALLED: &str = "op:stalled";
 pub const EVENT_APP_UPDATE_STATUS: &str = "appUpdate:status";
+pub const EVENT_QUIT_REQUESTED: &str = "quit:requested";
 
-/// One of the six events, name + typed payload.
+/// One of the seven events, name + typed payload.
 #[derive(Debug, Clone, PartialEq)]
 pub enum AppEvent {
     DetectionUpdated(DetectionReport),
@@ -89,6 +98,7 @@ pub enum AppEvent {
     OpStatus(OpStatusEvent),
     OpOutput(OpOutputEvent),
     OpStalled(OpStalledEvent),
+    QuitRequested(QuitRequestedEvent),
     /// Pack-Manager updating itself (DECISIONS D25) — unrelated to `op:*`,
     /// which only ever describe package-manager operations.
     AppUpdateStatus(AppUpdateStatus),
@@ -102,6 +112,7 @@ impl AppEvent {
             AppEvent::OpStatus(_) => EVENT_OP_STATUS,
             AppEvent::OpOutput(_) => EVENT_OP_OUTPUT,
             AppEvent::OpStalled(_) => EVENT_OP_STALLED,
+            AppEvent::QuitRequested(_) => EVENT_QUIT_REQUESTED,
             AppEvent::AppUpdateStatus(_) => EVENT_APP_UPDATE_STATUS,
         }
     }
@@ -113,6 +124,7 @@ impl AppEvent {
             AppEvent::OpStatus(p) => serde_json::to_value(p),
             AppEvent::OpOutput(p) => serde_json::to_value(p),
             AppEvent::OpStalled(p) => serde_json::to_value(p),
+            AppEvent::QuitRequested(p) => serde_json::to_value(p),
             AppEvent::AppUpdateStatus(p) => serde_json::to_value(p),
         }
         .expect("event payloads are plain data and always serialize")

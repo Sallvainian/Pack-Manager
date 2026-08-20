@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  EVENT_QUIT_REQUESTED,
   isAppState,
   isAppUpdateStatus,
   isDetectionReport,
@@ -19,6 +20,7 @@ import {
   isOperationDetail,
   isOperationRecord,
   isPlanRequest,
+  isQuitRequestedEvent,
   isSettings,
   isSnapshotUpdatedEvent,
   isUpgradePlan,
@@ -31,6 +33,7 @@ const GUARDS: Record<string, (v: unknown) => boolean> = {
   "event_op_output.json": isOpOutputEvent,
   "event_op_stalled.json": isOpStalledEvent,
   "event_op_status.json": isOpStatusEvent,
+  "event_quit_requested.json": isQuitRequestedEvent,
   "event_snapshot_updated.json": isSnapshotUpdatedEvent,
   "ipc_error.json": isIpcError,
   "manager_snapshot.json": isManagerSnapshot,
@@ -46,6 +49,17 @@ const GUARDS: Record<string, (v: unknown) => boolean> = {
 const FIXTURES = import.meta.glob("../../../dev/fixtures/ipc/*.json", {
   eager: true,
   import: "default",
+});
+
+describe("quit_requested_event_contract", () => {
+  it("uses the Rust event name and accepts only the camelCase payload shape", () => {
+    expect(EVENT_QUIT_REQUESTED).toBe("quit:requested");
+    expect(isQuitRequestedEvent({ opIds: ["op-1", "op-2"] })).toBe(true);
+    expect(isQuitRequestedEvent({ opIds: [] })).toBe(true);
+    expect(isQuitRequestedEvent({ op_ids: ["op-1"] })).toBe(false);
+    expect(isQuitRequestedEvent({ opIds: "op-1" })).toBe(false);
+    expect(isQuitRequestedEvent({ opIds: [1] })).toBe(false);
+  });
 });
 
 function baseName(path: string): string {

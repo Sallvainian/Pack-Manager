@@ -7,11 +7,15 @@
  * relaunching kills exactly the same child processes, so it deserves exactly
  * the same confirmation — only the wording and the follow-up action differ.
  *
- * The window-close trigger (and the actual quit once operations are cancelled) is
- * host wiring outside this unit; this dialog owns the presentation, the per-op
- * cancellation, and dismissal.
+ * Native quit triggers are wired in Rust; this dialog owns the presentation,
+ * per-op cancellation, confirmed-quit command, and dismissal.
  */
-import { cancelOperation, installAppUpdate, logFrontendEvent } from "../../lib/ipc/client";
+import {
+  cancelOperation,
+  confirmQuit,
+  installAppUpdate,
+  logFrontendEvent,
+} from "../../lib/ipc/client";
 import { describeError } from "../../lib/errors";
 import type { ManagerId } from "../../lib/ipc/types";
 import { managerInfo, useManagersStore } from "../../store/managers";
@@ -32,18 +36,40 @@ export function QuitGuardDialog({ opIds, reason = "quit" }: QuitGuardDialogProps
   const closeDialog = useUiStore((s) => s.closeDialog);
 
   const resolveName = (id: ManagerId) => managerInfo(detection, id)?.displayName ?? id;
-  const ops = opIds.map((id) => byId[id]).filter((o): o is NonNullable<typeof o> => !!o);
+  const entries = opIds.map((id) => ({ id, op: byId[id] }));
 
   const updating = reason === "update";
 
   function cancelAll() {
-    for (const id of opIds) void cancelOperation(id);
+    const cancellations = opIds.map(async (id) => {
+      try {
+        await cancelOperation(id);
+      } catch (e) {
+        // Persist the failure before a confirmed quit can end the process, but
+        // logger failure must never prevent the user's explicit exit choice.
+        await logFrontendEvent(
+          "error",
+          `operation cancel failed: ${describeError(e)}`,
+        ).catch(() => undefined);
+      }
+    });
     closeDialog();
     if (updating) {
       // Resolves only on failure — on success the process restarts.
       void installAppUpdate().catch(
         (e) => void logFrontendEvent("error", `update install failed: ${describeError(e)}`),
       );
+    } else {
+      // Wait for every cancellation request to settle, but a failed request
+      // must not strand the app in a half-confirmed quit. The backend shutdown
+      // hook repeats cancellation and performs the bounded process drain.
+      void Promise.all(cancellations)
+        .then(() => confirmQuit())
+        .catch((e) => {
+          void logFrontendEvent("error", `confirmed quit failed: ${describeError(e)}`).catch(
+            () => undefined,
+          );
+        });
     }
   }
 
@@ -58,13 +84,13 @@ export function QuitGuardDialog({ opIds, reason = "quit" }: QuitGuardDialogProps
       >
         <h2 className="text-[15px] font-semibold text-text-primary">Operations still running</h2>
         <p className="text-[13px] text-text-secondary">
-          {updating ? "Restarting to update" : "Quitting"} now will cancel {ops.length} running
-          operation{ops.length === 1 ? "" : "s"}:
+          {updating ? "Restarting to update" : "Quitting"} now will cancel {entries.length} running
+          operation{entries.length === 1 ? "" : "s"}:
         </p>
         <ul className="flex flex-col gap-1 rounded-control border border-border bg-bg-inset px-3 py-2">
-          {ops.map((op) => (
-            <li key={op.opId} className="font-mono text-[12px] text-text-secondary">
-              {opTitle(op, resolveName)}
+          {entries.map(({ id, op }) => (
+            <li key={id} className="font-mono text-[12px] text-text-secondary">
+              {op ? opTitle(op, resolveName) : `Operation · ${id}`}
             </li>
           ))}
         </ul>

@@ -128,6 +128,7 @@ describe("restart_with_running_ops_opens_quit_guard", () => {
 
     expect(fakeIpc.calls.filter((c) => c.cmd === "cancel_operation")).toHaveLength(1);
     await waitFor(() => expect(fakeIpc.called("install_app_update")).toBe(true));
+    expect(fakeIpc.called("confirm_quit")).toBe(false);
   });
 });
 

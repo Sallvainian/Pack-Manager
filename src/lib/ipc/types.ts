@@ -322,6 +322,7 @@ export const EVENT_OP_STATUS = "op:status";
 export const EVENT_OP_OUTPUT = "op:output";
 export const EVENT_OP_STALLED = "op:stalled";
 export const EVENT_APP_UPDATE_STATUS = "appUpdate:status";
+export const EVENT_QUIT_REQUESTED = "quit:requested";
 
 /** Payload of `snapshot:updated` (health rides in the snapshot). */
 export interface SnapshotUpdatedEvent {
@@ -356,6 +357,11 @@ export interface OpOutputEvent {
 export interface OpStalledEvent {
   opId: string;
   silentForSecs: number;
+}
+
+/** Payload emitted when a user quit is refused due to active operations. */
+export interface QuitRequestedEvent {
+  opIds: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -712,4 +718,8 @@ export function isOpOutputEvent(v: unknown): v is OpOutputEvent {
 
 export function isOpStalledEvent(v: unknown): v is OpStalledEvent {
   return isRec(v) && isStr(v.opId) && isNum(v.silentForSecs);
+}
+
+export function isQuitRequestedEvent(v: unknown): v is QuitRequestedEvent {
+  return isRec(v) && isStrArray(v.opIds);
 }

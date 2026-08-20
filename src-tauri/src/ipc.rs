@@ -549,7 +549,9 @@ pub struct AppUpdateStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::events::{OpOutputEvent, OpStalledEvent, OpStatusEvent, SnapshotUpdatedEvent};
+    use crate::events::{
+        OpOutputEvent, OpStalledEvent, OpStatusEvent, QuitRequestedEvent, SnapshotUpdatedEvent,
+    };
     use serde::de::DeserializeOwned;
     use std::path::PathBuf;
 
@@ -1009,6 +1011,13 @@ mod tests {
             &OpStalledEvent {
                 op_id: OP_ID.into(),
                 silent_for_secs: 120,
+            },
+        );
+
+        check(
+            "event_quit_requested.json",
+            &QuitRequestedEvent {
+                op_ids: vec![OP_ID.into(), "01981f2e-0000-7000-8000-5f8cff3fb96b".into()],
             },
         );
     }

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { LogLine, OpStatusEvent } from "../lib/ipc/types";
+import { OP_STATUSES, type LogLine, type OpStatusEvent } from "../lib/ipc/types";
 import {
+  activeOps,
   deriveManagerPhase,
   LOG_CAP,
   outdatedCount,
@@ -71,6 +72,33 @@ describe("operations applyStatus", () => {
     expect(rec.queuedAt).toBe("2026-07-22T14:00:00Z");
     expect(rec.packageIds).toEqual(["globalPackage:typescript"]);
     expect(rec.startedAt).toBe("2026-07-22T14:00:05Z");
+  });
+});
+
+describe("activeOps — AD-30 / FR-21 status set", () => {
+  it("includes exactly queued and running across the full status matrix", () => {
+    useOperationsStore.getState().setRecords(
+      OP_STATUSES.map((status) => ({
+        opId: `op-${status}`,
+        kind: "upgrade" as const,
+        executor: "brew" as const,
+        subject: "brew" as const,
+        status,
+        commandLine: "brew upgrade dolt",
+        packageIds: ["formula:dolt"],
+        queuedAt: "2026-08-19T00:00:00Z",
+        startedAt: null,
+        finishedAt: null,
+        exitCode: null,
+        error: null,
+        logPath: "/tmp/op.log",
+      })),
+    );
+
+    expect(activeOps(useOperationsStore.getState()).map((op) => op.status)).toEqual([
+      "queued",
+      "running",
+    ]);
   });
 });
 

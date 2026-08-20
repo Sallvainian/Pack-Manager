@@ -132,3 +132,8 @@ export function checkForAppUpdate(): Promise<void> {
 export function installAppUpdate(): Promise<void> {
   return invoke<void>("install_app_update");
 }
+
+/** Exit after the quit guard has cancelled every listed operation. */
+export function confirmQuit(): Promise<void> {
+  return invoke<void>("confirm_quit");
+}

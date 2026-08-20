@@ -761,16 +761,14 @@ pub async fn check_for_app_update(
     Ok(())
 }
 
-/// Refuses an app update while any package Operation is queued or running.
+/// The one definition of an active package Operation shared by quit and app
+/// update enforcement. This status set must match `activeOps` in
+/// `src/store/operations.ts` exactly (AD-30, FR-21).
 ///
-/// Split out of `install_app_update` so it is reachable from a unit test — the
-/// command itself needs a `tauri::AppHandle`, which a test cannot build.
-///
-/// The status set matches `activeOps` in `src/store/operations.ts` exactly.
 /// Queued counts as active: admission has already committed to running it, and
-/// a restart would drop it without ever starting it.
-fn refuse_app_update_while_busy(records: &[crate::ipc::OperationRecord]) -> Result<(), IpcError> {
-    let active: Vec<&str> = records
+/// an exit would drop it without ever starting it.
+pub(crate) fn active_op_ids(records: &[crate::ipc::OperationRecord]) -> Vec<String> {
+    records
         .iter()
         .filter(|record| {
             matches!(
@@ -778,8 +776,30 @@ fn refuse_app_update_while_busy(records: &[crate::ipc::OperationRecord]) -> Resu
                 crate::ipc::OpStatus::Queued | crate::ipc::OpStatus::Running
             )
         })
-        .map(|record| record.op_id.as_str())
-        .collect();
+        .map(|record| record.op_id.clone())
+        .collect()
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum QuitDecision {
+    Allow,
+    Block(Vec<String>),
+}
+
+pub(crate) fn quit_decision(records: &[crate::ipc::OperationRecord]) -> QuitDecision {
+    let active = active_op_ids(records);
+    if active.is_empty() {
+        QuitDecision::Allow
+    } else {
+        QuitDecision::Block(active)
+    }
+}
+
+/// Refuses an app update while any package Operation is queued or running.
+/// The active set comes from the same predicate as the quit guard, so the two
+/// enforcement paths cannot drift apart.
+fn refuse_app_update_while_busy(records: &[crate::ipc::OperationRecord]) -> Result<(), IpcError> {
+    let active = active_op_ids(records);
     if active.is_empty() {
         return Ok(());
     }
@@ -792,6 +812,20 @@ fn refuse_app_update_while_busy(records: &[crate::ipc::OperationRecord]) -> Resu
         active.len(),
         active.join(", ")
     )))
+}
+
+/// Confirmed-quit sink. Drain child processes before asking Tauri to exit so
+/// even its immediate-exit fallback cannot bypass the awaited shutdown hook.
+/// Programmatic exits carry `code: Some(0)`, so the `ExitRequested` backstop
+/// deliberately lets this request pass without reopening the guard.
+#[tauri::command]
+pub async fn confirm_quit(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), IpcError> {
+    state.shutdown().await;
+    app.exit(0);
+    Ok(())
 }
 
 /// Installs the downloaded update over the running bundle and relaunches.
@@ -814,7 +848,7 @@ pub async fn install_app_update(
         })
     })?;
     // Same kill hook as a normal quit: children must never outlive the app.
-    state.shutdown();
+    state.shutdown().await;
     // `restart` bare-spawns the new binary instead of going through
     // LaunchServices, so it comes up behind every other window unless it
     // activates itself. The spawned process inherits this env var and acts on
@@ -851,6 +885,86 @@ mod tests {
             exit_code: None,
             error: None,
             log_path: String::new(),
+        }
+    }
+
+    const ALL_STATUSES: [crate::ipc::OpStatus; 7] = [
+        crate::ipc::OpStatus::Queued,
+        crate::ipc::OpStatus::Running,
+        crate::ipc::OpStatus::Succeeded,
+        crate::ipc::OpStatus::Failed,
+        crate::ipc::OpStatus::Cancelled,
+        crate::ipc::OpStatus::TimedOut,
+        crate::ipc::OpStatus::Interrupted,
+    ];
+
+    fn is_active_by_spec(status: crate::ipc::OpStatus) -> bool {
+        use crate::ipc::OpStatus;
+        match status {
+            OpStatus::Queued | OpStatus::Running => true,
+            OpStatus::Succeeded
+            | OpStatus::Failed
+            | OpStatus::Cancelled
+            | OpStatus::TimedOut
+            | OpStatus::Interrupted => false,
+        }
+    }
+
+    #[test]
+    fn active_op_ids_selects_exactly_queued_and_running_in_record_order() {
+        for status in ALL_STATUSES {
+            assert_eq!(
+                !active_op_ids(&[record_with("op-1", status)]).is_empty(),
+                is_active_by_spec(status),
+                "{status:?} was classified against AD-30"
+            );
+        }
+        assert_eq!(
+            active_op_ids(&[
+                record_with("first", crate::ipc::OpStatus::Running),
+                record_with("done", crate::ipc::OpStatus::Succeeded),
+                record_with("second", crate::ipc::OpStatus::Queued),
+            ]),
+            vec!["first".to_string(), "second".to_string()]
+        );
+    }
+
+    #[test]
+    fn quit_decision_allows_terminal_work_and_blocks_with_active_ids() {
+        assert_eq!(quit_decision(&[]), QuitDecision::Allow);
+        let terminal: Vec<_> = ALL_STATUSES
+            .into_iter()
+            .filter(|status| !is_active_by_spec(*status))
+            .enumerate()
+            .map(|(index, status)| record_with(&format!("done-{index}"), status))
+            .collect();
+        assert_eq!(quit_decision(&terminal), QuitDecision::Allow);
+        assert_eq!(
+            quit_decision(&[
+                record_with("done", crate::ipc::OpStatus::Succeeded),
+                record_with("live", crate::ipc::OpStatus::Running),
+                record_with("waiting", crate::ipc::OpStatus::Queued),
+            ]),
+            QuitDecision::Block(vec!["live".to_string(), "waiting".to_string()])
+        );
+    }
+
+    #[test]
+    fn app_update_and_quit_guards_agree_for_every_status_pair() {
+        let agree = |records: &[crate::ipc::OperationRecord]| {
+            assert_eq!(
+                refuse_app_update_while_busy(records).is_err(),
+                matches!(quit_decision(records), QuitDecision::Block(_)),
+                "app-update and quit active sets drifted for {records:?}"
+            );
+        };
+
+        agree(&[]);
+        for first in ALL_STATUSES {
+            agree(&[record_with("op-1", first)]);
+            for second in ALL_STATUSES {
+                agree(&[record_with("op-1", first), record_with("op-2", second)]);
+            }
         }
     }
 

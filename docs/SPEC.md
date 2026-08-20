@@ -498,6 +498,7 @@ reveal_operation_log(args: { opId: string }): Promise<void>       // tauri-plugi
 reveal_logs_dir(): Promise<void>
 export_diagnostics(): Promise<{ zipPath: string }>
 log_frontend_event(args: { level: 'warn'|'error', message: string }): Promise<void>
+confirm_quit(): Promise<void>                                    // awaited child-process drain, then exit
 ```
 
 **Types** (TS mirrors serialized Rust fields; backend-only `#[serde(skip)]` fields are intentionally omitted):
@@ -664,6 +665,7 @@ interface Settings {
 | `op:status`                                                                                                                                                                                                                               | `{ opId, kind, executor, subject, status: OpStatus, queuePosition?: number, phaseLabel?: string, commandLine, exitCode?: number, error?: IpcError, startedAt?, finishedAt?, logPath }` — emitted on enqueue (queued), start, phase change, finish |
 | `op:output`                                                                                                                                                                                                                               | `{ opId, batch: LogLine[] }` — flushed every 50ms or 64 lines or 8KiB, whichever first                                                                                                                                                            |
 | `op:stalled`                                                                                                                                                                                                                              | `{ opId, silentForSecs: number }`                                                                                                                                                                                                                 |
+| `quit:requested`                                                                                                                                                                                                                          | `{ opIds: string[] }` — emitted when a user quit is refused because queued or running operations are active                                                                                                                                      |
 | Backend emits through an `EventSink` trait (`events.rs`) so core logic never touches `tauri::AppHandle`; tests use `VecSink`. Frontend derives per-manager phase (idle/refreshing/busy/error) from op records — no separate status event. |
 
 ### 5.10 Error taxonomy (`error.rs`)
