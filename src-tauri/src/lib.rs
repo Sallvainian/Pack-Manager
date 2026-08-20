@@ -25,6 +25,9 @@ use tauri::Manager as _;
 
 /// Menu item id for the app menu's "Check for Updates…".
 const MENU_CHECK_FOR_UPDATES: &str = "check_for_updates";
+/// Custom quit item: unlike the predefined macOS item, this reaches the event
+/// loop and can be guarded before `terminate:` becomes irreversible.
+const MENU_QUIT: &str = "quit";
 
 /// The window to pull forward after an update, preferring the configured label
 /// but never depending on it.
@@ -41,8 +44,8 @@ fn focus_target(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
         .or_else(|| app.webview_windows().into_values().next())
 }
 
-/// Set by `commands::install_app_update` immediately before `restart`, and read
-/// back by the process that restart spawns — `Command::new` inherits the parent
+/// Set by the app-update commands immediately before `restart`, and read back
+/// by the process that restart spawns — `Command::new` inherits the parent
 /// environment, so this survives the hand-off. Its presence means "you are the
 /// updated build, pull yourself to the front"; see the `RunEvent::Ready` arm.
 ///
@@ -71,6 +74,13 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         true,
         None::<&str>,
     )?;
+    let quit = MenuItem::with_id(
+        app,
+        MENU_QUIT,
+        format!("Quit {}", pkg_info.name),
+        true,
+        Some("CmdOrCtrl+Q"),
+    )?;
 
     Menu::with_items(
         app,
@@ -88,7 +98,7 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
                     &PredefinedMenuItem::hide(app, None)?,
                     &PredefinedMenuItem::hide_others(app, None)?,
                     &PredefinedMenuItem::separator(app)?,
-                    &PredefinedMenuItem::quit(app, None)?,
+                    &quit,
                 ],
             )?,
             &Submenu::with_items(
@@ -130,6 +140,24 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             )?,
         ],
     )
+}
+
+/// The single enforcement point for every user-initiated quit path. It shares
+/// the app-update guard's active predicate and emits the one frontend refusal
+/// signal when queued or running work would otherwise be orphaned.
+fn on_quit_requested(app: &tauri::AppHandle) -> commands::QuitDecision {
+    let Some(state) = app.try_state::<state::AppState>() else {
+        return commands::QuitDecision::Allow;
+    };
+    let decision = commands::quit_decision(&state.queue.records());
+    if let commands::QuitDecision::Block(op_ids) = &decision {
+        state.sink.emit(events::AppEvent::QuitRequested(
+            events::QuitRequestedEvent {
+                op_ids: op_ids.clone(),
+            },
+        ));
+    }
+    decision
 }
 
 /// Launch check + a 6h heartbeat, both gated on `autoCheckForUpdates`. The
@@ -206,6 +234,12 @@ pub fn run() {
             let handle = app.handle().clone();
             app.set_menu(build_menu(&handle)?)?;
             app.on_menu_event(move |app, event| {
+                if event.id() == MENU_QUIT {
+                    if matches!(on_quit_requested(app), commands::QuitDecision::Allow) {
+                        app.exit(0);
+                    }
+                    return;
+                }
                 if event.id() != MENU_CHECK_FOR_UPDATES {
                     return;
                 }
@@ -250,10 +284,38 @@ pub fn run() {
             commands::get_app_update_state,
             commands::check_for_app_update,
             commands::install_app_update,
+            commands::confirm_app_update,
+            commands::confirm_quit,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app_handle, event| match event {
+            // The close request must be prevented synchronously; the runtime
+            // reads this decision immediately after the callback returns.
+            tauri::RunEvent::WindowEvent {
+                event: tauri::WindowEvent::CloseRequested { api, .. },
+                ..
+            } => {
+                if matches!(
+                    on_quit_requested(app_handle),
+                    commands::QuitDecision::Block(_)
+                ) {
+                    api.prevent_close();
+                }
+            }
+            // Backstop for any future user-driven exit path. Programmatic
+            // exit/restart requests carry `Some(code)` and pass through so a
+            // confirmed quit cannot reopen the dialog in a loop.
+            tauri::RunEvent::ExitRequested {
+                code: None, api, ..
+            } => {
+                if matches!(
+                    on_quit_requested(app_handle),
+                    commands::QuitDecision::Block(_)
+                ) {
+                    api.prevent_exit();
+                }
+            }
             // Pull an updated build to the front. `AppHandle::restart` bare-
             // spawns the new binary (tauri `process.rs`) rather than going
             // through LaunchServices, so the replacement inherits no
@@ -285,12 +347,12 @@ pub fn run() {
                     }
                 }
             }
-            // Quit-guard kill hook: on exit, cancel every running op so child
+            // Quit-guard kill hook: on exit, cancel every active op so child
             // process groups are SIGTERMed and never outlive the app. The
             // confirm dialog lives in the frontend (QuitGuardDialog, U8).
             tauri::RunEvent::Exit => {
                 if let Some(state) = app_handle.try_state::<state::AppState>() {
-                    state.shutdown();
+                    tauri::async_runtime::block_on(state.shutdown());
                 }
             }
             _ => {}

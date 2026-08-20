@@ -1,7 +1,7 @@
 /**
  * events.ts — the single event subscription (SPEC §5.9, §5.11).
  *
- * `subscribeEvents()` is called once from App mount; it wires the five backend
+ * `subscribeEvents()` is called once from App mount; it wires the seven backend
  * events to the stores and returns an unlisten. The individual `on*` handlers
  * are exported for direct unit testing (no bridge mock required).
  *
@@ -26,12 +26,14 @@ import {
   EVENT_OP_OUTPUT,
   EVENT_OP_STALLED,
   EVENT_OP_STATUS,
+  EVENT_QUIT_REQUESTED,
   EVENT_SNAPSHOT_UPDATED,
   type AppUpdateStatus,
   type DetectionReport,
   type OpOutputEvent,
   type OpStalledEvent,
   type OpStatusEvent,
+  type QuitRequestedEvent,
   type SnapshotUpdatedEvent,
 } from "./types";
 
@@ -112,6 +114,12 @@ export function onStalled(evt: OpStalledEvent): void {
     .openDialog({ kind: "stalled", opId: evt.opId, silentForSecs: evt.silentForSecs });
 }
 
+export function onQuitRequested(evt: QuitRequestedEvent): void {
+  useUiStore
+    .getState()
+    .openDialog({ kind: "quitGuard", opIds: evt.opIds, reason: "quit" });
+}
+
 /**
  * In-app update state (DECISIONS D25). Only *manual* checks speak up: an
  * automatic check that finds nothing, or fails because the laptop is offline,
@@ -153,6 +161,7 @@ export async function subscribeEvents(): Promise<UnlistenFn> {
     listen<OpOutputEvent>(EVENT_OP_OUTPUT, (e) => onOutput(e.payload)),
     listen<OpStalledEvent>(EVENT_OP_STALLED, (e) => onStalled(e.payload)),
     listen<AppUpdateStatus>(EVENT_APP_UPDATE_STATUS, (e) => onAppUpdate(e.payload)),
+    listen<QuitRequestedEvent>(EVENT_QUIT_REQUESTED, (e) => onQuitRequested(e.payload)),
   ]);
   const unlisteners = results
     .filter((r): r is PromiseFulfilledResult<UnlistenFn> => r.status === "fulfilled")

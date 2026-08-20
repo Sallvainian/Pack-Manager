@@ -15,6 +15,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -714,6 +715,14 @@ struct Shared {
     records: Mutex<RecordStore>,
     buffers: Mutex<HashMap<String, Ring>>,
     tokens: Mutex<HashMap<String, CancellationToken>>,
+    closing: AtomicBool,
+    /// Serializes the last admission check/start sequence with `cancel_all`.
+    /// The atomic latch rejects later pumps; this mutex closes the race where
+    /// a scheduler pump had already observed `false` as shutdown began.
+    admission: Mutex<()>,
+    /// One-shot deterministic seam for the admission interleaving regression.
+    #[cfg(test)]
+    after_initial_closing_check: Mutex<Option<Box<dyn FnOnce() + Send>>>,
 }
 
 impl Shared {
@@ -751,6 +760,7 @@ enum Msg {
     Cancel {
         op_id: String,
     },
+    Pump,
     Finished {
         op_id: String,
         status: OpStatus,
@@ -872,17 +882,65 @@ impl Queue {
             .collect()
     }
 
-    /// Cancels every running op (quit-guard kill hook). Only flips the
-    /// tokens — the runner tasks perform the SIGTERM→grace→SIGKILL work, so
-    /// the quit path must ALSO await [`Queue::wait_until_idle`] before the
-    /// process exits or the kill tasks may never be polled.
+    fn active(&self) -> Vec<OperationRecord> {
+        self.records()
+            .into_iter()
+            .filter(|r| matches!(r.status, OpStatus::Queued | OpStatus::Running))
+            .collect()
+    }
+
+    /// Closes scheduler admission at the same linearization point used by the
+    /// final pre-spawn check. Existing running work is not cancelled.
+    pub(crate) fn close_admission(&self) {
+        let _admission = self
+            .shared
+            .admission
+            .lock()
+            .expect("admission gate poisoned");
+        self.shared.closing.store(true, Ordering::SeqCst);
+    }
+
+    /// Reopens admission after an app-update reservation fails. Wake the
+    /// scheduler so work that queued while the reservation was held can start.
+    pub(crate) fn reopen_admission(&self) {
+        let _admission = self
+            .shared
+            .admission
+            .lock()
+            .expect("admission gate poisoned");
+        self.shared.closing.store(false, Ordering::SeqCst);
+        let _ = self.tx.send(Msg::Pump);
+    }
+
+    /// Closes scheduler admission for this process and cancels
+    /// every queued or running op (quit-guard kill hook). Running tokens only
+    /// request cancellation — the runner tasks perform the
+    /// SIGTERM→grace→SIGKILL work, so the quit path must ALSO await
+    /// [`Queue::wait_until_idle`] before the process exits or the kill tasks
+    /// may never be polled.
     pub fn cancel_all(&self) {
+        // Admission and shutdown have one linearization point. A pump already
+        // inside the gate completes its start bookkeeping first; after this
+        // lock is acquired, setting the latch makes every later pump refuse.
+        let _admission = self
+            .shared
+            .admission
+            .lock()
+            .expect("admission gate poisoned");
+        self.shared.closing.store(true, Ordering::SeqCst);
         for token in self.shared.tokens.lock().expect("tokens poisoned").values() {
             token.cancel();
         }
+        // The scheduler owns its pending deque, so queued work is finalized by
+        // sending the same cancellation message used by the per-op command.
+        // The closing latch above guarantees none can start while these
+        // messages are waiting to be processed.
+        for record in self.active() {
+            self.cancel(&record.op_id);
+        }
     }
 
-    /// Waits (bounded) until no op is `Running`. The quit guard calls this
+    /// Waits (bounded) until no op is `Queued` or `Running`. The quit guard calls this
     /// after [`Queue::cancel_all`] so the runner tasks' SIGTERM → grace →
     /// SIGKILL escalation demonstrably completes before the process exits —
     /// children never outlive the app (SPEC F7). Returns `false` when the
@@ -890,8 +948,18 @@ impl Queue {
     pub async fn wait_until_idle(&self, timeout: Duration) -> bool {
         let deadline = Instant::now() + timeout;
         loop {
-            if self.running().is_empty() {
+            let active = self.active();
+            if active.is_empty() {
                 return true;
+            }
+            if self.shared.closing.load(Ordering::SeqCst) {
+                // Submissions can arrive after cancel_all's initial snapshot.
+                // The admission latch keeps them from spawning; repeatedly
+                // enqueueing cancellation here finalizes them instead of
+                // forcing the grace period to elapse with unreachable records.
+                for record in active {
+                    self.cancel(&record.op_id);
+                }
             }
             if Instant::now() >= deadline {
                 return false;
@@ -958,6 +1026,7 @@ async fn scheduler_task(
                 reply,
             } => sched.handle_plan_batch(subs, expected_revision, reply),
             Msg::Cancel { op_id } => sched.handle_cancel(&op_id),
+            Msg::Pump => {}
             Msg::Finished {
                 op_id,
                 status,
@@ -1294,6 +1363,24 @@ impl Sched {
     }
 
     fn try_start_all(&mut self) {
+        if self.shared.closing.load(Ordering::SeqCst) {
+            return;
+        }
+        #[cfg(test)]
+        if let Some(after_check) = self
+            .shared
+            .after_initial_closing_check
+            .lock()
+            .expect("admission test hook poisoned")
+            .take()
+        {
+            after_check();
+        }
+        let shared = self.shared.clone();
+        let _admission = shared.admission.lock().expect("admission gate poisoned");
+        if shared.closing.load(Ordering::SeqCst) {
+            return;
+        }
         let mut i = 0;
         while i < self.pending.len() {
             let can_start = self.pending[i].op.locks.is_disjoint(&self.held);
@@ -2999,8 +3086,8 @@ mod tests {
         assert_eq!(records[0].status, OpStatus::Cancelled);
     }
 
-    /// Regression for the quit guard: cancel_all only flips tokens; the exit
-    /// path must be able to WAIT until the runner tasks finish the kill work.
+    /// Regression for the quit guard: running cancellation only flips tokens;
+    /// the exit path must be able to WAIT until runner tasks finish kill work.
     /// With a running (buffered) refresh, cancel_all + wait_until_idle must
     /// converge to no running ops — previously the refresh child was
     /// untouchable and kept running past app exit (SPEC F7).
@@ -3031,6 +3118,188 @@ mod tests {
         );
         assert_eq!(status_of(&h, &id), OpStatus::Cancelled);
         assert!(h.queue.running().is_empty());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn cancel_all_stops_admission_before_a_queued_op_can_spawn() {
+        let h = harness();
+        let running_gate = Arc::new(Notify::new());
+        h.fake
+            .on_streaming("brew", &["upgrade", "dolt"])
+            .gate(running_gate.clone());
+        h.fake.on_streaming("brew", &["upgrade", "abseil"]);
+
+        let running = h
+            .queue
+            .submit(upgrade_sub(
+                ManagerId::Brew,
+                &[ManagerId::Brew],
+                "/fake/brew",
+                &["upgrade", "dolt"],
+            ))
+            .await
+            .unwrap();
+        let queued = h
+            .queue
+            .submit(upgrade_sub(
+                ManagerId::Brew,
+                &[ManagerId::Brew],
+                "/fake/brew",
+                &["upgrade", "abseil"],
+            ))
+            .await
+            .unwrap();
+
+        wait_for(|| status_of(&h, &running) == OpStatus::Running).await;
+        assert_eq!(status_of(&h, &queued), OpStatus::Queued);
+        wait_for(|| h.fake.calls().len() == 1).await;
+        assert_eq!(h.fake.calls().len(), 1);
+
+        h.queue.cancel_all();
+        assert!(
+            h.queue.wait_until_idle(Duration::from_secs(7)).await,
+            "the running operation must finalize within the shutdown grace"
+        );
+
+        assert_eq!(status_of(&h, &running), OpStatus::Cancelled);
+        let spawned: Vec<Vec<String>> = h.fake.calls().into_iter().map(|call| call.args).collect();
+        assert_eq!(
+            spawned.len(),
+            1,
+            "queued child started during shutdown: {spawned:?}"
+        );
+        assert!(!spawned.iter().any(|args| args == &["upgrade", "abseil"]));
+        assert_eq!(status_of(&h, &queued), OpStatus::Cancelled);
+        running_gate.notify_one();
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn shutdown_drain_cancels_work_submitted_after_initial_snapshot() {
+        let h = harness();
+
+        h.queue.cancel_all();
+        let late = h
+            .queue
+            .submit(refresh_sub(ManagerId::Npm, "/fake/npm", ManagedBy::Mise))
+            .await
+            .unwrap();
+        assert_eq!(status_of(&h, &late), OpStatus::Queued);
+
+        assert!(
+            h.queue.wait_until_idle(Duration::from_secs(7)).await,
+            "late queued work must be finalized inside the bounded drain"
+        );
+        assert_eq!(status_of(&h, &late), OpStatus::Cancelled);
+        assert!(h.fake.calls().is_empty(), "late work must never spawn");
+    }
+
+    /// Forces the shutdown race in which a scheduler pump has observed an
+    /// open latch but has not acquired the admission gate yet. Closing under
+    /// that gate must make the pump's second check reject the now-startable
+    /// queued operation.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn admission_gate_second_check_stops_a_stale_scheduler_pump() {
+        let h = harness();
+        let running_gate = Arc::new(Notify::new());
+        h.fake
+            .on_streaming("brew", &["upgrade", "dolt"])
+            .gate(running_gate.clone());
+        h.fake.on_streaming("brew", &["upgrade", "abseil"]);
+
+        let running = h
+            .queue
+            .submit(upgrade_sub(
+                ManagerId::Brew,
+                &[ManagerId::Brew],
+                "/fake/brew",
+                &["upgrade", "dolt"],
+            ))
+            .await
+            .unwrap();
+        let queued = h
+            .queue
+            .submit(upgrade_sub(
+                ManagerId::Brew,
+                &[ManagerId::Brew],
+                "/fake/brew",
+                &["upgrade", "abseil"],
+            ))
+            .await
+            .unwrap();
+
+        wait_for(|| status_of(&h, &running) == OpStatus::Running).await;
+        assert_eq!(status_of(&h, &queued), OpStatus::Queued);
+        wait_for(|| h.fake.calls().len() == 1).await;
+        assert_eq!(h.fake.calls().len(), 1);
+
+        let (pump_reached_tx, pump_reached_rx) = std::sync::mpsc::channel();
+        let (resume_pump_tx, resume_pump_rx) = std::sync::mpsc::channel();
+        *h.queue
+            .shared
+            .after_initial_closing_check
+            .lock()
+            .expect("admission test hook poisoned") = Some(Box::new(move || {
+            pump_reached_tx
+                .send(())
+                .expect("test controls the pump receiver");
+            resume_pump_rx
+                .recv()
+                .expect("test controls when the pump resumes");
+        }));
+
+        let admission = h
+            .queue
+            .shared
+            .admission
+            .lock()
+            .expect("admission gate poisoned");
+        running_gate.notify_one();
+        pump_reached_rx
+            .recv_timeout(Duration::from_secs(2))
+            .expect("scheduler pump must pause after its initial latch read");
+
+        h.queue.shared.closing.store(true, Ordering::SeqCst);
+        resume_pump_tx
+            .send(())
+            .expect("paused scheduler pump must still be live");
+        drop(admission);
+
+        wait_for(|| status_of(&h, &running) == OpStatus::Succeeded).await;
+        tokio::task::yield_now().await;
+        assert_eq!(status_of(&h, &queued), OpStatus::Queued);
+        let spawned: Vec<Vec<String>> = h.fake.calls().into_iter().map(|call| call.args).collect();
+        assert_eq!(
+            spawned.len(),
+            1,
+            "stale scheduler pump started a queued child: {spawned:?}"
+        );
+        assert!(!spawned.iter().any(|args| args == &["upgrade", "abseil"]));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn wait_until_idle_returns_false_when_its_bound_elapses() {
+        let h = harness();
+        let gate = Arc::new(Notify::new());
+        h.fake
+            .on_streaming("brew", &["upgrade", "dolt"])
+            .gate(gate.clone());
+        let id = h
+            .queue
+            .submit(upgrade_sub(
+                ManagerId::Brew,
+                &[ManagerId::Brew],
+                "/fake/brew",
+                &["upgrade", "dolt"],
+            ))
+            .await
+            .unwrap();
+        wait_for(|| status_of(&h, &id) == OpStatus::Running).await;
+
+        assert!(!h.queue.wait_until_idle(Duration::from_secs(7)).await);
+        assert_eq!(h.queue.running().len(), 1);
+
+        gate.notify_one();
+        wait_for(|| status_of(&h, &id) != OpStatus::Running).await;
     }
 
     /// Regression: a non-zero `brew update` (offline, tap trouble) must NOT
