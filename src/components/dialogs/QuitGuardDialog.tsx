@@ -8,7 +8,7 @@
  * the same confirmation — only the wording and the follow-up action differ.
  *
  * Native quit triggers are wired in Rust; this dialog owns the presentation,
- * per-op cancellation, confirmed-quit command, and dismissal.
+ * confirmed destructive action, per-op quit cancellation, and dismissal.
  */
 import {
   cancelOperation,
@@ -42,22 +42,11 @@ export function QuitGuardDialog({ opIds, reason = "quit" }: QuitGuardDialogProps
   const updating = reason === "update";
 
   function cancelAll() {
-    const cancellations = opIds.map(async (id) => {
-      try {
-        await cancelOperation(id);
-      } catch (e) {
-        // Persist the failure before a confirmed quit can end the process, but
-        // logger failure must never prevent the user's explicit exit choice.
-        await logFrontendEvent(
-          "error",
-          `operation cancel failed: ${describeError(e)}`,
-        ).catch(() => undefined);
-      }
-    });
     closeDialog();
     if (updating) {
-      // The explicit backend sink repeats cancellation, awaits the bounded
-      // drain, then installs. Resolves only on failure; success restarts.
+      // The backend first reserves admission and attempts the fallible install.
+      // Only success commits cancellation, drains, and restarts, so a failed
+      // install does not destroy the work the user had in flight.
       void confirmAppUpdate().catch((e) => {
         const detail = describeError(e);
         pushToast({
@@ -68,6 +57,18 @@ export function QuitGuardDialog({ opIds, reason = "quit" }: QuitGuardDialogProps
         void logFrontendEvent("error", `update install failed: ${detail}`).catch(() => undefined);
       });
     } else {
+      const cancellations = opIds.map(async (id) => {
+        try {
+          await cancelOperation(id);
+        } catch (e) {
+          // Persist the failure before a confirmed quit can end the process,
+          // but logger failure must never prevent the explicit exit choice.
+          await logFrontendEvent(
+            "error",
+            `operation cancel failed: ${describeError(e)}`,
+          ).catch(() => undefined);
+        }
+      });
       // Wait for every cancellation request to settle, but a failed request
       // must not strand the app in a half-confirmed quit. The backend shutdown
       // hook repeats cancellation and performs the bounded process drain.

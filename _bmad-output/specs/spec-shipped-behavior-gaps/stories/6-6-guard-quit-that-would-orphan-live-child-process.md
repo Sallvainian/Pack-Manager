@@ -3,7 +3,7 @@ title: 'Guard a Quit That Would Orphan a Live Child Process'
 type: 'feature'
 created: '2026-08-19'
 status: 'done'
-review_loop_iteration: 3
+review_loop_iteration: 4
 followup_review_recommended: false
 context:
   - '_bmad-output/specs/spec-shipped-behavior-gaps/SPEC.md'
@@ -60,7 +60,7 @@ deferred:
 
 Backend — `src-tauri/src/`:
 - `commands.rs:764-795` — `refuse_app_update_while_busy`; its doc already says "The status set matches `activeOps` in `src/store/operations.ts` exactly." The `matches!(record.status, OpStatus::Queued | OpStatus::Running)` at `:776-779` is **the** predicate to extract. Sole caller `:810`. Existing matrix test `:857-901`.
-- `commands.rs` — `install_app_update` atomically reserves idle admission before installation; `confirm_app_update` is the explicit cancel-and-drain sink used after the update guard.
+- `commands.rs` — `install_app_update` atomically reserves idle admission before installation; `confirm_app_update` reserves admission and installs before committing the user's authorized cancel-and-drain restart.
 - `ipc.rs:96-107` — `OpStatus`, seven variants, `#[serde(rename_all = "camelCase")]`.
 - `ipc.rs:544-581` — contract-fixture `check()` helper; `:787` `ipc_contract_matches_committed_fixtures`. Fixtures live in `dev/fixtures/ipc/` (repo root), 15 files today.
 - `events.rs:74-79` — the six `EVENT_*` name constants; `:82-90` `AppEvent`; `:92-113` `name()` + `payload_json()`; `:117-119` `EventSink`; `:159-173` `TauriSink` → `AppHandle::emit`.
@@ -138,11 +138,13 @@ Read-only evidence (verified in `~/.cargo/registry`, do not modify):
 - [x] [Review][Patch] Contain a rejection from the fallback logger after `confirm_quit` itself fails so the recovery path cannot create an unhandled promise rejection. [src/components/dialogs/QuitGuardDialog.tsx:68] — fixed; double-failure regression and frontend gates passed
 - [x] [Review][Patch] Narrow the Vitest exclusion to the generated BMAD snippet directory instead of hiding every future test anywhere under `_bmad-output`. [vitest.config.ts:10] — fixed; 144-test suite passed with generated snippets excluded
 - [x] [Review][Patch] Add the new `confirm_quit` command and `quit:requested` event to the exact IPC contract documentation. [docs/SPEC.md:481] — fixed
-- [x] [Review][Patch] Sequence app-update cancellation and installation through an explicit backend drain before installing. [src/components/dialogs/QuitGuardDialog.tsx:57] — fixed after PR review
+- [x] [Review][Patch] Sequence a confirmed app update through one explicit backend admission/install/drain sink instead of frontend cancellation requests followed immediately by installation. [src/components/dialogs/QuitGuardDialog.tsx:57] — fixed after PR review
 - [x] [Review][Patch] Reserve idle scheduler admission atomically so an operation cannot start between the app-update busy check and installation. [src-tauri/src/commands.rs] — fixed after PR review
-- [x] [Review][Patch] Reopen queue admission when confirmed app-update preparation times out or otherwise fails, so the still-running app cannot leave later submissions permanently queued. [src-tauri/src/commands.rs] — fixed after PR review; regression and full Rust gate passed
+- [x] [Review][Patch] Reopen queue admission whenever confirmed app-update preparation fails, so the still-running app cannot leave later submissions permanently queued. [src-tauri/src/commands.rs] — fixed after PR review; regression and full Rust gate passed
 - [x] [Review][Patch] Reissue cancellation during the shutdown drain for work submitted after `cancel_all` took its initial snapshot. [src-tauri/src/queue.rs] — fixed after PR review; regression and full Rust gate passed
 - [x] [Review][Patch] Show a persistent error toast as well as logging when confirmed app-update preparation or installation fails after the guard closes. [src/components/dialogs/QuitGuardDialog.tsx] — fixed after PR review; dialog regression and frontend gates passed
+- [x] [Review][Patch] Attempt the fallible updater installation before cancelling authorized in-flight work, reopen admission and preserve that work on failure, then drain only after installation succeeds. [src-tauri/src/commands.rs] — fixed after PR review; success-order and failure-preservation regressions added
+- [x] [Review][Patch] Restore the Rust-edition safety note beside the intentionally tolerated `std::env::set_var` relaunch handoff. [src-tauri/src/commands.rs] — fixed after PR review
 - [x] [Review][Defer] Make the pre-existing all-or-nothing event subscription recover when one listener registration fails, so a transient failure cannot disable the quit-confirmation surface for the whole session. [src/lib/ipc/events.ts:152] — deferred, pre-existing
 - [x] [Review][Patch] Normalize the new deferred-work entries to the ledger's `source_spec` / `summary` / `evidence` schema. [_bmad-output/implementation-artifacts/deferred-work.md:43] — fixed
 - [x] [Review][Patch] Remove the superseded untracked TEA red-phase snippets, worker payloads, and result marker instead of committing stale instructions alongside their verified live replacements. [_bmad-output/test-artifacts:1] — fixed; live tests remain authoritative
@@ -209,12 +211,14 @@ Read-only evidence (verified in `~/.cargo/registry`, do not modify):
 - 2026-08-19: Applied PR #48 follow-up review: added an explicit confirmed-update drain, atomically reserved update admission, and corrected active-operation copy.
 - 2026-08-19: Applied PR #48 second review pass: reopened admission after failed update preparation and made shutdown drains cancel late-arriving work.
 - 2026-08-19: Applied PR #48 third review pass: surfaced confirmed-update restart failures in a persistent error toast with structured diagnostic detail.
+- 2026-08-19: Applied PR #48 fourth review pass: installed before cancelling confirmed active work, preserved work and reopened admission on failure, and restored the relaunch environment safety note.
 
 ## Review Triage Log
 
 - PR #48 Claude Code Review: applied the app-update sequencing suggestion and queued/running copy correction; the final verdict reported no merge blocker.
 - PR #48 Claude Code Review iteration 2: applied the admission-reopen blocker and the late-submission cancellation suggestion; both received focused Rust regressions and the full Rust gate passed.
 - PR #48 Claude Code Review iteration 3: applied the non-blocking visible-error suggestion for a failed confirmed update; the new dialog regression and all frontend gates passed.
+- PR #48 Claude Code Review iteration 4: applied the install-before-cancel ordering correction and optional Rust safety-note restoration; focused frontend/backend regressions cover failure preservation and success ordering.
 
 ## Design Notes
 

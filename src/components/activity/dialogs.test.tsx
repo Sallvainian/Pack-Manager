@@ -209,6 +209,7 @@ describe("quit_guard_lists_ops_and_cancels_all", () => {
     expect(toast.message).toContain("Update restart failed");
     expect(toast.message).toContain("restart refused");
     expect(toast.message).not.toContain("[object Object]");
+    expect(fakeIpc.called("cancel_operation")).toBe(false);
 
     await vi.waitFor(() => expect(fakeIpc.called("log_frontend_event")).toBe(true));
     const logged = fakeIpc.callsFor("log_frontend_event")[0].args as {

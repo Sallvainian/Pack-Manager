@@ -499,7 +499,7 @@ reveal_logs_dir(): Promise<void>
 export_diagnostics(): Promise<{ zipPath: string }>
 log_frontend_event(args: { level: 'warn'|'error', message: string }): Promise<void>
 confirm_quit(): Promise<void>                                    // awaited child-process drain, then exit
-confirm_app_update(): Promise<void>                              // confirmed cancel/drain, install, then restart
+confirm_app_update(): Promise<void>                              // reserve/install, then confirmed cancel/drain + restart
 ```
 
 **Types** (TS mirrors serialized Rust fields; backend-only `#[serde(skip)]` fields are intentionally omitted):

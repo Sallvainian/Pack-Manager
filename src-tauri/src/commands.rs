@@ -827,15 +827,13 @@ fn reserve_app_update_admission(queue: &Queue) -> Result<(), IpcError> {
     Ok(())
 }
 
-/// The explicit confirmation path owns cancellation. Do not begin installing
-/// until every queued/running record has reached a terminal state.
-async fn prepare_confirmed_app_update(state: &AppState) -> Result<(), IpcError> {
-    state.shutdown().await;
-    let result = refuse_app_update_while_busy(&state.queue.records());
+/// Reserve scheduler admission and install the already-downloaded update
+/// before cancelling the active work that the user authorized us to stop.
+/// A failed install leaves that work intact and restores normal admission.
+fn prepare_confirmed_app_update(state: &AppState) -> Result<(), IpcError> {
+    state.queue.close_admission();
+    let result = install_downloaded_update(state);
     if result.is_err() {
-        // A timed-out drain leaves the shutdown latch closed. The update did
-        // not install or restart, so restore normal admission before returning
-        // control to the still-running app.
         state.queue.reopen_admission();
     }
     result
@@ -854,6 +852,15 @@ fn restart_into_updated_build(app: tauri::AppHandle) -> ! {
     // LaunchServices, so it comes up behind every other window unless it
     // activates itself. The spawned process inherits this env var and acts on
     // it at `RunEvent::Ready`.
+    //
+    // This is called from an async command, so it runs on a runtime worker
+    // rather than the main thread, and `set_var` can in principle race a
+    // concurrent `getenv` elsewhere — the reason edition 2024 makes it
+    // `unsafe`. Tolerated here: `shutdown()` has already run and `restart`
+    // never returns, so the process is milliseconds from exec. On an edition
+    // bump this needs an `unsafe` block plus this safety note; it fails to
+    // compile rather than silently changing behaviour, so the bump itself is
+    // the reminder.
     std::env::set_var(crate::RELAUNCH_FOCUS_ENV, "1");
     tracing::info!("restarting into the updated build");
     app.restart();
@@ -897,18 +904,17 @@ pub async fn install_app_update(
 
 /// Explicit app-update confirmation from the quit guard. Unlike the ordinary
 /// install command, this path is authorized to cancel active package work.
+/// It first reserves admission and attempts the fallible install; only a
+/// successful install commits the user's cancellation choice and restarts.
 #[tauri::command]
 pub async fn confirm_app_update(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), IpcError> {
-    prepare_confirmed_app_update(&state).await?;
-    if let Err(error) = install_downloaded_update(&state) {
-        state.queue.reopen_admission();
-        return Err(error);
-    }
-    // Cancel any submission received while the installer was running; the
-    // admission latch ensures it never spawned a child.
+    prepare_confirmed_app_update(&state)?;
+    // The install succeeded. Now commit the confirmed destructive action:
+    // cancel active work plus any submission received while the synchronous
+    // installer held admission closed, then drain before restarting.
     state.shutdown().await;
     restart_into_updated_build(app);
 }
@@ -1062,8 +1068,14 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn confirmed_app_update_drains_running_work_before_installation() {
+    async fn confirmed_app_update_installs_before_draining_running_work() {
         let h = harness();
+        let release = Arc::new(crate::app_update::fake::FakeRelease::new("0.2.0"));
+        let source = crate::app_update::fake::FakeUpdateSource::found(release.clone());
+        h.state
+            .app_update
+            .check_and_download(&source, UpdateCheckTrigger::Manual)
+            .await;
         let gate = Arc::new(tokio::sync::Notify::new());
         h.fake
             .on("npm", &["ls", "-g", "--depth=0", "--json"])
@@ -1099,8 +1111,16 @@ mod tests {
             crate::ipc::OpStatus::Running
         );
 
-        prepare_confirmed_app_update(&h.state).await.unwrap();
+        prepare_confirmed_app_update(&h.state).unwrap();
 
+        assert!(*release.installed.lock().expect("installed poisoned"));
+        assert_eq!(
+            h.state.queue.record(&op_id).unwrap().status,
+            crate::ipc::OpStatus::Running,
+            "install success must be known before active work is cancelled"
+        );
+
+        h.state.shutdown().await;
         assert_eq!(
             h.state.queue.record(&op_id).unwrap().status,
             crate::ipc::OpStatus::Cancelled
@@ -1161,23 +1181,30 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn failed_confirmed_update_preparation_reopens_admission() {
-        let h = stuck_harness();
-        let detection =
-            |manager: ManagerId, program: &str, managed_by: ManagedBy| DetectStatus::Present {
-                binary_path: PathBuf::from(program),
-                canonical_path: PathBuf::from(program),
-                version: Some("1.0.0".into()),
-                managed_by,
-                evidence: format!("test {manager}"),
-            };
-        let stuck_id = h
+    async fn failed_confirmed_update_install_preserves_work_and_reopens_admission() {
+        let h = harness();
+        let npm_gate = Arc::new(tokio::sync::Notify::new());
+        h.fake
+            .on("npm", &["ls", "-g", "--depth=0", "--json"])
+            .fixture("npm_ls_g_2026-07-22.json")
+            .gate(npm_gate);
+        h.fake
+            .on("npm", &["outdated", "-g", "--json"])
+            .fixture_with_exit("npm_outdated_g_synthetic.json", 1);
+        let detection = |manager: ManagerId, program: &str| DetectStatus::Present {
+            binary_path: PathBuf::from(program),
+            canonical_path: PathBuf::from(program),
+            version: Some("1.0.0".into()),
+            managed_by: ManagedBy::Standalone,
+            evidence: format!("test {manager}"),
+        };
+        let running_id = h
             .state
             .queue
             .submit(
                 queue::make_refresh_submission(
                     ManagerId::Npm,
-                    &detection(ManagerId::Npm, "/fake/npm", ManagedBy::Mise),
+                    &detection(ManagerId::Npm, "/fake/npm"),
                     &Settings::default(),
                     &h.env,
                 )
@@ -1186,28 +1213,37 @@ mod tests {
             .await
             .unwrap();
         for _ in 0..100 {
-            if h.state.queue.record(&stuck_id).unwrap().status == crate::ipc::OpStatus::Running {
+            if h.state.queue.record(&running_id).unwrap().status == crate::ipc::OpStatus::Running {
                 break;
             }
             tokio::task::yield_now().await;
         }
         assert_eq!(
-            h.state.queue.record(&stuck_id).unwrap().status,
+            h.state.queue.record(&running_id).unwrap().status,
             crate::ipc::OpStatus::Running
         );
 
         let error = prepare_confirmed_app_update(&h.state)
-            .await
-            .expect_err("an unresponsive child must fail the bounded preparation");
-        assert_eq!(error.code, ErrorCode::SelfUpdateUnavailable);
+            .expect_err("installing without a downloaded update must fail");
+        assert_eq!(error.code, ErrorCode::Io);
+        assert_eq!(
+            h.state.queue.record(&running_id).unwrap().status,
+            crate::ipc::OpStatus::Running,
+            "a failed install must not cancel the user's active work"
+        );
 
+        let brew_gate = Arc::new(tokio::sync::Notify::new());
+        h.fake
+            .on("brew", &["update"])
+            .ok("Already up-to-date.\n")
+            .gate(brew_gate);
         let later_id = h
             .state
             .queue
             .submit(
                 queue::make_refresh_submission(
                     ManagerId::Brew,
-                    &detection(ManagerId::Brew, "/fake/brew", ManagedBy::Standalone),
+                    &detection(ManagerId::Brew, "/fake/brew"),
                     &Settings::default(),
                     &h.env,
                 )
@@ -1224,7 +1260,17 @@ mod tests {
         assert_eq!(
             h.state.queue.record(&later_id).unwrap().status,
             crate::ipc::OpStatus::Running,
-            "the failed update preparation must not wedge future submissions"
+            "the failed install must reopen admission for future submissions"
+        );
+
+        h.state.shutdown().await;
+        assert_eq!(
+            h.state.queue.record(&running_id).unwrap().status,
+            crate::ipc::OpStatus::Cancelled
+        );
+        assert_eq!(
+            h.state.queue.record(&later_id).unwrap().status,
+            crate::ipc::OpStatus::Cancelled
         );
     }
     use std::sync::{Arc, Mutex, RwLock};
@@ -1296,12 +1342,6 @@ mod tests {
         _dir: tempfile::TempDir,
     }
 
-    struct StuckHarness {
-        state: AppState,
-        env: ToolEnv,
-        _dir: tempfile::TempDir,
-    }
-
     fn make_exec(path: &std::path::Path) {
         use std::os::unix::fs::PermissionsExt;
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
@@ -1360,55 +1400,6 @@ mod tests {
             sink,
             env,
             bin,
-            _dir: dir,
-        }
-    }
-
-    fn stuck_harness() -> StuckHarness {
-        let dir = tempfile::tempdir().unwrap();
-        let bin = dir.path().join("bin");
-        std::fs::create_dir_all(&bin).unwrap();
-        let env = ToolEnv::from_entries(
-            dir.path().join("home"),
-            vec![bin],
-            PathSource::StaticFallback,
-        )
-        .with_candidate_root(dir.path().join("candidates"));
-        let runner: Arc<dyn crate::process::CommandRunner> = Arc::new(PendingDetectionRunner {
-            started: Arc::new(tokio::sync::Notify::new()),
-        });
-        let sink = Arc::new(VecSink::new());
-        let registry = Arc::new(Registry::new());
-        let plan_coordinator = Arc::new(Mutex::new(crate::state::PlanCoordinator::default()));
-        let queue = Queue::new(QueueDeps {
-            runner: runner.clone(),
-            sink: sink.clone(),
-            registry: registry.clone(),
-            journal: Arc::new(Journal::new(dir.path().join("operations.jsonl"))),
-            ops_dir: dir.path().join("ops"),
-            refresh_factory: None,
-            route_recheck: None,
-            plan_coordinator: plan_coordinator.clone(),
-            max_concurrency: queue::MAX_CONCURRENCY,
-            aging_guard: queue::AGING_GUARD,
-        });
-        let state = AppState {
-            settings: Arc::new(RwLock::new(Settings::default())),
-            settings_path: Arc::new(dir.path().join("settings.json")),
-            tool_env: Arc::new(RwLock::new(env.clone())),
-            detection: Arc::new(RwLock::new(None)),
-            registry,
-            queue,
-            journal_records: Arc::new(RwLock::new(Vec::new())),
-            runner,
-            sink: sink.clone(),
-            logging: Arc::new(Mutex::new(None)),
-            app_update: Arc::new(crate::app_update::AppUpdater::new("0.0.0-test", sink)),
-            plan_coordinator,
-        };
-        StuckHarness {
-            state,
-            env,
             _dir: dir,
         }
     }
