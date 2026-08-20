@@ -12,8 +12,8 @@
  */
 import {
   cancelOperation,
+  confirmAppUpdate,
   confirmQuit,
-  installAppUpdate,
   logFrontendEvent,
 } from "../../lib/ipc/client";
 import { describeError } from "../../lib/errors";
@@ -55,10 +55,13 @@ export function QuitGuardDialog({ opIds, reason = "quit" }: QuitGuardDialogProps
     });
     closeDialog();
     if (updating) {
-      // Resolves only on failure — on success the process restarts.
-      void installAppUpdate().catch(
-        (e) => void logFrontendEvent("error", `update install failed: ${describeError(e)}`),
-      );
+      // The explicit backend sink repeats cancellation, awaits the bounded
+      // drain, then installs. Resolves only on failure; success restarts.
+      void confirmAppUpdate().catch((e) => {
+        void logFrontendEvent("error", `update install failed: ${describeError(e)}`).catch(
+          () => undefined,
+        );
+      });
     } else {
       // Wait for every cancellation request to settle, but a failed request
       // must not strand the app in a half-confirmed quit. The backend shutdown
@@ -78,13 +81,13 @@ export function QuitGuardDialog({ opIds, reason = "quit" }: QuitGuardDialogProps
       <div
         role="alertdialog"
         aria-modal="true"
-        aria-label="Operations still running"
+        aria-label="Operations are active"
         onClick={(e) => e.stopPropagation()}
         className="flex w-[440px] max-w-full flex-col gap-3 rounded-card border border-border-strong bg-bg-overlay p-5 shadow-2xl"
       >
-        <h2 className="text-[15px] font-semibold text-text-primary">Operations still running</h2>
+        <h2 className="text-[15px] font-semibold text-text-primary">Operations are active</h2>
         <p className="text-[13px] text-text-secondary">
-          {updating ? "Restarting to update" : "Quitting"} now will cancel {entries.length} running
+          {updating ? "Restarting to update" : "Quitting"} now will cancel {entries.length} active
           operation{entries.length === 1 ? "" : "s"}:
         </p>
         <ul className="flex flex-col gap-1 rounded-control border border-border bg-bg-inset px-3 py-2">

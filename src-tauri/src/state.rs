@@ -357,15 +357,16 @@ impl AppState {
         outcome
     }
 
-    /// Quit-guard kill hook: cancel every running op (SIGTERM → 5s → SIGKILL
-    /// on the process groups) so children never outlive the app.
+    /// Quit-guard kill hook: cancel every queued or running op (SIGTERM → 5s →
+    /// SIGKILL on running process groups) so children never outlive the app.
     ///
-    /// `cancel_all` only flips the tokens — the SIGTERM/SIGKILL work happens
-    /// inside each op's runner task on the async runtime. Callers must await
-    /// this bounded drain; the synchronous `RunEvent::Exit` adapter is the one
-    /// place that blocks on it. Returning immediately would let the process
-    /// exit before any signal is sent and reparent live children to launchd
-    /// (SPEC F7 violation).
+    /// Running cancellation only flips tokens — the SIGTERM/SIGKILL work
+    /// happens inside each op's runner task on the async runtime. Queued work
+    /// is finalized by scheduler messages. Callers must await this bounded
+    /// drain; the synchronous `RunEvent::Exit` adapter is the one place that
+    /// blocks on it. Returning immediately would let the process exit before
+    /// any signal is sent and reparent live children to launchd (SPEC F7
+    /// violation).
     pub async fn shutdown(&self) {
         self.queue.cancel_all();
         let running = self.queue.running().len();

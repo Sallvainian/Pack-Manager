@@ -126,11 +126,16 @@ export function checkForAppUpdate(): Promise<void> {
 }
 
 /**
- * Install the downloaded update and relaunch. Never resolves on success (the
- * process restarts); cancel running operations before calling it.
+ * Install the downloaded update while the operation queue is idle, then
+ * relaunch. Never resolves on success; the backend refuses active work.
  */
 export function installAppUpdate(): Promise<void> {
   return invoke<void>("install_app_update");
+}
+
+/** Explicitly cancel and drain active operations, then install and relaunch. */
+export function confirmAppUpdate(): Promise<void> {
+  return invoke<void>("confirm_app_update");
 }
 
 /** Exit after the quit guard has cancelled every listed operation. */

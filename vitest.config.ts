@@ -6,11 +6,13 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     // BMAD test artifacts are paste-ready source snippets with destination-
-    // relative imports, not live suites. Keep them out of Vitest discovery.
+    // relative imports, not live suites. Nested loop worktrees contain their
+    // own complete test trees. Keep both out of this checkout's discovery.
     exclude: [
       ...configDefaults.exclude,
       "tests/e2e/**",
       "_bmad-output/test-artifacts/generated/**",
+      ".bmad-loop/**",
     ],
   },
 });

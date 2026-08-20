@@ -3,13 +3,14 @@ title: 'Guard a Quit That Would Orphan a Live Child Process'
 type: 'feature'
 created: '2026-08-19'
 status: 'done'
-review_loop_iteration: 0
+review_loop_iteration: 1
 followup_review_recommended: false
 context:
   - '_bmad-output/specs/spec-shipped-behavior-gaps/SPEC.md'
   - '_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md'
 warnings: ['oversized']
-deferred: []
+deferred:
+  - 'Recover safely when one event-listener registration fails.'
 ---
 
 <intent-contract>
@@ -26,7 +27,7 @@ deferred: []
 - **One predicate.** Extract the `OpStatus::Queued | OpStatus::Running` filter out of `refuse_app_update_while_busy` into one shared function, and have both the app-update refusal and the quit guard call it. The two active sets must not be able to drift apart (AD-30, FR-21). A test must assert the two agree over the full seven-variant `OpStatus` matrix.
 - **One dialog, one refusal.** Every quit trigger reaches the same enforcement function and the same `{ kind: "quitGuard", reason: "quit" }` dialog. No trigger decides for itself.
 - **Queued counts as running.** Admission has already committed to the work.
-- **Children never outlive the app.** The shutdown path must set a drain latch so no pending op starts after cancellation, cancel every running op, and *await* the bounded idle wait — `cancel_all` only flips tokens; `runner.rs` `kill_group` does the SIGTERM → 5s grace → SIGKILL work inside each op's task and must be polled.
+- **Children never outlive the app.** The shutdown path must set a drain latch so no pending op starts after cancellation, finalize queued work, cancel every running op, and *await* the bounded idle wait — running cancellation only flips tokens; `runner.rs` `kill_group` does the SIGTERM → 5s grace → SIGKILL work inside each op's task and must be polled.
 - **No rollback is promised.** Partially completed Manager work stays partially completed; the guard surfaces the choice and never offers to undo.
 - An OS-initiated shutdown or logout gets **no dialog** and is best-effort.
 
@@ -59,7 +60,7 @@ deferred: []
 
 Backend — `src-tauri/src/`:
 - `commands.rs:764-795` — `refuse_app_update_while_busy`; its doc already says "The status set matches `activeOps` in `src/store/operations.ts` exactly." The `matches!(record.status, OpStatus::Queued | OpStatus::Running)` at `:776-779` is **the** predicate to extract. Sole caller `:810`. Existing matrix test `:857-901`.
-- `commands.rs:805-833` — `install_app_update`: refuse → install → `state.shutdown()` (`:816-817`) → set `RELAUNCH_FOCUS_ENV` → `app.restart()`. The sibling guard's shape.
+- `commands.rs` — `install_app_update` atomically reserves idle admission before installation; `confirm_app_update` is the explicit cancel-and-drain sink used after the update guard.
 - `ipc.rs:96-107` — `OpStatus`, seven variants, `#[serde(rename_all = "camelCase")]`.
 - `ipc.rs:544-581` — contract-fixture `check()` helper; `:787` `ipc_contract_matches_committed_fixtures`. Fixtures live in `dev/fixtures/ipc/` (repo root), 15 files today.
 - `events.rs:74-79` — the six `EVENT_*` name constants; `:82-90` `AppEvent`; `:92-113` `name()` + `payload_json()`; `:117-119` `EventSink`; `:159-173` `TauriSink` → `AppHandle::emit`.
@@ -137,7 +138,8 @@ Read-only evidence (verified in `~/.cargo/registry`, do not modify):
 - [x] [Review][Patch] Contain a rejection from the fallback logger after `confirm_quit` itself fails so the recovery path cannot create an unhandled promise rejection. [src/components/dialogs/QuitGuardDialog.tsx:68] — fixed; double-failure regression and frontend gates passed
 - [x] [Review][Patch] Narrow the Vitest exclusion to the generated BMAD snippet directory instead of hiding every future test anywhere under `_bmad-output`. [vitest.config.ts:10] — fixed; 144-test suite passed with generated snippets excluded
 - [x] [Review][Patch] Add the new `confirm_quit` command and `quit:requested` event to the exact IPC contract documentation. [docs/SPEC.md:481] — fixed
-- [x] [Review][Defer] Sequence the pre-existing app-update cancellation and installation path so installation cannot race the still-active records it just asked to cancel. [src/components/dialogs/QuitGuardDialog.tsx:57] — deferred, pre-existing
+- [x] [Review][Patch] Sequence app-update cancellation and installation through an explicit backend drain before installing. [src/components/dialogs/QuitGuardDialog.tsx:57] — fixed after PR review
+- [x] [Review][Patch] Reserve idle scheduler admission atomically so an operation cannot start between the app-update busy check and installation. [src-tauri/src/commands.rs] — fixed after PR review
 - [x] [Review][Defer] Make the pre-existing all-or-nothing event subscription recover when one listener registration fails, so a transient failure cannot disable the quit-confirmation surface for the whole session. [src/lib/ipc/events.ts:152] — deferred, pre-existing
 - [x] [Review][Patch] Normalize the new deferred-work entries to the ledger's `source_spec` / `summary` / `evidence` schema. [_bmad-output/implementation-artifacts/deferred-work.md:43] — fixed
 - [x] [Review][Patch] Remove the superseded untracked TEA red-phase snippets, worker payloads, and result marker instead of committing stale instructions alongside their verified live replacements. [_bmad-output/test-artifacts:1] — fixed; live tests remain authoritative
@@ -167,7 +169,6 @@ Read-only evidence (verified in `~/.cargo/registry`, do not modify):
 - Blind Hunter: confirmed-quit failure closes the dialog without visible recovery — dismissed because structured logging is the project's established failure surface here and the story does not specify a retry modal.
 - Blind Hunter: a cancellation IPC that never settles can strand the confirmation — dismissed because `cancel_operation` only sends the scheduler message and returns; a permanently hung Tauri transport is outside this command's normal contract.
 - Blind Hunter: closing the dialog briefly permits a new operation before confirmed quit — dismissed because the user has already explicitly chosen to quit and the backend shutdown atomically closes admission, cancels, and drains all work without orphaning a child.
-- Blind Hunter: queued work is described as running — dismissed because the accepted story deliberately says queued counts as running and reuses the existing quit-guard copy.
 - Blind Hunter: malformed native payload can crash dialog rendering — dismissed because the sole producer is the typed Rust event, with its camelCase fixture and TypeScript guard contract verified together; event handlers do not independently validate trusted native payloads.
 - Blind Hunter: an empty refusal opens a zero-operation dialog — dismissed because `QuitDecision::Block` is only constructed from a non-empty active-id set, so the native producer cannot emit that state.
 - Blind Hunter: a quit request replaces another open modal — dismissed because `DialogHost` is intentionally a single-modal surface and the safety-critical quit decision must become the active modal.
@@ -179,8 +180,6 @@ Read-only evidence (verified in `~/.cargo/registry`, do not modify):
 - Edge Case Hunter: an empty quit payload reaches the dialog — dismissed because the backend's `Block` constructor requires a non-empty active set.
 - Blind Hunter: TEA coverage arithmetic is inconsistent — disposed by removing the superseded pre-implementation bundle rather than publishing stale metadata.
 - Blind Hunter: story filename and sprint key use different slugs — dismissed because the manifest maps Story `6-6` explicitly and the loop already resolved and executed this exact artifact; the suggested fix also edits the spec under review.
-- Blind Hunter: story frontmatter does not enumerate deferred review work — dismissed because the suggested fix edits the spec under review; the authoritative structured entries are preserved in `deferred-work.md`.
-- Blind Hunter: review-loop and follow-up frontmatter flags should change — dismissed because those are workflow-owned fields in the spec under review, not implementation patches.
 - Blind Hunter: implementation completion is provisional until the final native build — dismissed as a spec edit; the Auto Run Result already states that the post-review native build remains to be rerun.
 - Blind Hunter: native acceptance evidence is pending — dismissed because the story explicitly records that limitation and does not claim the browser double as native evidence.
 - Blind Hunter: AC7 lacks a logout procedure — dismissed because adding one edits the spec under review and performing a real logout is outside the safe verification authority for this run.
@@ -200,13 +199,15 @@ Read-only evidence (verified in `~/.cargo/registry`, do not modify):
 - Acceptance Auditor: generated rollback assertion can run after the dialog disappears — disposed with the superseded generated test; the live browser assertion runs while the guard is visible.
 - Acceptance Auditor: generated coverage does not exercise `AppState::shutdown` awaiting — disposed with the superseded generated report; the live implementation is verified by queue drain tests and the awaited command path.
 - Acceptance Auditor: generated drift-matrix metadata undercounts one list — disposed with the superseded worker payload.
-- Acceptance Auditor: story deferred claim conflicts with the ledger — dismissed because changing the spec under review is not a code patch; the ledger now carries all three entries in its machine-readable schema.
 
 ## Spec Change Log
 
 - 2026-08-19: Implemented the shared `Queued | Running` guard, native quit routing, one quit-dialog event path, cancellation-before-confirm behavior, and an awaited bounded shutdown drain. Added Rust, frontend, IPC-contract, and browser-double regression coverage. No rollback behavior was added.
+- 2026-08-19: Applied PR #48 follow-up review: added an explicit confirmed-update drain, atomically reserved update admission, corrected active-operation copy, and refreshed the review workflow's Node action.
 
 ## Review Triage Log
+
+- PR #48 Claude Code Review: applied the app-update sequencing suggestion and queued/running copy correction; the final verdict reported no merge blocker.
 
 ## Design Notes
 
@@ -239,6 +240,6 @@ Read-only evidence (verified in `~/.cargo/registry`, do not modify):
 
 Status: done
 Implementation: complete; no rollback behavior introduced.
-Automated verification: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, and `cargo test --locked` passed after review fixes (255 passed, 9 ignored); `npx tsc --noEmit`, `npx vitest run` (144 passed), `npm run build`, `npm run test:e2e:typecheck`, the full two-engine Playwright suite (22 passed), and the focused quit-guard Playwright suite (6 passed) passed after frontend review fixes; `npm run tauri build -- --debug --no-sign` passed after all review fixes.
+Automated verification: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, and `cargo test --locked` passed after PR follow-up fixes (257 passed, 9 ignored); `npx tsc --noEmit`, `npx vitest run` (144 passed), `npm run build`, `npm run test:e2e:typecheck`, the full two-engine Playwright suite (22 passed), and the focused quit-guard Playwright suite (6 passed) passed; `npm run tauri build -- --debug --no-sign` passed after all review fixes.
 Native verification: the real debug app exposed the `Quit Pack-Manager` menu item; idle `⌘Q` and the red close button exited without a guard; `⌘Q` during an isolated read-only Refresh All opened the guard; `Keep running` dismissed it and kept the app open; `Cancel operations and quit` finalized the operations and exited cleanly; a post-exit process check found no surviving Pack-Manager or isolated-operation children. The red close path and `⌘W` share the same source-reviewed adapter. A real macOS logout/terminate was deliberately not invoked because it would disrupt the user session; that path was verified structurally through the shared backend quit predicate and shutdown drain.
 Planning baseline revision: `408d1bfdb329357ae11b17cf068ef958fa7f9b6d`

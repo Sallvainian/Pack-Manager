@@ -44,8 +44,8 @@ fn focus_target(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
         .or_else(|| app.webview_windows().into_values().next())
 }
 
-/// Set by `commands::install_app_update` immediately before `restart`, and read
-/// back by the process that restart spawns — `Command::new` inherits the parent
+/// Set by the app-update commands immediately before `restart`, and read back
+/// by the process that restart spawns — `Command::new` inherits the parent
 /// environment, so this survives the hand-off. Its presence means "you are the
 /// updated build, pull yourself to the front"; see the `RunEvent::Ready` arm.
 ///
@@ -284,6 +284,7 @@ pub fn run() {
             commands::get_app_update_state,
             commands::check_for_app_update,
             commands::install_app_update,
+            commands::confirm_app_update,
             commands::confirm_quit,
         ])
         .build(tauri::generate_context!())
@@ -346,7 +347,7 @@ pub fn run() {
                     }
                 }
             }
-            // Quit-guard kill hook: on exit, cancel every running op so child
+            // Quit-guard kill hook: on exit, cancel every active op so child
             // process groups are SIGTERMed and never outlive the app. The
             // confirm dialog lives in the frontend (QuitGuardDialog, U8).
             tauri::RunEvent::Exit => {

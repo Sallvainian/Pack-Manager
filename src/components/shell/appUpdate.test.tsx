@@ -108,6 +108,7 @@ describe("restart_with_running_ops_opens_quit_guard", () => {
   it("confirms before killing in-flight operations, then installs on confirm", async () => {
     fakeIpc.respond("install_app_update", () => undefined);
     fakeIpc.respond("cancel_operation", () => undefined);
+    fakeIpc.respond("confirm_app_update", () => undefined);
     useOperationsStore.getState().applyStatus(npmUpgradeRunning());
     useAppUpdateStore
       .getState()
@@ -127,7 +128,8 @@ describe("restart_with_running_ops_opens_quit_guard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel operations and restart" }));
 
     expect(fakeIpc.calls.filter((c) => c.cmd === "cancel_operation")).toHaveLength(1);
-    await waitFor(() => expect(fakeIpc.called("install_app_update")).toBe(true));
+    await waitFor(() => expect(fakeIpc.called("confirm_app_update")).toBe(true));
+    expect(fakeIpc.called("install_app_update")).toBe(false);
     expect(fakeIpc.called("confirm_quit")).toBe(false);
   });
 });

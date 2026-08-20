@@ -79,7 +79,7 @@ describe("quit_guard_lists_ops_and_cancels_all", () => {
     render(<DialogHost />);
 
     const dialog = screen.getByRole("alertdialog");
-    expect(dialog.textContent).toContain("Operations still running");
+    expect(dialog.textContent).toContain("Operations are active");
     expect(dialog.textContent).toContain("Upgrade · Homebrew");
     expect(dialog.textContent).toContain("Upgrade · npm");
     expect(screen.getAllByRole("button").map((button) => button.textContent?.trim()).sort()).toEqual([
@@ -119,7 +119,7 @@ describe("quit_guard_lists_ops_and_cancels_all", () => {
     render(<DialogHost />);
 
     const dialog = screen.getByRole("alertdialog");
-    expect(dialog.textContent).toContain("cancel 1 running operation");
+    expect(dialog.textContent).toContain("cancel 1 active operation");
     expect(dialog.textContent).toContain(`Operation · ${missingOpId}`);
   });
 

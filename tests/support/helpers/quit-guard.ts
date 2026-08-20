@@ -25,12 +25,12 @@ export async function whenQuitIsRequested(
 /** Browser page object for the frontend limb of the native quit guard. */
 export function createQuitGuard(page: Page) {
   const dialog: Locator = page.getByRole("alertdialog", {
-    name: "Operations still running",
+    name: "Operations are active",
   });
 
   return {
     dialog,
-    heading: dialog.getByRole("heading", { name: "Operations still running" }),
+    heading: dialog.getByRole("heading", { name: "Operations are active" }),
     operation: (title: string): Locator =>
       dialog.getByRole("listitem").filter({ hasText: title }),
     operations: (): Locator => dialog.getByRole("listitem"),

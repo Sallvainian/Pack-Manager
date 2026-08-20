@@ -53,7 +53,7 @@ test.describe("quit guard", () => {
     await expect(guard.operation("Upgrade 1 · Homebrew")).toBeVisible();
     await expect(guard.operation("Upgrade 1 · npm")).toBeVisible();
     await expect(
-      guard.dialog.getByText(/Quitting now will cancel 2 running operations/),
+      guard.dialog.getByText(/Quitting now will cancel 2 active operations/),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: /undo|roll ?back|restore/i })).toHaveCount(0);
 
@@ -134,7 +134,7 @@ test.describe("quit guard", () => {
     await expect(guard.operations()).toHaveCount(1);
     await expect(guard.operation("Upgrade 1 · mise")).toBeVisible();
     await expect(
-      guard.dialog.getByText(/Quitting now will cancel 1 running operation(?!s)/),
+      guard.dialog.getByText(/Quitting now will cancel 1 active operation(?!s)/),
     ).toBeVisible();
   });
 });

@@ -16,7 +16,7 @@ use crate::ipc::{
     UpdateCheckTrigger, UpgradePlan,
 };
 use crate::paths::ToolEnv;
-use crate::queue::{self, PlanSources};
+use crate::queue::{self, PlanSources, Queue};
 use crate::settings::{Settings, SettingsPatch};
 use crate::state::{AppState, IssuedPlan};
 
@@ -805,13 +805,51 @@ fn refuse_app_update_while_busy(records: &[crate::ipc::OperationRecord]) -> Resu
     }
     Err(IpcError::from_code(
         ErrorCode::SelfUpdateUnavailable,
-        "Finish or cancel the package operations still running, then install the update.",
+        "Finish or cancel the active package operations, then install the update.",
     )
     .with_detail(format!(
         "refused: {} package operation(s) queued or running ({})",
         active.len(),
         active.join(", ")
     )))
+}
+
+/// Reserve an idle queue for update installation without leaving a gap where
+/// a new operation can start after the busy check. A raced submission is
+/// caught by the second check, then admission is reopened and pumped.
+fn reserve_app_update_admission(queue: &Queue) -> Result<(), IpcError> {
+    refuse_app_update_while_busy(&queue.records())?;
+    queue.close_admission();
+    if let Err(error) = refuse_app_update_while_busy(&queue.records()) {
+        queue.reopen_admission();
+        return Err(error);
+    }
+    Ok(())
+}
+
+/// The explicit confirmation path owns cancellation. Do not begin installing
+/// until every queued/running record has reached a terminal state.
+async fn prepare_confirmed_app_update(state: &AppState) -> Result<(), IpcError> {
+    state.shutdown().await;
+    refuse_app_update_while_busy(&state.queue.records())
+}
+
+fn install_downloaded_update(state: &AppState) -> Result<(), IpcError> {
+    state.app_update.install().map_err(|detail| {
+        IpcError::from(PmError::Io {
+            detail: format!("update install failed: {detail}"),
+        })
+    })
+}
+
+fn restart_into_updated_build(app: tauri::AppHandle) -> ! {
+    // `restart` bare-spawns the new binary instead of going through
+    // LaunchServices, so it comes up behind every other window unless it
+    // activates itself. The spawned process inherits this env var and acts on
+    // it at `RunEvent::Ready`.
+    std::env::set_var(crate::RELAUNCH_FOCUS_ENV, "1");
+    tracing::info!("restarting into the updated build");
+    app.restart();
 }
 
 /// Confirmed-quit sink. Drain child processes before asking Tauri to exit so
@@ -830,40 +868,42 @@ pub async fn confirm_quit(
 
 /// Installs the downloaded update over the running bundle and relaunches.
 ///
-/// The frontend routes this through the quit guard, but that is convention, not
-/// enforcement: this command kills every child process via `shutdown()` and then
-/// `restart()`, so a caller that skips the guard destroys in-flight package work
-/// and its journal tail. The refusal below is the enforcement point — the
-/// frontend check stays as the path that explains itself to the user, and this
-/// one exists so no caller can bypass it. `restart` does not return.
+/// The ordinary path refuses active work in Rust, then atomically closes queue
+/// admission before installing. The frontend uses `confirm_app_update` only
+/// after the user explicitly authorizes cancellation. `restart` does not
+/// return.
 #[tauri::command]
 pub async fn install_app_update(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), IpcError> {
-    refuse_app_update_while_busy(&state.queue.records())?;
-    state.app_update.install().map_err(|detail| {
-        IpcError::from(PmError::Io {
-            detail: format!("update install failed: {detail}"),
-        })
-    })?;
-    // Same kill hook as a normal quit: children must never outlive the app.
+    reserve_app_update_admission(&state.queue)?;
+    if let Err(error) = install_downloaded_update(&state) {
+        state.queue.reopen_admission();
+        return Err(error);
+    }
+    // Catch and finalize work submitted while the synchronous installer held
+    // the reservation. The latch has prevented any new child from starting.
     state.shutdown().await;
-    // `restart` bare-spawns the new binary instead of going through
-    // LaunchServices, so it comes up behind every other window unless it
-    // activates itself. The spawned process inherits this env var and acts on
-    // it at `RunEvent::Ready`. Set last: it must not outlive a failed install.
-    //
-    // This is an async command, so it runs on a runtime worker rather than the
-    // main thread, and `set_var` can in principle race a concurrent `getenv`
-    // elsewhere — the reason edition 2024 makes it `unsafe`. Tolerated here:
-    // `shutdown()` has already run and `restart` never returns, so the process
-    // is milliseconds from exec. On an edition bump this needs an `unsafe`
-    // block plus that safety note; it fails to compile rather than silently
-    // changing behaviour, so the bump itself is the reminder.
-    std::env::set_var(crate::RELAUNCH_FOCUS_ENV, "1");
-    tracing::info!("restarting into the updated build");
-    app.restart();
+    restart_into_updated_build(app);
+}
+
+/// Explicit app-update confirmation from the quit guard. Unlike the ordinary
+/// install command, this path is authorized to cancel active package work.
+#[tauri::command]
+pub async fn confirm_app_update(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), IpcError> {
+    prepare_confirmed_app_update(&state).await?;
+    if let Err(error) = install_downloaded_update(&state) {
+        state.queue.reopen_admission();
+        return Err(error);
+    }
+    // Cancel any submission received while the installer was running; the
+    // admission latch ensures it never spawned a child.
+    state.shutdown().await;
+    restart_into_updated_build(app);
 }
 
 #[cfg(test)]
@@ -1011,6 +1051,105 @@ mod tests {
         assert!(
             !detail.contains("done"),
             "terminal op must not be listed: {detail}"
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn confirmed_app_update_drains_running_work_before_installation() {
+        let h = harness();
+        let gate = Arc::new(tokio::sync::Notify::new());
+        h.fake
+            .on("npm", &["ls", "-g", "--depth=0", "--json"])
+            .fixture("npm_ls_g_2026-07-22.json")
+            .gate(gate);
+        h.fake
+            .on("npm", &["outdated", "-g", "--json"])
+            .fixture_with_exit("npm_outdated_g_synthetic.json", 1);
+        let detection = DetectStatus::Present {
+            binary_path: PathBuf::from("/fake/npm"),
+            canonical_path: PathBuf::from("/fake/npm"),
+            version: Some("11.0.0".into()),
+            managed_by: ManagedBy::Mise,
+            evidence: "test npm".into(),
+        };
+        let submission = queue::make_refresh_submission(
+            ManagerId::Npm,
+            &detection,
+            &Settings::default(),
+            &h.env,
+        )
+        .expect("present npm yields a refresh submission");
+        let op_id = h.state.queue.submit(submission).await.unwrap();
+
+        for _ in 0..100 {
+            if h.state.queue.record(&op_id).unwrap().status == crate::ipc::OpStatus::Running {
+                break;
+            }
+            tokio::task::yield_now().await;
+        }
+        assert_eq!(
+            h.state.queue.record(&op_id).unwrap().status,
+            crate::ipc::OpStatus::Running
+        );
+
+        prepare_confirmed_app_update(&h.state).await.unwrap();
+
+        assert_eq!(
+            h.state.queue.record(&op_id).unwrap().status,
+            crate::ipc::OpStatus::Cancelled
+        );
+        assert!(refuse_app_update_while_busy(&h.state.queue.records()).is_ok());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn app_update_reservation_blocks_new_child_admission() {
+        let h = harness();
+        h.fake
+            .on("npm", &["ls", "-g", "--depth=0", "--json"])
+            .fixture("npm_ls_g_2026-07-22.json");
+        h.fake
+            .on("npm", &["outdated", "-g", "--json"])
+            .fixture_with_exit("npm_outdated_g_synthetic.json", 1);
+        let detection = DetectStatus::Present {
+            binary_path: PathBuf::from("/fake/npm"),
+            canonical_path: PathBuf::from("/fake/npm"),
+            version: Some("11.0.0".into()),
+            managed_by: ManagedBy::Mise,
+            evidence: "test npm".into(),
+        };
+
+        reserve_app_update_admission(&h.state.queue).unwrap();
+        let op_id = h
+            .state
+            .queue
+            .submit(
+                queue::make_refresh_submission(
+                    ManagerId::Npm,
+                    &detection,
+                    &Settings::default(),
+                    &h.env,
+                )
+                .expect("present npm yields a refresh submission"),
+            )
+            .await
+            .unwrap();
+        for _ in 0..20 {
+            tokio::task::yield_now().await;
+        }
+
+        assert_eq!(
+            h.state.queue.record(&op_id).unwrap().status,
+            crate::ipc::OpStatus::Queued
+        );
+        assert!(
+            h.fake.calls().is_empty(),
+            "no child may start after update admission is reserved"
+        );
+
+        h.state.shutdown().await;
+        assert_eq!(
+            h.state.queue.record(&op_id).unwrap().status,
+            crate::ipc::OpStatus::Cancelled
         );
     }
     use std::sync::{Arc, Mutex, RwLock};

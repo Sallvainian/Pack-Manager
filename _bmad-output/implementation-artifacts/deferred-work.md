@@ -41,13 +41,5 @@
 ## Deferred from: code review of 6-6-guard-quit-that-would-orphan-live-child-process.md (2026-08-19)
 
 - source_spec: `_bmad-output/specs/spec-shipped-behavior-gaps/stories/6-6-guard-quit-that-would-orphan-live-child-process.md`
-  summary: Close the app-update check/install admission race.
-  evidence: `install_app_update` checks `refuse_app_update_while_busy`, performs installation, and only then closes scheduler admission in `shutdown`, so a package operation can enter during installation and be cancelled by restart despite passing the refusal check.
-
-- source_spec: `_bmad-output/specs/spec-shipped-behavior-gaps/stories/6-6-guard-quit-that-would-orphan-live-child-process.md`
-  summary: Sequence frontend app-update cancellation before installation.
-  evidence: `QuitGuardDialog` starts `install_app_update` immediately after issuing `cancel_operation`, so the backend can still see queued/running records and refuse the restart after the user's work was already cancelled.
-
-- source_spec: `_bmad-output/specs/spec-shipped-behavior-gaps/stories/6-6-guard-quit-that-would-orphan-live-child-process.md`
   summary: Recover safely when one event-listener registration fails.
   evidence: One failed `listen()` registration tears down every successful listener and is never retried, so a transient failure can leave the new quit guard blocked without its confirmation surface.

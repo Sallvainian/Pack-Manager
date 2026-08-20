@@ -760,6 +760,7 @@ enum Msg {
     Cancel {
         op_id: String,
     },
+    Pump,
     Finished {
         op_id: String,
         status: OpStatus,
@@ -881,11 +882,42 @@ impl Queue {
             .collect()
     }
 
-    /// Permanently closes scheduler admission for this process and cancels
-    /// every running op (quit-guard kill hook). Only flips the tokens — the
-    /// runner tasks perform the SIGTERM→grace→SIGKILL work, so the quit path
-    /// must ALSO await [`Queue::wait_until_idle`] before the process exits or
-    /// the kill tasks may never be polled.
+    fn active(&self) -> Vec<OperationRecord> {
+        self.records()
+            .into_iter()
+            .filter(|r| matches!(r.status, OpStatus::Queued | OpStatus::Running))
+            .collect()
+    }
+
+    /// Closes scheduler admission at the same linearization point used by the
+    /// final pre-spawn check. Existing running work is not cancelled.
+    pub(crate) fn close_admission(&self) {
+        let _admission = self
+            .shared
+            .admission
+            .lock()
+            .expect("admission gate poisoned");
+        self.shared.closing.store(true, Ordering::SeqCst);
+    }
+
+    /// Reopens admission after an app-update reservation fails. Wake the
+    /// scheduler so work that queued while the reservation was held can start.
+    pub(crate) fn reopen_admission(&self) {
+        let _admission = self
+            .shared
+            .admission
+            .lock()
+            .expect("admission gate poisoned");
+        self.shared.closing.store(false, Ordering::SeqCst);
+        let _ = self.tx.send(Msg::Pump);
+    }
+
+    /// Closes scheduler admission for this process and cancels
+    /// every queued or running op (quit-guard kill hook). Running tokens only
+    /// request cancellation — the runner tasks perform the
+    /// SIGTERM→grace→SIGKILL work, so the quit path must ALSO await
+    /// [`Queue::wait_until_idle`] before the process exits or the kill tasks
+    /// may never be polled.
     pub fn cancel_all(&self) {
         // Admission and shutdown have one linearization point. A pump already
         // inside the gate completes its start bookkeeping first; after this
@@ -899,9 +931,16 @@ impl Queue {
         for token in self.shared.tokens.lock().expect("tokens poisoned").values() {
             token.cancel();
         }
+        // The scheduler owns its pending deque, so queued work is finalized by
+        // sending the same cancellation message used by the per-op command.
+        // The closing latch above guarantees none can start while these
+        // messages are waiting to be processed.
+        for record in self.active() {
+            self.cancel(&record.op_id);
+        }
     }
 
-    /// Waits (bounded) until no op is `Running`. The quit guard calls this
+    /// Waits (bounded) until no op is `Queued` or `Running`. The quit guard calls this
     /// after [`Queue::cancel_all`] so the runner tasks' SIGTERM → grace →
     /// SIGKILL escalation demonstrably completes before the process exits —
     /// children never outlive the app (SPEC F7). Returns `false` when the
@@ -909,7 +948,7 @@ impl Queue {
     pub async fn wait_until_idle(&self, timeout: Duration) -> bool {
         let deadline = Instant::now() + timeout;
         loop {
-            if self.running().is_empty() {
+            if self.active().is_empty() {
                 return true;
             }
             if Instant::now() >= deadline {
@@ -977,6 +1016,7 @@ async fn scheduler_task(
                 reply,
             } => sched.handle_plan_batch(subs, expected_revision, reply),
             Msg::Cancel { op_id } => sched.handle_cancel(&op_id),
+            Msg::Pump => {}
             Msg::Finished {
                 op_id,
                 status,
@@ -3036,8 +3076,8 @@ mod tests {
         assert_eq!(records[0].status, OpStatus::Cancelled);
     }
 
-    /// Regression for the quit guard: cancel_all only flips tokens; the exit
-    /// path must be able to WAIT until the runner tasks finish the kill work.
+    /// Regression for the quit guard: running cancellation only flips tokens;
+    /// the exit path must be able to WAIT until runner tasks finish kill work.
     /// With a running (buffered) refresh, cancel_all + wait_until_idle must
     /// converge to no running ops — previously the refresh child was
     /// untouchable and kept running past app exit (SPEC F7).
@@ -3119,7 +3159,7 @@ mod tests {
             "queued child started during shutdown: {spawned:?}"
         );
         assert!(!spawned.iter().any(|args| args == &["upgrade", "abseil"]));
-        assert_ne!(status_of(&h, &queued), OpStatus::Running);
+        assert_eq!(status_of(&h, &queued), OpStatus::Cancelled);
         running_gate.notify_one();
     }
 
