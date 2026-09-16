@@ -2,13 +2,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../lib/ipc/bridge", () => import("../test/fakeIpc"));
 
-import { onOutput, onSnapshot, onStalled, onStatus, subscribeEvents } from "../lib/ipc/events";
+import {
+  onOutput,
+  onQuitRequested,
+  onSnapshot,
+  onStalled,
+  onStatus,
+  subscribeEvents,
+} from "../lib/ipc/events";
 import type { IpcError, OpStatusEvent } from "../lib/ipc/types";
 import {
   EVENT_DETECTION_UPDATED,
+  EVENT_APP_UPDATE_STATUS,
   EVENT_OP_OUTPUT,
   EVENT_OP_STALLED,
   EVENT_OP_STATUS,
+  EVENT_QUIT_REQUESTED,
   EVENT_SNAPSHOT_UPDATED,
 } from "../lib/ipc/types";
 import {
@@ -94,6 +103,17 @@ describe("onStalled", () => {
   });
 });
 
+describe("onQuitRequested", () => {
+  it("opens the one quit guard with the refused operation ids", () => {
+    onQuitRequested({ opIds: ["queued-op", "running-op"] });
+    expect(useUiStore.getState().dialog).toEqual({
+      kind: "quitGuard",
+      opIds: ["queued-op", "running-op"],
+      reason: "quit",
+    });
+  });
+});
+
 describe("subscribeEvents — no listener leak on partial failure", () => {
   const ALL_EVENTS = [
     EVENT_DETECTION_UPDATED,
@@ -101,11 +121,13 @@ describe("subscribeEvents — no listener leak on partial failure", () => {
     EVENT_OP_STATUS,
     EVENT_OP_OUTPUT,
     EVENT_OP_STALLED,
+    EVENT_APP_UPDATE_STATUS,
+    EVENT_QUIT_REQUESTED,
   ];
 
   beforeEach(() => fakeIpc.reset());
 
-  it("registers all five listeners and tears them all down", async () => {
+  it("registers all seven listeners and tears them all down", async () => {
     const unlisten = await subscribeEvents();
     for (const evt of ALL_EVENTS) expect(fakeIpc.listenerCount(evt)).toBe(1);
     unlisten();
@@ -119,5 +141,16 @@ describe("subscribeEvents — no listener leak on partial failure", () => {
 
     // The siblings that DID register must not leak for the process lifetime.
     for (const evt of ALL_EVENTS) expect(fakeIpc.listenerCount(evt)).toBe(0);
+  });
+
+  it("routes quit:requested through the subscribed event handler", async () => {
+    const unlisten = await subscribeEvents();
+    fakeIpc.emit(EVENT_QUIT_REQUESTED, { opIds: ["op-1"] });
+    expect(useUiStore.getState().dialog).toEqual({
+      kind: "quitGuard",
+      opIds: ["op-1"],
+      reason: "quit",
+    });
+    unlisten();
   });
 });

@@ -65,6 +65,23 @@ _bmad/
 docs/.archive/
 
 # Local agent tooling — machine-specific paths and working data.
-.bmad-loop/
+# `.bmad-loop/` is not blanket-ignored: `bmad_loop_hook.py` and
+# `profiles/grok.toml` are tracked (same as My-Love / Google-Drive-MCP).
+# Per-run state and the per-machine policy stay ignored.
+.bmad-loop/archive/
 .codex/
 _bmad/render/
+
+# Grok CLI (bmad-loop adapter). Untracked, like .claude/ and _bmad/, except
+# the hook registration. Grok 1.0.30 discovers repo-scoped skills even when
+# gitignored; worktree checkouts get `.grok/skills` and `.grok/hooks` via
+# seed_files in .bmad-loop/profiles/grok.toml. `init` writes the hook file
+# only once, and worktree reuse never re-seeds it, so the SessionEnd omission
+# that keeps grok sessions alive is tracked.
+.grok/*
+!.grok/hooks/
+.grok/hooks/*
+!.grok/hooks/bmad-loop.json
+
+# Playwright CLI output (may contain credentials)
+.playwright-cli/

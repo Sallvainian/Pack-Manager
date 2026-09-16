@@ -357,27 +357,26 @@ impl AppState {
         outcome
     }
 
-    /// Quit-guard kill hook: cancel every running op (SIGTERM → 5s → SIGKILL
-    /// on the process groups) so children never outlive the app.
+    /// Quit-guard kill hook: cancel every queued or running op (SIGTERM → 5s →
+    /// SIGKILL on running process groups) so children never outlive the app.
     ///
-    /// `cancel_all` only flips the tokens — the SIGTERM/SIGKILL work happens
-    /// inside each op's runner task on the async runtime. This hook runs on
-    /// the main thread during `RunEvent::Exit`, so it BLOCKS (bounded by
-    /// [`SHUTDOWN_GRACE`]) until those tasks report terminal states;
-    /// returning immediately would let the process exit before any signal is
-    /// sent and reparent live children to launchd (SPEC F7 violation).
-    pub fn shutdown(&self) {
-        let running = self.queue.running().len();
+    /// Running cancellation only flips tokens — the SIGTERM/SIGKILL work
+    /// happens inside each op's runner task on the async runtime. Queued work
+    /// is finalized by scheduler messages. Callers must await this bounded
+    /// drain; the synchronous `RunEvent::Exit` adapter is the one place that
+    /// blocks on it. Returning immediately would let the process exit before
+    /// any signal is sent and reparent live children to launchd (SPEC F7
+    /// violation).
+    pub async fn shutdown(&self) {
         self.queue.cancel_all();
-        if running == 0 {
-            return;
+        let running = self.queue.running().len();
+        if running > 0 {
+            tracing::info!(running, "app exit: cancelling running operations");
         }
-        tracing::info!(running, "app exit: cancelling running operations");
-        let queue = self.queue.clone();
-        let done =
-            tauri::async_runtime::block_on(
-                async move { queue.wait_until_idle(SHUTDOWN_GRACE).await },
-            );
+        // Always perform the bounded wait, even if the pre-cancel snapshot was
+        // idle. Admission and cancellation are synchronized, and this final
+        // poll closes the queued-to-running race at the shutdown boundary.
+        let done = self.queue.wait_until_idle(SHUTDOWN_GRACE).await;
         if done {
             tracing::info!("app exit: all operations finalized");
         } else {

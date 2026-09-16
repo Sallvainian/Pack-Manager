@@ -37,3 +37,9 @@
 - source_spec: `/Users/sallvain/Projects/Pack-Manager/_bmad-output/implementation-artifacts/spec-fix-window-drag-region.md`
   summary: Add a regression guard pinning the capability permission list and asserting the shell renders its drag regions.
   evidence: `src-tauri/gen/schemas` is gitignored, so a dropped or misspelled permission identifier is only caught when a machine regenerates schemas at build time; no test references `data-tauri-drag-region`.
+
+## Deferred from: code review of 6-6-guard-quit-that-would-orphan-live-child-process.md (2026-08-19)
+
+- source_spec: `_bmad-output/specs/spec-shipped-behavior-gaps/stories/6-6-guard-quit-that-would-orphan-live-child-process.md`
+  summary: Recover safely when one event-listener registration fails.
+  evidence: One failed `listen()` registration tears down every successful listener and is never retried, so a transient failure can leave the new quit guard blocked without its confirmation surface.
