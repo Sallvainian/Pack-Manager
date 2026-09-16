@@ -20,27 +20,27 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@tanstack/react-virtual": "^3.14.8",
+    "@tanstack/react-virtual": "^3.14.12",
     "@tauri-apps/api": "^2",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "zustand": "^5.0.14"
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
-    "@faker-js/faker": "^10.5.0",
-    "@playwright/test": "^1.61.1",
+    "@faker-js/faker": "^10.6.0",
+    "@playwright/test": "^1.63.0",
     "@seontechnologies/playwright-utils": "^4.4.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/cli": "^2",
-    "@testing-library/jest-dom": "^7.0.0",
-    "@testing-library/react": "^16.3.2",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
-    "@vitejs/plugin-react": "^6.0.4",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
     "jsdom": "^30.0.1",
     "tailwindcss": "^4.3.3",
     "typescript": "~7.0.2",
-    "vite": "^8.1.5",
+    "vite": "^8.3.0",
     "vitest": "^4.1.11"
   },
   "allowScripts": {
