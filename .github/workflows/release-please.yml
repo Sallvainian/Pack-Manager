@@ -123,10 +123,12 @@ jobs:
       # far worse trade than approving one bot branch nobody else can push to.
       #
       # Best effort on purpose. GITHUB_TOKEN is not documented to work on the
-      # approve endpoint and may 403, and approval is cosmetic here: nothing in
-      # this repo's ruleset requires those checks to merge (0 required reviews,
-      # no required status checks), so the release must never hinge on it.
-      # RELEASE_PLEASE_TOKEN makes the whole step a no-op by removing the gate.
+      # approve endpoint and may 403. The Main ruleset now requires `web`,
+      # `rust`, and `E2E validation` (so Dependabot auto-merge has something
+      # to wait on). Those required checks are enforced by the merge step
+      # below, which watches them before squash-merging. This approve step
+      # only unsticks the first-time-contributor workflow gate; it is not
+      # the merge gate. RELEASE_PLEASE_TOKEN removes that gate at its source.
       - name: Approve the checks GitHub gated on the release PR
         if: steps.find.outputs.number != ''
         continue-on-error: true
@@ -155,6 +157,11 @@ jobs:
       # Squash, not merge: a merge commit repeats the original commit message
       # in its body, so release-please counts the same fix twice and the
       # changelog lists it under two SHAs (see 0.2.0 through 0.2.3).
+      #
+      # Wait for the required checks before merging. The Main ruleset requires
+      # `web`, `rust`, and `E2E validation`; a bare `gh pr merge --squash`
+      # would 405 while those are pending. This job runs on push to main, not
+      # on the release PR, so watching those checks cannot deadlock on itself.
       - name: Merge the release PR
         id: merge
         if: steps.find.outputs.number != ''
@@ -162,9 +169,30 @@ jobs:
           GH_TOKEN: ${{ env.RP_TOKEN }}
         run: |
           set -euo pipefail
-          echo "Merging release PR #${{ steps.find.outputs.number }}"
-          gh pr merge "${{ steps.find.outputs.number }}" \
-            --repo "${{ github.repository }}" \
+          number="${{ steps.find.outputs.number }}"
+          repo="${{ github.repository }}"
+          echo "Waiting for required checks on release PR #${number}"
+          names=""
+          for attempt in $(seq 1 60); do
+            names=$(gh pr checks "$number" --repo "$repo" --json name --jq '.[].name' || true)
+            if printf '%s\n' "$names" | grep -qx web \
+              && printf '%s\n' "$names" | grep -qx rust \
+              && printf '%s\n' "$names" | grep -qx 'E2E validation'; then
+              break
+            fi
+            echo "Attempt ${attempt}: required checks not reported yet; retrying in 5s."
+            sleep 5
+          done
+          if ! printf '%s\n' "$names" | grep -qx web \
+            || ! printf '%s\n' "$names" | grep -qx rust \
+            || ! printf '%s\n' "$names" | grep -qx 'E2E validation'; then
+            echo "::error::Required checks web/rust/E2E validation never appeared on PR #${number}"
+            exit 1
+          fi
+          gh pr checks "$number" --repo "$repo" --watch --fail-fast --required
+          echo "Merging release PR #${number}"
+          gh pr merge "$number" \
+            --repo "$repo" \
             --squash \
             --delete-branch
 
