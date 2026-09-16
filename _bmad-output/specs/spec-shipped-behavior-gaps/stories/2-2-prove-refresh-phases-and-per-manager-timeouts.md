@@ -2,7 +2,7 @@
 title: 'Prove Refresh Phases and Per-Manager Timeouts'
 type: 'bugfix'
 created: '2026-08-19'
-status: 'blocked'
+status: 'ready-for-dev'
 baseline_revision: 'ea48b7d98ea87ce30b2ed1bcfe15ac4cf84e65df'
 review_loop_iteration: 0
 followup_review_recommended: false
