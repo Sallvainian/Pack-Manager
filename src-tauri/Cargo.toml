@@ -33,7 +33,7 @@ nix = { version = "0.31.3", features = ["signal", "process", "fs"] }
 regex = "1.13.1"
 dirs = "7.0.0"
 which = "8.0.5"
-zip = "8.6.0"
+zip = "9.0.1"
 tauri-plugin-opener = "2.5.4"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json", "registry"] }
 uuid = { version = "1.24.0", features = ["v7", "serde"] }
