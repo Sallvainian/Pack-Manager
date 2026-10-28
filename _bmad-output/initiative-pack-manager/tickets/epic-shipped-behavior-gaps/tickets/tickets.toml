@@ -1,0 +1,372 @@
+# Stories of epic-shipped-behavior-gaps, in build order (v6 stories.yaml order).
+# Migrated 2026-10-28 from specs/spec-shipped-behavior-gaps/stories.yaml; ids lost their dash (6-6 -> 66). Each
+# description carries the story's full v6 epics.md text. `after` comes only from epics.md's declared
+# Dependencies/Blocks; "1.<id>" names an entry of epic 1. v6_key is the sprint-status key.
+
+[[entry]]
+id = 66
+type = "story"
+title = "Guard a Quit That Would Orphan a Live Child Process"
+description = '''
+CAP-7: a user-initiated quit with any Operation Queued or Running routes to the single enforcement point the application-update path already uses and presents an explicit choice, while an OS-initiated shutdown gets no dialog and runs the awaited kill hook.
+
+Story 6.6: Guard a Quit That Would Orphan a Live Child Process (v6 epics.md text; its acceptance criteria are binding)
+
+As a Pack-Manager user,
+I want a quit that would abandon running or queued work to ask me first,
+So that work is never silently discarded and the app never leaves child processes behind.
+
+**Story Contract:**
+
+- FR and requirement links: FR-14 (the quit-guard limb, revived by D30 and AD-30 after the D33 rescope triaged it out); FR-21 (its shipping `Queued` ∪ `Running` refusal predicate is the source of truth AD-30 takes, and AD-30 binds FR-21 in return — the two active sets may not drift apart)
+- Required test level: Real native Tauri E2E for the window-close and `⌘Q` paths, since the enforcement point is a native window/menu event and no browser double exercises it (**AD-26** governs the harness). The OS-shutdown limb is verified at the unit level against the kill hook.
+- Governing invariants: **AD-30** (the whole story), AD-3, AD-4, AD-5
+- Dependencies: none — this story guards the **shipping** operation queue and needs nothing from Epic UX-PB. It does not use `planAttemptId`, the persistent draft, or any D27–D30 surface, and it may be built at any point.
+
+**Acceptance Criteria:**
+
+**Given** at least one Operation is `Queued` or `Running`
+**When** a **user-initiated** quit is requested — an OS window-close request or `⌘Q`
+**Then** both paths resolve to the **same** enforcement point the application-update path already uses — one predicate, one dialog, one refusal — and the user is presented an explicit choice rather than having the work silently discarded
+**And** the guard's active set is `Queued` ∪ `Running`: **queued counts as running**, because admission has already committed to the work and a quit would drop it unstarted
+**And** that active set stays **identical** to FR-21's application-update refusal — a change to either predicate is an AD-30 change, not a local one
+**And** no rollback is promised: partially completed Manager work stays partially completed, and the guard surfaces the choice rather than offering to undo.
+
+**Given** the quit guard is presented and the user chooses to quit anyway
+**When** the app exits
+**Then** every child process is terminated before exit — children never outlive the app.
+
+**Given** at least one Operation is `Queued` or `Running`
+**When** the quit is **OS-initiated** — a system shutdown or logout
+**Then** **no dialog is presented**; the guard is best-effort only and runs the existing kill hook — cancel every running Operation, then **await the bounded idle wait**, because `cancel_all` only flips the cancellation tokens and the runner tasks perform the `SIGTERM` → grace → `SIGKILL` work, so a shutdown path that does not await it exits before the children die
+**And** the logout is not blocked to argue with the user: losing the run is the accepted cost, and this asymmetry with the user-initiated case is deliberate rather than an oversight.
+
+**Given** a second code path that could decide on its own whether to quit
+**When** it is introduced
+**Then** it routes to the same enforcement point rather than deciding for itself — a second deciding path is the defect **AD-30** names, and it is how the current build ended up with a `QuitGuardDialog` its host renders and nothing but the application-update path calls.
+'''
+verify = "Window close and ⌘Q with any Operation Queued or Running reach one predicate and one dialog, quit-anyway terminates every child before exit, and an OS shutdown runs the awaited kill hook with no dialog."
+covers = ["R7"]
+after = []
+hitl = false
+risk = "low"
+plan_checkpoint = true
+notes = ["Buildable now - no UX-PB dependency, and UX-PB.1b, 2f, and 4e all presume this guard exists rather than building one, so landing it early unblocks their assumptions. The active set is `Queued` union `Running` and must stay IDENTICAL to FR-21's application-update refusal set in commands.rs and activeOps in src/store/operations.ts - changing either predicate is an AD-30 change, not a local one. Both quit paths hit one predicate, one dialog, one refusal. The shutdown path must await the bounded idle wait so SIGTERM -> grace -> SIGKILL actually completes. Promise no rollback."]
+v6_key = "6-6-guard-a-quit-that-would-orphan-a-live-child-process"
+
+[[entry]]
+id = 22
+type = "story"
+title = "Prove Refresh Phases and Per-Manager Timeouts"
+description = '''
+CAP-1: each Manager's refresh shows its correct phase order, enforces its own timeout so a hung Manager gives up alone while peers finish, and merges recovered parse output into the already-parsed inventory.
+
+Story 2.2: Prove Refresh Phases and Per-Manager Timeouts (v6 epics.md text; its acceptance criteria are binding)
+
+As a Pack-Manager user,
+I want refresh settings, phases, and timeouts to behave consistently per Manager,
+So that a slow or disabled step never creates misleading global state.
+
+**Story Contract:**
+
+- FR and requirement links: FR-3; FR-17
+- Required test level: Unit plus component
+- Governing invariants: AD-4, AD-25
+- Dependencies: deterministic adapters and fake time
+
+**Acceptance Criteria:**
+
+**Given** Homebrew metadata refresh is enabled or disabled
+**When** a Brew refresh is planned and rendered
+**Then** the enabled path shows the required update/inventory/outdated phase order
+**And** the disabled path omits only the metadata-update phase without mislabeling later phases.
+
+**Given** each of the six Manager adapters and its documented timeout boundary
+**When** controlled time reaches success, timeout, or error outcomes
+**Then** the correct Manager-specific terminal state and actionable detail appear
+**And** peers continue independently without real network access or wall-clock sleeps.
+
+**Given** a Manager that has already produced a successful snapshot, and a later refresh whose detection, parse, network, timeout, or persistence path fails
+**When** the failure resolves and recovered-parse output is available
+**Then** the failure stays contained to that Manager, its Last-good Snapshot is retained and labeled with its own timestamp and the exact failure alongside a `Retry refresh` affordance, and the recovered output **merges** into the inventory already parsed from the successful refresh outputs
+**And** the snapshot is never replaced by an empty one and never by an outdated-only overlay — which would make every up-to-date Package vanish — the merge never un-pins a row, and health and staleness presentation read from the snapshot's real timestamp with no invented or interpolated value substituted.
+'''
+verify = "Controlled-time tests show the correct Brew phase order (metadata phase omitted only when disabled), per-Manager timeouts with peers unaffected, and recovered parse output merged without blanking or un-pinning rows."
+covers = ["R1"]
+after = []
+hitl = false
+risk = "low"
+notes = ["Buildable now - no UX-PB dependency. parse_recovery must MERGE the recovered overlay into the already-parsed inventory; replacing it drops every up-to-date row from the table. The merge must never blank up-to-date rows and never un-pin a row. The disabled Homebrew-metadata path omits only that phase, not the others. A retained Last-good Snapshot carries its real timestamp and the exact failure beside Retry refresh - never an invented health value (FR-3, FR-17, AD-4, AD-25)."]
+v6_key = "2-2-prove-refresh-phases-and-per-manager-timeouts"
+
+[[entry]]
+id = 25
+type = "story"
+title = "Offer Copyable Install Guidance for Absent Managers"
+description = '''
+CAP-8: every absent Manager's Dashboard card, sidebar entry, and workspace state shows that Manager's copyable install command through the existing CopyableCommand paths, and an all-absent machine gets a Dashboard guidance panel.
+
+Story 2.5: Offer Copyable Install Guidance for Absent Managers (v6 epics.md text; its acceptance criteria are binding)
+
+Added 2026-08-18 by `sprint-change-proposal-2026-08-18.md`, implementing `docs/DECISIONS.md` **D40**. Like Story 6.6, this postdates the D33 rescope: it is new scope decided by the owner, not a resurrected triage story.
+
+As a Pack-Manager user,
+I want every absent Manager to show a copyable install command, and an all-absent machine to tell me where to start,
+So that a Manager I lack — or a machine with none at all — hands me the terminal command instead of a dead end.
+
+**Story Contract:**
+
+- FR and requirement links: FR-1 (the install-hint limb, extended by D40 from "where one is known" to all six)
+- Required test level: Unit plus component
+- Governing invariants: AD-4 (hints are static data through existing typed surfaces; no new process effect), AD-27 (focus is a 2px `outline` in `--color-focus-ring` on any added control; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)
+- Governing decisions: **D40** (copyable hints, never an executing Install button — installer non-goal, SM-3 no-privilege, no shell surface, and FR-23's closed immediate-execution set may not grow); D14 (copy-to-terminal is the product's handoff ethos)
+- Dependencies: none — buildable now; no Epic UX-PB surface is involved. The existing `installHint` render paths (`Sidebar.tsx`, `ManagerCard.tsx`, `ManagerPane.tsx`) are reused, not rebuilt.
+
+**Acceptance Criteria:**
+
+**Given** any of the six Managers is detected absent
+**When** its Dashboard card, sidebar entry, and Manager workspace absent state render
+**Then** each shows that Manager's copyable install command through the existing `CopyableCommand` treatment (extending the mas behavior to all six), the command is copy-only, nothing in the app can execute it, and no `Install` button or other execution affordance exists (D40)
+**And** the absent presentation still explains that Refresh All / Re-detect picks the Manager up after installation.
+
+**Given** the indicative commands recorded in D40 (brew → the official Homebrew installer one-liner; mise → `brew install mise`; npm → `mise use -g node@lts`; uv → `mise use -g uv`; rustup → the official rustup installer one-liner; mas → `brew install mas`)
+**When** the hints are implemented
+**Then** each shipped hint is verified against that Manager's current official installation documentation, and hints are static per-Manager strings — no context-aware suppression or rewriting based on which other Managers are present, per D40's rejected-alternatives record.
+
+**Given** a machine where all six Managers are absent
+**When** detection completes
+**Then** the Dashboard presents a state panel carrying D40's guidance — no package managers were found, the user installs one themselves (Homebrew is the usual first), and `Refresh All` re-detects afterward — the system never reads as an error or `Warning` for absence alone, and `Update Everything` stays disabled with a reason.
+'''
+verify = "All six absent Managers show a verified copy-only install command with no execution affordance, and an all-absent machine shows the D40 guidance panel with Update Everything disabled and a stated reason."
+covers = ["R8"]
+after = []
+hitl = false
+risk = "low"
+done_checkpoint = true
+notes = ["Buildable now - no UX-PB dependency. Copy-only: no Install button and no execution affordance anywhere. D40 explicitly refused an executing installer (installer is a non-goal, and there is no sudo or shell path in this app). Extend mas's existing treatment to all six Managers. The all-absent Dashboard must not read `Warning` for absence alone, and Update Everything stays disabled with a stated reason (FR-1 install-hint limb, D40, D14)."]
+v6_key = "2-5-offer-copyable-install-guidance-for-absent-managers"
+
+[[entry]]
+id = 35
+type = "story"
+title = "Preserve Exact Batched Plan Membership and Row Plan Actions"
+description = '''
+CAP-5: toggle, shift-range, tri-state header checkbox, Cmd-A, Space, and Cmd-click act directly on draft membership as one batched operation carrying concrete canonical identities plus the snapshot token.
+
+Story 3.5: Preserve Exact Batched Plan Membership and Row Plan Actions (v6 epics.md text; its acceptance criteria are binding)
+
+As a Pack-Manager user,
+I want membership interactions and single-row plan actions to preserve exact Package identity,
+So that I can act efficiently without adding excluded or unrelated Packages to the Upgrade Plan.
+
+**Restated per `ARCHITECTURE-SPINE.md` AD-28.** This story's criteria were written on the transient-selection model AD-28 abolishes — "the exact selectable identities", a `Clear` that cleared a selection set, and an `Esc` rung. AD-28 exists precisely to prevent this story building a transient selection set while UX-PB.1a builds direct membership: two stories that obey every other invariant and ship opposite models of the same checkbox. The criteria below are restated in membership terms and batched. `epics.md` never named `⌘U`, so no `⌘U` limb is removed here — only `docs/SPEC.md` §4.11 carries that, and it is hand-written and workflow-unowned.
+
+**Story Contract:**
+
+- FR and requirement links: FR-6; FR-10; FR-13; FR-19; RP-2 (`⌘A` as an Edit-menu action, and the surviving accelerator map); NFR-3 (the 101-rows requirement that makes batching a requirement rather than an optimization)
+- Required test level: Component plus browser E2E
+- Governing invariants: AD-16, AD-17, **AD-28** (a Package checkbox **is** membership; the anchor survives and the selection set does not; a range or filter-wide interaction is **one** membership operation; a batch carries concrete canonical identities computed from the snapshot the user is looking at, never a predicate for Rust to re-expand; one predicate, and it is Rust's), AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)
+- Dependencies: Stories 3.1 and 3.2; **UX-PB.1a** (which retires the live `selection` set in `src/store/packages.ts`); deterministic bridge
+
+**Acceptance Criteria:**
+
+**Given** eligible, current, pinned, greedy, filtered, and range-addressable rows
+**When** a toggle, a shift-range, the tri-state header Checkbox, `⌘A`, Space, or `⌘`-click mutates membership
+**Then** each acts **directly on Upgrade Plan draft membership** — checking an eligible Package adds it and unchecking removes it, with no separate selection set to build and no `Add Selected` submit step — the exact canonical identities and visible filter semantics are preserved, and ineligible rows never enter membership under any of them, including the header Checkbox
+**And** a range or filter-wide interaction submits **one** membership operation covering every affected identity — one round trip, one canonical rebuild — never one operation per row, because the canonical draft lives in Rust and every mutation round-trips before the projection updates (NFR-3, AD-28)
+**And** the batch carries **concrete canonical identities computed from the snapshot the user is looking at**, plus the snapshot token it read, and Rust rejects a batch whose token is not its current snapshot — never a predicate for Rust to re-expand, which would resolve against whatever snapshot Rust holds at that instant and stage a Package the user never saw
+**And** a range is an anchor and a target over the **ordered filtered set the projection holds**, including off-screen virtualized rows, and **not** the rendered DOM window — the product virtualizes, so at 500 rows roughly twenty are rendered and a 400-row range would otherwise mean two different things to this story and the story that owns the table
+**And** the frontend may hold the shift-range anchor, the search term, and the filter — *where the user is* — and never *what is staged*: the **anchor survives, the selection set does not**, and losing the anchor degrades a range into a single toggle, which is already the shipping fallback
+**And** the header Checkbox's tri-state denominator is the eligible set matching the active filter including off-screen rows — unchecked when none of that set is staged, `mixed` when some, checked when all — derived from the membership projection and never stored
+**And** the batch is **all-or-none in application and narrowing in resolution**: one rebuild applies every member it still finds eligible and drops the rest as one transaction, reporting the dropped refs and their reasons; it never half-applies silently and is rejected outright only when the rebuild **errors**, in which case the prior coherent draft and its last authenticated preview are preserved unchanged (AD-16)
+**And** provenance follows the shape of the act (AD-23, AD-28): a **range is `Explicit`** for every member because it names concrete visible rows, while the header Checkbox and `⌘A` are `Bulk { scope: FilteredView }`
+**And** **`Clear` survives with a changed meaning and `Esc` does not.** `Clear` is no longer a selection clear — it is a **scope-wide membership removal** under AD-28's closed three-way taxonomy, clearing membership for the refs in its scope and clearing the tombstones **only** of the refs whose membership it actually cleared, never of refs that held none. **`Esc` never touches membership**: its clear-selection rung is deleted rather than re-pointed, and `Esc` is not handed the sidecar as a replacement sink, so the cascade is **close-dialog alone** (AD-17, `prd.md` FR-6). One `Esc` mass-writing tombstones and poisoning a draft against `Update Everything` is the failure this closes.
+
+**Given** the Dashboard, History, and Settings — the views with no Package list
+**When** `⌘A` is pressed
+**Then** the native select-all is **not** suppressed and behaves normally, because an accelerator that shadows a standard Edit-menu action suppresses the native default **only on surfaces where it performs its own action** (AD-28)
+**And** this is a named shipping defect with an owner rather than a hypothetical: the handler calls `preventDefault()` before the select-all helper early-returns on views with no Package list, so today `⌘A` blocks native select-all on those three views and puts nothing in its place. The search field escapes it only because the handler bails on editable targets first
+**And** `docs/DECISIONS.md` D37 does not excuse it — `⌘A` is an Edit-menu action D37 keeps by name, and RP-2 makes it a release prerequisite. It is a functional regression in select-all, not an accessibility item
+**And** re-pointing `⌘A` to membership must not inherit the defect (`prd.md` FR-6).
+
+**Given** one eligible or ineligible Package row
+**When** the single-row plan action is invoked
+**Then** exactly one eligible Package's canonical identity is added to (or removed from) the persistent draft Upgrade Plan, nothing is built, submitted, enqueued, or executed, and the sidecar reflects the membership change
+**And** ineligible, pinned, or current rows add nothing, stay inert with an explained reason, and never expand membership
+**And** a single-row removal is a **single-ref removal** under AD-28's taxonomy and writes a tombstone (AD-23), so no later bulk expansion of any scope re-adds it
+**And** the resulting one-Package plan enters the same review and separate-confirmation path as a multi-Package plan, with its execution, verification, Results, and History lifecycle proven by the later-wave stories that own those stages.
+'''
+verify = "Toggle, shift-range, the header checkbox, ⌘A, Space and ⌘-click mutate draft membership as one batched operation carrying concrete identities and the snapshot token; ⌘A stays native on Dashboard, History and Settings; Esc never touches membership."
+covers = ["R5"]
+after = [31, 32, "1.1a"]
+hitl = false
+risk = "low"
+plan_checkpoint = true
+notes = ["Blocked by UX-PB.1a (wave 1), which retires the transient selection set this story acts against. A 400-row range over virtualized rows must be ONE round trip resolved against the projection's ordered filtered set - all-or-none in application, narrowing in resolution, with dropped refs reported. Never send a predicate for Rust to re-expand (AD-28, NFR-3). Cmd-A stays native on Dashboard, History, and Settings where there is no Package list; Esc is close-dialog only. A single-row removal writes a tombstone that no later bulk expansion re-adds."]
+v6_key = "3-5-preserve-exact-batched-plan-membership-and-row-plan-actions"
+
+[[entry]]
+id = 31
+type = "story"
+title = "Present Complete Package State and Manager Detail"
+description = '''
+CAP-2: every Package row is understandable without relying on color, uv executables are expandable and searchable, and npm's self state lives only in its Manager Card and Header where Update Manager stages and never executes.
+
+Story 3.1: Present Complete Package State and Manager Detail (v6 epics.md text; its acceptance criteria are binding)
+
+As a Pack-Manager user,
+I want complete Package rows, expandable details, self-update separation, and non-color status cues,
+So that I can understand what each Manager reports without losing Manager-specific meaning.
+
+**Story Contract:**
+
+- FR and requirement links: FR-2; FR-5; FR-6; FR-10; FR-11; FR-19
+- Required test level: Component
+- Governing invariants: AD-16, AD-17, AD-28 (the row Checkbox **is** membership — no transient selection, and the row reads the same single eligibility-and-visibility predicate as the header Checkbox, `⌘A`, the batch payload, and the tri-state denominator, projected from Rust with the snapshot it was computed against), AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)
+- Dependencies: representative all-state fixtures
+
+**Acceptance Criteria:**
+
+**Given** representative current, Outdated, pinned, self-updating/greedy, unknown-version, and error Packages
+**When** Manager Package tables render
+**Then** name, installed/latest values, status text, eligibility, selection, and the row plan action that adds or removes the Package's stable identity in the one persistent editable draft Upgrade Plan without executing are complete and understandable without relying on color.
+
+**Given** uv executable details and npm's own outdated row
+**When** the user expands/searches uv content and views npm
+**Then** uv executables are reachable and searchable
+**And** npm self state appears only in its Manager Card/Header — where `Update Manager` stages an independent, individually-removable self-update plan item surfaced as `IN PLAN` / `Remove` and never executes directly — while the four ordinary Package rows remain.
+'''
+verify = "All-state fixtures render complete Package rows understandable without color, uv executables are expandable and searchable, and npm's self-update appears only in its Header as IN PLAN / Remove."
+covers = ["R2"]
+after = ["1.1e"]
+hitl = false
+risk = "low"
+notes = ["Blocked by UX-PB.1e (wave 1) - the standardized Manager presentation must land first. npm keeps its four ordinary Package rows while its self-update appears as IN PLAN / Remove in the header only (FR-2, FR-5, FR-6, FR-10, FR-11, FR-19)."]
+v6_key = "3-1-present-complete-package-state-and-manager-detail"
+
+[[entry]]
+id = 32
+type = "story"
+title = "Enforce Pinned and Greedy Eligibility"
+description = '''
+CAP-3: pinned rows stay inert with the correct explained reason across every entry path and filter, and greedy-only casks are grouped separately, collapsed, default-excluded, and enter a plan only through explicit opt-in with visible disclosure.
+
+Story 3.2: Enforce Pinned and Greedy Eligibility (v6 epics.md text; its acceptance criteria are binding)
+
+As a Pack-Manager user,
+I want pinned formulae and self-updating casks handled by their documented policies,
+So that no plan silently overrides a pin or includes default-excluded work.
+
+**Story Contract:**
+
+- FR and requirement links: FR-5; FR-6; FR-7
+- Required test level: Unit plus component
+- Governing invariants: AD-16 (ineligible-item inertness: **inert, not inactive** — the control may not use the native `disabled` state), AD-17, AD-28 (membership, the single predicate, and the closed removal taxonomy), AD-27 (focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls)
+- Governing decisions: **D38** — D15's disabled-checkbox *mechanism* is superseded; D15's substance (a pinned formula is never upgradable in-app and is excluded from every plan) is unchanged and not reopened
+- Dependencies: Story 3.1; **Story UX-PB.1d** (which declares `Blocks: Story 3.2` and owns the inertness contract this story renders — the edge previously existed in one direction only, so nothing sequenced the contract); deterministic plan-builder and UI fixtures
+
+**Acceptance Criteria:**
+
+**Given** pinned Homebrew formulae
+**When** membership mutation, row plan-add, per-Manager update-all, and Update Everything draft-entry paths are exercised across every active filter
+**Then** pinned rows stay inert, add nothing to the draft Upgrade Plan, and are explained and excluded from every plan with the correct reason
+**And** the control uses `aria-disabled="true"` and **not** the native `disabled` state — this story renders the same control as UX-PB.1d and takes the same correction. A natively disabled form control dispatches no mouse events, so `disabled` and the pointer-reachable reason are mutually exclusive and the reason wins (AD-16, D38). Reduced opacity alone is not the treatment either.
+
+**Given** ordinary and greedy-only casks
+**When** the default and explicit opt-in flows execute
+**Then** greedy-only casks are the documented set difference, remain separate/collapsed/default-excluded, and enter a plan only through explicit opt-in with visible disclosure.
+'''
+verify = "No membership path adds a pinned formula or a default-excluded greedy cask; pinned rows use aria-disabled and explain themselves on hover; greedy-only casks join only through explicit opt-in with visible disclosure."
+covers = ["R3"]
+after = [31, "1.1d"]
+hitl = false
+risk = "low"
+notes = ["Blocked by UX-PB.1d (wave 1) - the inertness mechanism and reason strings come from there. Use aria-disabled, never native `disabled` (D38, AD-16). Greedy-only casks are identified by the two-call set difference, never an in-JSON heuristic (D7). No membership path - row, header, Manager-wide, or Update Everything - may add a pinned or default-excluded cask."]
+v6_key = "3-2-enforce-pinned-and-greedy-eligibility"
+
+[[entry]]
+id = 34
+type = "story"
+title = "Validate Every Settings Control and Environment Report"
+description = '''
+CAP-4: every Settings control validates, persists atomically before activation, and shows Saving, Saved, or failure honestly, with skipUpgradePlanConfirmation as a first-class persisted control and a complete Environment Report with visible Copy outcomes.
+
+Story 3.4: Validate Every Settings Control and Environment Report (v6 epics.md text; its acceptance criteria are binding)
+
+As a Pack-Manager user,
+I want every Settings control and Environment Report action to validate, persist, and report failures clearly,
+So that configuration changes and environment evidence remain trustworthy.
+
+**Story Contract:**
+
+- FR and requirement links: FR-17
+- Required test level: Unit plus component
+- Governing invariants: AD-4, AD-5, AD-19, **AD-27** (this story renders Settings controls, and AD-27 revision 10 widened its `Binds` to name Story 3.4 explicitly — an earlier enumeration omitted it and this document faithfully mirrored the omission. Focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, which WKWebView drops on native-appearance controls, and never `outline-none`. Verify each added control's focus state at runtime — no grep and no green suite substitutes for that)
+- Dependencies: controlled persistence and clipboard seams
+
+**Acceptance Criteria:**
+
+**Given** the retained editable stall threshold, hard cap, and log level plus `skipUpgradePlanConfirmation` (default `false`) as the configurable Settings — each with its default, valid bounds, invalid input, and a persistence failure — and an old persisted `autoOpenDrawer` value carried over after the Activity auto-open preference was removed
+**When** the user changes Settings
+**Then** valid values persist before becoming active, invalid values are rejected, save failure changes neither active nor persisted state, and log-level changes apply live only after persistence
+**And** `skipUpgradePlanConfirmation` is validated and persisted as a first-class control, the Activity auto-open preference is removed from active Settings while any old persisted `autoOpenDrawer` value is tolerated during migration without ever becoming active, the new value applies only after atomic persistence succeeds, and every control saves immediately and atomically with visible `Saving`/`Saved`/failure state.
+
+**Given** the complete current detection and ToolEnv state
+**When** Environment Report opens and Copy is used
+**Then** every required field and evidence value is present
+**And** copy success and failure are visible and actionable.
+'''
+verify = "Every Settings control validates, persists before activating and shows Saving/Saved/failure honestly; skipUpgradePlanConfirmation is first-class; autoOpenDrawer stays inactive legacy; Environment Report Copy reports success or failure."
+covers = ["R4"]
+after = ["1.5b"]
+hitl = false
+risk = "low"
+notes = ["Blocked by UX-PB.5b. Despite its wave-5 label, 5b clears EARLY: UX-PB.5a gates on waves 1-2 only, so the whole confirmation branch can run alongside wave 3 - which is why this story precedes 6-5 rather than running last. 5b establishes skipUpgradePlanConfirmation and its atomic persistence; this story makes it first-class in Settings. A failed save changes neither active nor persisted state and never reads `Saved`. Log-level changes apply live only after persistence. A stale autoOpenDrawer value is tolerated as inactive legacy, not migrated or resurrected (FR-17, AD-19, AD-27)."]
+v6_key = "3-4-validate-every-settings-control-and-environment-report"
+
+[[entry]]
+id = 65
+type = "story"
+title = "Export Exact Native Diagnostics and Visible Outcomes"
+description = '''
+CAP-6: Export diagnostics produces the documented timestamped ZIP - report.json, newest three app logs, newest 25 transcripts, operations.jsonl, and the raw plan-attempt record sets correlated by planAttemptId - proven through the production native command.
+
+Story 6.5: Export Exact Native Diagnostics and Visible Outcomes (v6 epics.md text; its acceptance criteria are binding)
+
+As a Pack-Manager user,
+I want diagnostics export to create the documented archive and report native outcomes,
+So that support evidence is complete, inspectable, and actionable.
+
+**Story Contract:**
+
+- FR and requirement links: FR-18
+- Required test level: Real native Tauri E2E plus artifact inspection. Satisfiable as written — **AD-26** names a compliant shape and no renegotiation is needed.
+- Governing invariants: AD-3, AD-4, AD-5, AD-16, AD-18, AD-26, **AD-29** (the archive carries the **raw journal lines**, never a synthesized record — this story's assertion that the exported plan-attempt records carry scope, exact commands, verification facts and results is satisfied by the record **set** for a `planAttemptId` and cannot be satisfied by any single record, because AD-29's admission/terminal split makes such a record impossible. A folded attempt view may be added as an **additional** entry marked as derived; it never replaces the raw lines and is never written back to the journal), **AD-27** (this story renders the diagnostics action, and AD-27 revision 10 widened its `Binds` to name Story 6.5 explicitly — an earlier enumeration omitted it and this document faithfully mirrored the omission. Focus is a 2px `outline` in `--color-focus-ring`; never a `ring-*`/box-shadow, and never `outline-none`; verify the added control at runtime), **AD-30** (a quit that would orphan a live child process is guarded at **one** enforcement point, and its active set is `Queued` ∪ `Running` — the interrupted-run evidence this export carries is evidence of a run whose quit reached that guard; Story 6.6 builds it, and this story neither builds nor duplicates it)
+- Harness constraint (AD-26): the native automation surface is excluded from release bits at **compile time**, never by a runtime selector, and the harness must drive the **production composition** — the same registered commands and events, the same handlers, the same serialization. No delivery coverage may be claimed from a fixture, from the browser double, or from a harness that introduces a test-only command, a second composition root, or a different registration set.
+- Dependencies: disposable logs/transcripts/journal
+
+**Acceptance Criteria:**
+
+**Given** documented default destination, alternate permission outcomes, and invocation from Settings and History
+**When** diagnostics export runs through the production native command
+**Then** the timestamped ZIP path and visible success/failure match the contract.
+
+**Given** more than three app logs, 25 transcripts, 1,000 journal records, and durable plan-attempt records correlated by `planAttemptId`
+**When** the produced ZIP is opened and inspected
+**Then** it contains `report.json`, the newest three app logs, newest 25 transcripts, `operations.jsonl`, and the durable plan-attempt records that correlate the exported evidence — with exact expected contents and no missing required entry, including those plan-attempt entries
+**And** the required fields are carried **between** an attempt's two records rather than duplicated into each (AD-29): the **admission** record carries `planAttemptId`, reviewed Manager/Package scope, exact commands, identities and timestamps, and the **terminal** record carries verification facts and results; `retryOfPlanAttemptId` accompanies the attempt where one exists. The assertion is satisfied by the record **set** for a `planAttemptId` and may not be written as a single-record assertion
+**And** the archive carries the raw journal lines, so widening the export does not widen disclosure — plan-attempt records enter under the same allowlist the export already applies, inherited environment values stay excluded, and a record carries the reviewed intent and the exact argv Pack-Manager constructed and never ambient environment or user paths (AD-18).
+
+**Given** Export diagnostics and Open Logs actions
+**When** native command/opener success and failure are controlled
+**Then** the UI exposes actionable outcomes
+'''
+verify = "Export diagnostics through the production native command yields the documented ZIP with report.json, three logs, 25 transcripts, operations.jsonl and each attempt's raw admission/terminal record set, with actionable success and failure."
+covers = ["R6"]
+after = ["1.3d", "1.4d"]
+hitl = false
+risk = "high"
+plan_checkpoint = true
+done_checkpoint = true
+notes = ["Blocked by UX-PB.3d (wave 3) and UX-PB.4d (wave 4) - the plan-attempt records it archives do not exist until those land. This is the last story in either spec to unblock: 4d sits at the far end of the critical path, so 6-5 runs last overall. The harness must be AD-26-compliant: an automation surface excluded from release bits at COMPILE time, never by a runtime selector, driving the production composition - and adopting it is an AD-20 security-reviewed change. No delivery coverage may be claimed from fixtures or the browser double. The archive carries the admission/terminal record SET per attempt, never a synthesized single record; inherited environment values stay excluded; permission failures surface real errors instead of silence. Per D42 there is no preview or redaction step - the construction-time allowlist plus the visible ZIP path is the review affordance."]
+v6_key = "6-5-export-exact-native-diagnostics-and-visible-outcomes"

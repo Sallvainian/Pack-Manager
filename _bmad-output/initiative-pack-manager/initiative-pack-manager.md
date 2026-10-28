@@ -1,13 +1,8 @@
 ---
 type: initiative
 title: "Pack-Manager: one trustworthy control plane over six macOS package managers"
-sources:
-  - _bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md
-  - _bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/addendum.md
-companions:
-  - _bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md
-  - _bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/DESIGN.md
-  - _bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/EXPERIENCE.md
+sources: [_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md, _bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/addendum.md]
+companions: [_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md, _bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/DESIGN.md, _bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/EXPERIENCE.md]
 after: []
 risk: high
 ---

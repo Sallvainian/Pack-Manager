@@ -13,3 +13,4 @@ slug = "epic-shipped-behavior-gaps"
 title = "Shipped-behavior gap closure (D33 survivors)"
 description = "The eight verified gaps between the shipping 1.0.x build and its requirements are closed: refresh timeouts, install guidance, complete rows, eligibility, Settings honesty, batched membership, diagnostics, and the quit guard."
 covers = ["R1", "R3", "R5", "R6", "R7", "R10", "R14", "R15", "R16", "R17", "R18"]
+after = [{ epic = 1, needs = "entry-level only: 1a (draft membership) for 35, 1d (inertness) for 32, 1e (Manager presentation) for 31, 5b (skipUpgradePlanConfirmation) for 34, 3d and 4d (plan-attempt records) for 65; 66, 22 and 25 wait on nothing" }]
