@@ -1,0 +1,15 @@
+# Epics of initiative-pack-manager, in build order. Migrated from the v6 spec kernels on 2026-10-28.
+
+[[epic]]
+id = 1
+slug = "epic-upgrade-plan-redesign"
+title = "The Upgrade Plan redesign (D27–D30)"
+description = "Every update is staged in one persistent Upgrade Plan, confirmed once, run as one durable plan attempt, verified before success, and recorded as one History row."
+covers = ["R8", "R23"]
+
+[[epic]]
+id = 2
+slug = "epic-shipped-behavior-gaps"
+title = "Shipped-behavior gap closure (D33 survivors)"
+description = "The eight verified gaps between the shipping 1.0.x build and its requirements are closed: refresh timeouts, install guidance, complete rows, eligibility, Settings honesty, batched membership, diagnostics, and the quit guard."
+covers = ["R1", "R3", "R5", "R6", "R7", "R10", "R14", "R15", "R16", "R17", "R18"]
