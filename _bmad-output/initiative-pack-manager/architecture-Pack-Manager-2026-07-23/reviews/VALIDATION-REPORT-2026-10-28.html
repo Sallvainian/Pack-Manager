@@ -1,0 +1,167 @@
+<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Spine Validation Report</title><style>
+:root{--bg:#fbfaf8;--fg:#1d1c1a;--muted:#6b675f;--line:#e4e0d8;--card:#fff;--crit:#b42318;--high:#c4560a;--med:#8a6d00;--ok:#1f7a3f;--code:#f1eee8}
+@media (prefers-color-scheme: dark){:root{--bg:#161513;--fg:#ece9e3;--muted:#a19c92;--line:#2f2c28;--card:#1e1d1a;--crit:#ff7b72;--high:#ffa657;--med:#e3c04f;--ok:#56d364;--code:#2a2824}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:1040px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:26px;margin:0 0 12px}h2{font-size:18px;margin:32px 0 10px;padding-top:12px;border-top:1px solid var(--line)}
+h2:nth-of-type(3){color:var(--crit)}h2:nth-of-type(4){color:var(--high)}h2:nth-of-type(5){color:var(--med)}h2:nth-of-type(2){color:var(--ok)}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden;font-size:14px;display:block;overflow-x:auto}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:600}
+td:first-child{font-weight:700;white-space:nowrap}code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:13px}
+li{margin:4px 0}p{margin:8px 0}strong{font-weight:650}
+</style></head><body><main><h1>Validation report — architecture spine revision 12 (2026-10-28)</h1>
+<p><strong>Spine:</strong> <code>architecture-Pack-Manager-2026-07-23.md</code> (<code>artifact_revision: 12</code>, 22 ADs, 1,633 lines), validated after the BMad v7 migration.
+<strong>Gate:</strong> <code>lint_spine.py</code> + rubric walker + the two configured floor reviewers (currency, adversary), each in an independent context. The spine was not changed.</p>
+<h2>Verdict</h2>
+<p>The migration left the spine intact. Its Upgrade Plan core and its claims about the existing code still hold, but it is <strong>not safe to build past wave 1 without an Update pass (revision 13)</strong>. After merging duplicates, the reviewers found <strong>2 critical, 6 high, 9 medium and 8 low</strong> issues. No AD needs retiring; every fix is a new or tightened AD, or a frontmatter refresh.</p>
+<h2>Migration integrity (deterministic) — PASS</h2>
+<ul>
+<li>Compared with the pre-migration spine at <code>3f64e2b</code>, the only changes are <strong>9 path tokens</strong> and the added <code>title:</code> line. No content changed.</li>
+<li>All 9 new targets resolve.</li>
+<li><code>lint_spine.py</code>: 0 findings.</li>
+</ul>
+<h2>Critical</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Finding</th>
+<th>Lens</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C1</td>
+<td><strong><code>Run fix</code> (FR-23) has no invariant and no owner.</strong> The Upgrade Plan epic covers R23, and its R1 says all four immediate-execution call sites (including <code>Run fix</code>) go through the draft. The spine names "three call sites", gives <code>PlanIntent</code> no health-fix member, and mentions <code>Run fix</code>/FR-23 zero times. No ticket mentions it. Shipping code still executes immediately (<code>HealthBanner.tsx:43</code> → <code>run_health_fix</code>). Verified by the parent.</td>
+<td>rubric C1, adversary H-5</td>
+<td>AD-16 :467–477</td>
+</tr>
+<tr>
+<td>C2</td>
+<td><strong>No ticket owns how a normally completing attempt ends, from 2b until 3d.</strong> AD-29 gives the terminal append to 2e, but 2e covers only cancellation. Until 3d lands, a compliant build has three choices and all are wrong: never end the attempt (every later confirmation is refused), write success before verification, or write no end record (History shows <code>Interrupted</code>).</td>
+<td>adversary C-1</td>
+<td>AD-16 :504–506; AD-29 :1371–1375, :1442–1444</td>
+</tr>
+</tbody>
+</table>
+<h2>High</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Finding</th>
+<th>Lens</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>H1</td>
+<td><strong>The quit and app-update guard checks a closed list, <code>Queued ∪ Running</code>, but AD-16 adds non-terminal <code>Verifying</code> and <code>Interaction required</code> states</strong>, and the second one holds a live child process. Ticket 66 locks in the two-state set and is buildable now; 3f adds the new state. Quitting at a prompt would orphan the child. <code>commands.rs:772–780</code> is verified.</td>
+<td>rubric H1, adversary H-1</td>
+<td>AD-30 :1495–1500 vs AD-16 :522–535</td>
+</tr>
+<tr>
+<td>H2</td>
+<td><strong>AD-26's "a compliant harness composition exists" was never checked against the WebdriverIO service's own setup guide.</strong> That guide requires <code>tauri-plugin-wdio</code>, <code>withGlobalTauri: true</code>, capability grants and a frontend plugin import. None of these can be removed at compile time, and each conflicts with AD-20, AD-26's "no capability toggle", or AD-3's "<code>bridge.ts</code> is the only Tauri importer".</td>
+<td>currency HIGH-1</td>
+<td>:1099–1107, :1608</td>
+</tr>
+<tr>
+<td>H3</td>
+<td><strong>The native harness has two consumers but the spine names only one.</strong> Story 6.6 (ticket 66) needs real native E2E and lands first; the spine names only 6.5 as owner and "only live consumer".</td>
+<td>rubric H2</td>
+<td>AD-3 :283–286; AD-26 :1082; :1608</td>
+</tr>
+<tr>
+<td>H4</td>
+<td><strong>The attempt fold has no rule for a terminal record without an admission record.</strong> Two existing mechanisms produce one: the start-record write is allowed to fail, and count-based compaction of <code>operations.jsonl</code> (<code>journal.rs:185</code>) can drop it. 2c, 4a and 4e would each read that case differently.</td>
+<td>adversary H-2</td>
+<td>AD-29 :1438–1446; AD-18 :851–855</td>
+</tr>
+<tr>
+<td>H5</td>
+<td><strong>"Durable, journaled" <code>Verifying</code> and <code>Interaction required</code> have nowhere to be recorded.</strong> The Operation journal writes one start line and one finish line, and the last line wins. One plausible encoding brings a crashed verifying Operation back as <code>Verifying</code> instead of <code>Interrupted</code>.</td>
+<td>adversary H-3</td>
+<td>AD-16 :526–527; AD-29 :1474</td>
+</tr>
+<tr>
+<td>H6</td>
+<td><strong>AD-28's snapshot token has no identity, owner or wave.</strong> The obvious candidate, <code>PlanCoordinator.revision</code>, advances on every queue change, so it would reject every batch staged during a live attempt. Rule :1263 also contradicts :1334.</td>
+<td>adversary H-4</td>
+<td>AD-28 :1263, :1331–1334</td>
+</tr>
+</tbody>
+</table>
+<h2>Medium (9)</h2>
+<ul>
+<li><strong>Frontmatter still describes v6.</strong></li>
+<li><code>binds:</code> uses v6 ids and leaves out Stories 2.5 and 6.6.</li>
+<li><code>sources:</code> lists <code>docs/architecture.md</code> and <code>_bmad-output/project-context.md</code>, which don't exist, plus the archived <code>epics.md</code>, and none of the v7 initiative or epic files.</li>
+<li>The body says "six stories survive"; D39–D42 are never cited.</li>
+<li>Source: rubric M1 + deterministic check.</li>
+<li><strong>AD-27's closed binding list leaves out 2.2, 2.5 and 6.6</strong>, all of which render controls (rubric M2).</li>
+<li><strong>The D40 install hints have no owning rule.</strong> A second source already exists: <code>SettingsView.tsx:275</code> hard-codes the mas hint (rubric M3).</li>
+<li><strong>AD-18's "shared retention policy" constrains compaction but never states the policy</strong> (rubric M4; underlies H4).</li>
+<li><strong>Dependency automation has no rule, and the Stack table is stale.</strong></li>
+<li>12 of 20 rows have drifted, including Vitest 4 → 5 (major) and the updater plugin 2.10 → 2.14.</li>
+<li>Dependabot now auto-merges major upgrades, with nothing re-checking the spine.</li>
+<li>Source: rubric M5, currency MEDIUM-1.</li>
+<li><strong>Typed, re-serializing compaction</strong>, which 2c may copy, erases what AD-29 needs to stay distinguishable (adversary M-1).</li>
+<li><strong>Greedy casks fall into two ineligibility classes</strong>, plus an intent-level scalar that AD-23 should have removed (adversary M-2).</li>
+<li><strong>No ticket retires <code>ActivityDrawer</code> or re-points <code>⌘L</code></strong> (adversary M-3).</li>
+<li><strong>Verification-refresh argv</strong> is in the reviewed snapshot for drift, but is bound from live Settings after admission (adversary M-4).</li>
+</ul>
+<h2>Low (8)</h2>
+<ul>
+<li>The <code>macos-14</code> row tells readers to run deprecated workflows on deleted files.</li>
+<li>"No telemetry" is enforced only on the webview side.</li>
+<li>D39 is not reflected.</li>
+<li>The WebKit focus guard runs on <code>ubuntu-latest</code>, which is moving to 26.04 between 2026-10-19 and 2026-11-19.</li>
+<li>The updater plugin changed between 2.12 and 2.14 (<code>allowDowngrades</code> config-only, canonical signatures, <code>requireSignedVersion</code>), and the deferred post-publish row doesn't track it.</li>
+<li>Node 24 and <code>macos-15</code> are now one version behind with no revisit trigger.</li>
+<li>Two tickets each build the below-720px safety indicator.</li>
+<li>The retry preview can be evicted by staging.</li>
+</ul>
+<h2>What still holds</h2>
+<ul>
+<li><strong>Quotes:</strong> all five AD-26 quotes are still word-for-word in today's Tauri docs.</li>
+<li><strong>Tools:</strong> <code>tauri-driver</code> still has no macOS support.</li>
+<li><strong>Tailwind:</strong> AD-27's Tailwind claims compile the same on 4.3.3.</li>
+<li><strong>CI and release:</strong> the macOS 15 SDK, the <code>macos-14</code> cutoff and the release step order all check out.</li>
+<li><strong>Baseline:</strong> 20 commands, 6 events and 15 fixtures.</li>
+<li><strong>Brownfield claims:</strong> the rubric walker's code spot-checks all hold.</li>
+<li><strong>UNVERIFIED:</strong> that WKWebView doesn't paint <code>box-shadow</code> on native controls. This needs a real macOS Tauri build and has not been re-checked on macOS 26.</li>
+</ul>
+<h2>Recommendation</h2>
+<p>Run <code>bmad-architecture</code> <strong>Update</strong>, resuming from this folder's <code>.memlog.md</code>, to fix C1–C2 and H1–H6 as revision 13. Then ask Sofia (<code>bmad-agent-po</code>) to add the owning entries the spine names: a <code>Run fix</code> staging entry, the normal-completion terminal write, and the harness owner for 66.</p>
+<table>
+<thead>
+<tr>
+<th>Order</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Before <strong>2b</strong></td>
+<td>C2 and H6 bite once 2b lands.</td>
+</tr>
+<tr>
+<td>Before <strong>66</strong></td>
+<td>H1 and H3 bite in 66, which is buildable now.</td>
+</tr>
+<tr>
+<td>Before <strong>6.5</strong></td>
+<td>H2 blocks 6.5's harness.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>22</strong>, <strong>25</strong>, <strong>1a</strong> and <strong>1b</strong> can start in parallel with the Update. <strong>1c</strong> should wait for C1, because <code>Run fix</code> is one of its entry points.</p>
+<h2>Reviews</h2>
+<ul>
+<li><code>review-rubric-rev12-2026-10-28.md</code> — 1 critical, 2 high, 5 medium, 3 low</li>
+<li><code>review-adversary-rev12-2026-10-28.md</code> — 1 critical, 5 high, 4 medium, 2 low; includes proposed AD wording</li>
+<li><code>review-currency-rev12-2026-10-28.md</code> — 1 high, 1 medium, 3 low; includes the claim ledger</li>
+</ul></main></body></html>

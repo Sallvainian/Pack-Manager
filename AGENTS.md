@@ -1,9 +1,9 @@
 <!-- bmad:context -->
-<!-- Verified 2026-08-18 against c8302e2. Managed by bmad-project-context; edits inside this block are replaced on refresh. Keep anything you want preserved outside the markers. -->
+<!-- Verified 2026-10-28 against ce86f2c. Managed by bmad-project-context; edits inside this block are replaced on refresh. Keep anything you want preserved outside the markers. -->
 
 ## Pack-Manager
 
-macOS GUI for package managers (Tauri 2 + React 19 + TypeScript + Vite; Rust backend in `src-tauri/`). One native app bundle — no HTTP API, no database. Product behavior lives in `docs/SPEC.md`, the decision log in `docs/DECISIONS.md`, architecture invariants in the spine (see *Where things are*).
+macOS GUI for package managers (Tauri 2 + React 19 + TypeScript + Vite; Rust backend in `src-tauri/`). One native app bundle — no HTTP API, no database. Product behavior lives in `docs/SPEC.md`, the decision log in `docs/DECISIONS.md`, architecture invariants in the spine (see *Where things are*). Planning — PRD, spine, UX, and the ticket tree — lives in the active BMad initiative, `_bmad-output/initiative-pack-manager/`.
 
 ## Policy
 
@@ -41,6 +41,7 @@ macOS GUI for package managers (Tauri 2 + React 19 + TypeScript + Vite; Rust bac
 - Node, the macOS runner label, and the dev-server port are each pinned in 3 places and must move together or something breaks silently: Node in `.nvmrc` + `ci.yml:57,76` + `release.yml:80`; `macos-15` in `ci.yml:28,70` + `release.yml:63` (never `macos-latest` — D34); port `1420` in `vite.config.ts`, `tauri.conf.json`'s `devUrl`, and `playwright.config.ts`.
 - Action pinning is per-workflow: `release.yml`/`test.yml` SHA-pin every third-party action; `ci.yml`/`release-please.yml`/`claude*.yml` float tags. Match the file you're editing.
 - Actions → Release → Run workflow builds/signs/notarizes and uploads to the run only, unless `attach_to_tag` names an existing tag, in which case it re-uploads to that GitHub Release with `--clobber` (the repair path for a release whose build failed after the tag was cut).
+- Read story status with `uv run _bmad/method/scripts/tickets.py --project-root . status _bmad-output/initiative-pack-manager` (`next` for what's ready to start) — never `sprint-status.yaml`, which is archived in `archive-v6/` and no longer updated.
 
 ## Conventions that differ from defaults
 
@@ -54,7 +55,7 @@ macOS GUI for package managers (Tauri 2 + React 19 + TypeScript + Vite; Rust bac
 
 ## Known pitfalls
 
-- D27–D30 (a persistent Upgrade Plan, `planAttemptId`, a `Verifying` status, an "Interaction required" UX) are decided but unimplemented — every `epic-ux-pb` story is still `backlog`. `planAttemptId`, `Verifying`, `InteractionRequired`, `skipUpgradePlanConfirmation`, and `PlanIntent` do not exist anywhere in source. A single-package upgrade still executes immediately with no confirmation sheet; the durable coherence token today is only `PlanCoordinator.revision`.
+- D27–D30 (a persistent Upgrade Plan, `planAttemptId`, a `Verifying` status, an "Interaction required" UX) are decided but unimplemented — none of the 28 `epic-upgrade-plan-redesign` entries (`1a`–`5e`, the v6 `UX-PB.*` stories) has started. `planAttemptId`, `Verifying`, `InteractionRequired`, `skipUpgradePlanConfirmation`, and `PlanIntent` do not exist anywhere in source. A single-package upgrade still executes immediately with no confirmation sheet; the durable coherence token today is only `PlanCoordinator.revision`.
 - Window dragging depends on three independent, unguarded pieces that fail silently with no failing test: `titleBarStyle: Overlay` + `data-tauri-drag-region`, the `core:window:allow-start-dragging` capability grant, and two hardcoded `38px` strips in separate files (`AppLayout.tsx`, `Sidebar.tsx`) that must stay equal.
 - `refresh_all`/`refresh_manager` must re-run detection first and fan out from the fresh result, never the cached `DetectionOutcome` — this is the fix for a named regression (`brew install mas` then Refresh All left mas stuck "Not installed").
 - Plan building applies rust-dedup (D10): if rustup contributes any package, mise's `tool:rust` is removed from the plan — one plan never contains both.
@@ -64,5 +65,6 @@ macOS GUI for package managers (Tauri 2 + React 19 + TypeScript + Vite; Rust bac
 - Editing a `theme.css` token value is a coordinated change — `tests/e2e/browser-style-contract.spec.ts` pins several tokens as literal `rgb()` strings. A token edit alone leaves `tsc`/`vitest`/`build` green and only reddens the separate e2e lane.
 - `**/.memlog.md` is deliberately tracked, not ignored — it's a BMAD workflow's append-only working memory with no edit/delete tooling. Never rewrite, prune, or gitignore one. The working tree also gains/loses files mid-session from concurrent BMAD workflows — stage by explicit path, never `git add -A`.
 - `dev/fixtures/README.md` and `live_smoke.rs` still say this machine has "mas absent" — that's stale documentation, not a code defect; real mas 7.0.0 fixtures exist.
+- An epic file's own `after:` gates every ticket in that epic (`tickets.py`) — record a cross-epic dependency as entry-level `after` plus the initiative `tickets.toml` `[[epic]] after` declaration, which gates nothing.
 
 <!-- /bmad:context -->
