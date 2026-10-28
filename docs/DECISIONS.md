@@ -346,7 +346,7 @@ a test gap, verify whether the behavior is already present in the shipping
 code. The Epics 1–6 triage found most of it was — an adversarial pass
 overturned 14 of 20 initial keeps for exactly that reason. That triage is
 recorded per story, with rationale and `epics.md` citations, in
-`_bmad-output/planning-artifacts/story-triage-2026-07-24.md`: 6 keep, 19
+`_bmad-output/initiative-pack-manager/story-triage-2026-07-24/story-triage-2026-07-24.md`: 6 keep, 19
 merge, 12 retire across the 37 stories. Read it before rescheduling any of
 them.
 
@@ -566,7 +566,7 @@ deleted**: its pointer-hover explanation of why a Package is ineligible is
 mouse-facing behavior, and only its keyboard and VoiceOver limbs are in scope
 here.
 
-`ARCHITECTURE-SPINE.md` is **done**: revision 10 (2026-07-25) is the
+`architecture-Pack-Manager-2026-07-23.md` is **done**: revision 10 (2026-07-25) is the
 `bmad-architecture` Update named here, and it applied D37 through AD-11, AD-16,
 AD-17 and AD-27.
 
@@ -589,7 +589,7 @@ Pinned formulae remain unupgradable in-app and excluded from every plan — D15'
 substance is unchanged and not reopened. Only its mechanism is replaced. A pinned
 row now exposes `aria-disabled="true"` with activation kept inert and its reason
 attached as an accessible description, per `EXPERIENCE.md`'s Checkbox contract
-and `ARCHITECTURE-SPINE.md` AD-16.
+and `architecture-Pack-Manager-2026-07-23.md` AD-16.
 
 The reason is functional, not stylistic. D15 promised the `brew unpin` command
 would reach the user via a tooltip, and it never has:

@@ -53,7 +53,7 @@ and unattended.
    reaches that sheet, and that dismissing it runs nothing.
 
    **Target state, not checkable yet:** D27–D30 replace this with a persistent draft
-   plan where the checkbox *is* membership (`ARCHITECTURE-SPINE.md` AD-28) and a
+   plan where the checkbox *is* membership (`architecture-Pack-Manager-2026-07-23.md` AD-28) and a
    separate confirmation dialog is the gate. When Epic UX-PB ships, this step becomes
    "row checkboxes, Manager headers and Update Everything all stage into the draft plan
    and reach the confirmation gate."
@@ -122,7 +122,7 @@ release; they cannot prevent one. Prevention lives in the automated checks above
 
      ⌘L is the one entry whose *shipping* behaviour and target state differ. At HEAD it
      toggles the Activity drawer (`src/hooks/useKeyboard.ts:166`, `toggleDrawer()`), and
-     that is what to verify. `ARCHITECTURE-SPINE.md` AD-17 retires the drawer and redefines
+     that is what to verify. `architecture-Pack-Manager-2026-07-23.md` AD-17 retires the drawer and redefines
      ⌘L as a focus move into the Upgrade Plan sidecar region that neither toggles nor
      navigates; Epic UX-PB is unbuilt, so do not check for that and do not report the
      difference as a failure.

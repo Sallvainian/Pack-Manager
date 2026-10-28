@@ -46,7 +46,7 @@ This section supersedes older text in this document wherever the two conflict:
   behavior.
 - **F5's transient-selection-plus-`Add N to Plan` model is superseded.** A
   Package checkbox *is* Upgrade Plan membership; there is no separate selection
-  set and no submit step (`ARCHITECTURE-SPINE.md` AD-28, `docs/DECISIONS.md`
+  set and no submit step (`architecture-Pack-Manager-2026-07-23.md` AD-28, `docs/DECISIONS.md`
   D27). F5's row `Update Package` action and its "Neither action executes" line
   remain correct as target behavior; only the two-step selection model is
   historical.
@@ -294,7 +294,7 @@ Pane states: loading (header immediate from detection + 8 skeleton rows); clean 
 Cmd+R refresh current manager (Dashboard: all) · Cmd+Shift+R refresh all · Cmd+U upgrade selected (opens sheet) · Cmd+Shift+U Update Everything (sheet) · Cmd+A select all visible selectable rows · Space toggle focused row · Esc clear selection / close sheet / close drawer · Cmd+L toggle drawer · Cmd+F focus search · Cmd+1..9 sidebar jump. Roving tabindex in tables; live region announces op completions; all color states carry text/icon equivalents; text contrast ≥4.5:1 on its surface.
 
 > **Superseded in part (2026-07-25).** Retired: `Cmd+U upgrade selected` and the
-> `Esc` *clear selection* rung — `ARCHITECTURE-SPINE.md` AD-28 removes both
+> `Esc` *clear selection* rung — `architecture-Pack-Manager-2026-07-23.md` AD-28 removes both
 > (`Esc` closes a dialog and nothing else; membership is never cleared by a
 > keystroke). Also retired: the roving tabindex and the completion-announcing
 > live region — `docs/DECISIONS.md` D37 removes keyboard navigation and
