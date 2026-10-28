@@ -8,7 +8,7 @@ id = 66
 type = "story"
 title = "Guard a Quit That Would Orphan a Live Child Process"
 description = '''
-CAP-7: a user-initiated quit with any Operation Queued or Running routes to the single enforcement point the application-update path already uses and presents an explicit choice, while an OS-initiated shutdown gets no dialog and runs the awaited kill hook.
+R7: a user-initiated quit with any Operation Queued or Running routes to the single enforcement point the application-update path already uses and presents an explicit choice, while an OS-initiated shutdown gets no dialog and runs the awaited kill hook.
 
 Story 6.6: Guard a Quit That Would Orphan a Live Child Process (v6 epics.md text; its acceptance criteria are binding)
 
@@ -59,7 +59,7 @@ id = 22
 type = "story"
 title = "Prove Refresh Phases and Per-Manager Timeouts"
 description = '''
-CAP-1: each Manager's refresh shows its correct phase order, enforces its own timeout so a hung Manager gives up alone while peers finish, and merges recovered parse output into the already-parsed inventory.
+R1: each Manager's refresh shows its correct phase order, enforces its own timeout so a hung Manager gives up alone while peers finish, and merges recovered parse output into the already-parsed inventory.
 
 Story 2.2: Prove Refresh Phases and Per-Manager Timeouts (v6 epics.md text; its acceptance criteria are binding)
 
@@ -104,7 +104,7 @@ id = 25
 type = "story"
 title = "Offer Copyable Install Guidance for Absent Managers"
 description = '''
-CAP-8: every absent Manager's Dashboard card, sidebar entry, and workspace state shows that Manager's copyable install command through the existing CopyableCommand paths, and an all-absent machine gets a Dashboard guidance panel.
+R8: every absent Manager's Dashboard card, sidebar entry, and workspace state shows that Manager's copyable install command through the existing CopyableCommand paths, and an all-absent machine gets a Dashboard guidance panel.
 
 Story 2.5: Offer Copyable Install Guidance for Absent Managers (v6 epics.md text; its acceptance criteria are binding)
 
@@ -151,7 +151,7 @@ id = 35
 type = "story"
 title = "Preserve Exact Batched Plan Membership and Row Plan Actions"
 description = '''
-CAP-5: toggle, shift-range, tri-state header checkbox, Cmd-A, Space, and Cmd-click act directly on draft membership as one batched operation carrying concrete canonical identities plus the snapshot token.
+R5: toggle, shift-range, tri-state header checkbox, Cmd-A, Space, and Cmd-click act directly on draft membership as one batched operation carrying concrete canonical identities plus the snapshot token.
 
 Story 3.5: Preserve Exact Batched Plan Membership and Row Plan Actions (v6 epics.md text; its acceptance criteria are binding)
 
@@ -210,7 +210,7 @@ id = 31
 type = "story"
 title = "Present Complete Package State and Manager Detail"
 description = '''
-CAP-2: every Package row is understandable without relying on color, uv executables are expandable and searchable, and npm's self state lives only in its Manager Card and Header where Update Manager stages and never executes.
+R2: every Package row is understandable without relying on color, uv executables are expandable and searchable, and npm's self state lives only in its Manager Card and Header where Update Manager stages and never executes.
 
 Story 3.1: Present Complete Package State and Manager Detail (v6 epics.md text; its acceptance criteria are binding)
 
@@ -249,7 +249,7 @@ id = 32
 type = "story"
 title = "Enforce Pinned and Greedy Eligibility"
 description = '''
-CAP-3: pinned rows stay inert with the correct explained reason across every entry path and filter, and greedy-only casks are grouped separately, collapsed, default-excluded, and enter a plan only through explicit opt-in with visible disclosure.
+R3: pinned rows stay inert with the correct explained reason across every entry path and filter, and greedy-only casks are grouped separately, collapsed, default-excluded, and enter a plan only through explicit opt-in with visible disclosure.
 
 Story 3.2: Enforce Pinned and Greedy Eligibility (v6 epics.md text; its acceptance criteria are binding)
 
@@ -289,7 +289,7 @@ id = 34
 type = "story"
 title = "Validate Every Settings Control and Environment Report"
 description = '''
-CAP-4: every Settings control validates, persists atomically before activation, and shows Saving, Saved, or failure honestly, with skipUpgradePlanConfirmation as a first-class persisted control and a complete Environment Report with visible Copy outcomes.
+R4: every Settings control validates, persists atomically before activation, and shows Saving, Saved, or failure honestly, with skipUpgradePlanConfirmation as a first-class persisted control and a complete Environment Report with visible Copy outcomes.
 
 Story 3.4: Validate Every Settings Control and Environment Report (v6 epics.md text; its acceptance criteria are binding)
 
@@ -329,7 +329,7 @@ id = 65
 type = "story"
 title = "Export Exact Native Diagnostics and Visible Outcomes"
 description = '''
-CAP-6: Export diagnostics produces the documented timestamped ZIP - report.json, newest three app logs, newest 25 transcripts, operations.jsonl, and the raw plan-attempt record sets correlated by planAttemptId - proven through the production native command.
+R6: Export diagnostics produces the documented timestamped ZIP - report.json, newest three app logs, newest 25 transcripts, operations.jsonl, and the raw plan-attempt record sets correlated by planAttemptId - proven through the production native command.
 
 Story 6.5: Export Exact Native Diagnostics and Visible Outcomes (v6 epics.md text; its acceptance criteria are binding)
 

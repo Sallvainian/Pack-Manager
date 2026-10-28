@@ -1,7 +1,7 @@
 ---
 type: migration
 title: Pack-Manager BMad v6 to v7 migration
-status: approved
+status: done
 created: 2026-10-28
 ---
 
@@ -83,7 +83,7 @@ _bmad-output/
       epic-upgrade-plan-redesign/
         epic-upgrade-plan-redesign.md              # NEW, rendered from SPEC.md (16 CAPs)
         .memlog.md                                 # moved unchanged from the spec folder
-        story-map.md                               # companion, moved; References line
+        capability-story-map.md                    # companion, moved (renamed, see Execution notes)
         tickets/tickets.toml                       # 28 [[entry]]
       epic-shipped-behavior-gaps/
         epic-shipped-behavior-gaps.md              # NEW, rendered from SPEC.md (8 CAPs)
@@ -121,7 +121,7 @@ No epic-level `after`: neither epic waits on the other as a whole; the cross-epi
 
 ## Epic envelopes
 
-Each `SPEC.md` renders into its epic file: each `CAP-N` → `R<n> (CAP-N): <intent>; success: <success>` (same number), Constraints → Constraints, Non-goals → Boundaries, Assumptions → Notes, Why → Description, Success signal → Outcome. `parent: initiative-pack-manager`. No `status` line (both `backlog`). References: the parent's Requirements, the spine, DESIGN.md/EXPERIENCE.md, and (epic 1) `story-map.md`.
+Each `SPEC.md` renders into its epic file: each `CAP-N` → `R<n> (CAP-N): <intent>; success: <success>` (same number), Constraints → Constraints, Non-goals → Boundaries, Assumptions → Notes, Why → Description, Success signal → Outcome. `parent: initiative-pack-manager`. No `status` line (both `backlog`). References: the parent's Requirements, the spine, DESIGN.md/EXPERIENCE.md, and (epic 1) `capability-story-map.md`.
 
 ## Story entries
 
@@ -167,9 +167,9 @@ Epic 2 `epic-shipped-behavior-gaps` (ids lose their dash per the spec rule):
 | 66 | 6-6-… | R7 | — | plan |
 | 22 | 2-2-… | R1 | — | |
 | 25 | 2-5-… | R8 | — | done |
-| 35 | 3-5-… | R5 | "1.1a" | plan |
+| 35 | 3-5-… | R5 | 31, 32, "1.1a" | plan |
 | 31 | 3-1-… | R2 | "1.1e" | |
-| 32 | 3-2-… | R3 | "1.1d" | |
+| 32 | 3-2-… | R3 | 31, "1.1d" | |
 | 34 | 3-4-… | R4 | "1.5b" | |
 | 65 | 6-5-… | R6 | "1.3d", "1.4d" | plan, done |
 
@@ -211,6 +211,39 @@ Outside the store (never edited here; the user updates them):
 - `deferred-work.md` in the initiative folder is where v7 `bmad-build` and bmad-loop's sweep expect the ledger.
 - `bmad-sprint-planning`, `bmad-create-epics-and-stories`, `bmad-spec` and `bmad-correct-course` are replaced by Sofia (`bmad-agent-po`).
 
+## Execution notes
+
+Deviations from the approved plan, each made because a check or a source required it:
+
+- **`story-map.md` renamed `capability-story-map.md`.** `tickets.py` reads any `story-*.md` beside a container's file as a leaf ticket and refused the tree ("earlier layout"). Content kept, except its `CAP-<n>` ids became `R<n>` (below).
+- **Frontmatter lists written inline** (`sources: [a, b]`) — `tickets.py` refuses block lists.
+- **Two declared `after` edges added** that the plan table missed: v6 `epics.md` gives Story 3.5 `Dependencies: Stories 3.1 and 3.2` and Story 3.2 `Dependencies: Story 3.1`. Entry 35 is after 31, 32, 1.1a; entry 32 after 31, 1.1d. `stories.yaml` order is kept; the conflict is a `Source conflict:` line in the epic's Notes.
+- **Cross-epic edge declared in `tickets.toml` only.** `[[epic]] 2` carries `after = [{ epic = 1, needs = … }]` so `tickets.py` stops reporting `undeclared_after`. The epic file's own `after:` stays empty: in `tickets.py` that key gates every ticket of the epic, which would block 66, 22 and 25 — the three stories the source says are buildable now. Entry-level `after` carries the real gates. `tickets.py next` returns 1.1a, 2.66, 2.22, 2.25.
+- **`CAP-<n>` → `R<n>` in entry text and the companion map** (checklist item 8). In each epic `CAP-N` became `R<N>` one-for-one, so the substitution is exact. Requirements lines keep `CAP-N` in their parentheses.
+- **Path rewrites scoped to specific moved files and run folders.** References to the retired folder itself (e.g. "never moved back into `planning-artifacts`", recorded `find _bmad-output/planning-artifacts …` commands) name the v6 folder as a historical fact and are left as written.
+- **`migrate_v6.py --clean` not run.** Report mode found no legacy leftovers, stale keys, or unused customizations, so cleanup had nothing to remove.
+- Step 6 (workspace), step 10 (`--fold-specs`: `folded: [], problems: []`) and step 12 made no changes and have no commit.
+
+Commits on `chore/bmad-v7-migration` (none pushed): `9e66760` approved plan, `10a7407` step 7, `79ebb84` step 8, `5d3bf79` step 9, `d43ce55` step 11, `6bbfdc0` step 13, `fdfb117` step 14, then the step 15–16 commit carrying this record.
+
+## Paths dead before the migration
+
+Already unresolvable in the v6 tree (confirmed against the backup) and left as written: `_bmad-output/project-context.md` (49 references), `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-22/prd.md` (6) and `addendum.md` (3), `_bmad-output/planning-artifacts/sprint-change-proposal-2026-07-24.md` (5), `_bmad-output/planning-artifacts/implementation-readiness-report-2026-07-23.md` (4), `/Users/sallvain/Projects/Pack-Manager/_bmad-output/implementation-artifacts/spec-fix-window-drag-region.md` (6) and `spec-harden-command-trust-boundaries.md` (4). Each now lives under `_bmad-output/archive/` or was deleted on 2026-08-18.
+
 ## Checklist results
 
-(filled in at step 15)
+| # | Item | Result |
+| --- | --- | --- |
+| 1 | Every v6 source file placed or listed | PASS — all 218 backup files exist at their mapped path; `archive/` (47) and `test-artifacts/` (empty) left in place. |
+| 2 | Document folders keep name, files, main file or router; `initiative-`, `backlog/`, `archive/` exist | PASS — 10 folders each hold `<folder>.md` (the UX one a new router); `backlog/.gitkeep` added. |
+| 3 | Dated versions all present | PASS — all five `sprint-change-proposal-*` folders, as the user chose. |
+| 4 | `tickets.py status` exits 0; counts match tracking | PASS — exit 0, 36 tickets all `planned`; 36 non-epic, non-retrospective `sprint-status.yaml` keys, all `backlog`. |
+| 5 | One entry per story, plans joined, no epic story files | PASS — 36 entries, 0 plans (no v6 build records existed), 0 leaf files written. |
+| 6 | Plans typed and mapped; retrospectives placed | PASS (vacuous) — no plans, no retrospectives in v6. |
+| 7 | `covers` chains resolve; coverage map fully owned | PASS — every epic `covers` id is an initiative `R` line, every entry `covers` id an epic `R` line, every epic `R` line has an entry, and every FR the v6 map assigns to an epic is covered. R2, R4, R9, R11–R13, R19–R22, R24, R25 are `Parked:` (triaged out or release checklist). |
+| 8 | No pre-release spec folders; no stray `CAP-` ids | PASS with one reported exception — no `spec-<slug>/spec-<slug>.md` exists. One `CAP-8` remains in `sprint-change-proposal-2026-08-18.md:93`, a dated record of the change it applied to the v6 spec; rewriting it would falsify that record. |
+| 9 | Every live path resolves | PASS — 237 `_bmad-output/initiative-pack-manager/…` references across 86 live files resolve, 0 unresolved, 0 old paths to moved files left; v6-dead paths listed above. Memlogs, `archive-v6/` and `archive/` byte-identical to the backup. |
+| 10 | Active initiative set; output folder resolves | PASS — `resolve_config.py`: `core.active_initiative = initiative-pack-manager`, `core.output_folder = {project-root}/_bmad-output`. |
+| 11 | Store under git as answered; no double tracking | PASS — store inside the Pack-Manager repo, no nested `.git`. |
+| 12 | Backup complete and never committed | PASS — 218 files, `diff -rq` identical at copy time; `git log --all` shows no commit touching it. |
+| 13 | Plan records questions, answers, backup, files, results | PASS — this file. |

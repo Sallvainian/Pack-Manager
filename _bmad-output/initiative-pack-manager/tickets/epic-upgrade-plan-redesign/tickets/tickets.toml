@@ -7,7 +7,7 @@ id = "1a"
 type = "story"
 title = "Persistent draft domain with single-entry membership and Rust rebuild"
 description = '''
-Opens CAP-1: one eligible Package row becomes membership in the single persistent draft Upgrade Plan, with Rust rebuilding the exact command and nothing executing. Retires the transient selection set that makes unstaged execution possible today.
+Opens R1: one eligible Package row becomes membership in the single persistent draft Upgrade Plan, with Rust rebuilding the exact command and nothing executing. Retires the transient selection set that makes unstaged execution possible today.
 
 Story UX-PB.1a: Persistent draft domain with single-entry membership and Rust rebuild (v6 epics.md text; its acceptance criteria are binding)
 
@@ -54,7 +54,7 @@ id = "1b"
 type = "story"
 title = "Sidecar lifecycle and navigation-persistent visibility"
 description = '''
-CAP-2: the Upgrade Sidecar opens on the first staged item, survives Dashboard and Manager navigation unchanged, and closes on the last removal. The draft is session-scoped and never written to disk.
+R2: the Upgrade Sidecar opens on the first staged item, survives Dashboard and Manager navigation unchanged, and closes on the last removal. The draft is session-scoped and never written to disk.
 
 Story UX-PB.1b: Sidecar lifecycle and navigation-persistent visibility (v6 epics.md text; its acceptance criteria are binding)
 
@@ -96,7 +96,7 @@ id = "1c"
 type = "story"
 title = "Remaining draft entry points as independent removable items"
 description = '''
-Completes CAP-1 across the other entry points - count-labeled header checkbox, Manager-header Update Manager, Manager-wide action, and Update Everything - each staging independently removable items into the same draft. No global toggle bypasses it.
+Completes R1 across the other entry points - count-labeled header checkbox, Manager-header Update Manager, Manager-wide action, and Update Everything - each staging independently removable items into the same draft. No global toggle bypasses it.
 
 Story UX-PB.1c: Remaining draft entry points as independent removable items (v6 epics.md text; its acceptance criteria are binding)
 
@@ -138,7 +138,7 @@ id = "1d"
 type = "story"
 title = "Ineligible-control inertness with a pointer-reachable explanation"
 description = '''
-CAP-3: pinned, current, excluded, and unavailable Packages stay inert on every activation path and explain themselves on pointer interaction. The header checkbox denominator counts only eligible rows matching the active filter, off-screen ones included.
+R3: pinned, current, excluded, and unavailable Packages stay inert on every activation path and explain themselves on pointer interaction. The header checkbox denominator counts only eligible rows matching the active filter, off-screen ones included.
 
 Story UX-PB.1d: Ineligible-control inertness with a pointer-reachable explanation (v6 epics.md text; its acceptance criteria are binding)
 
@@ -180,7 +180,7 @@ id = "1e"
 type = "story"
 title = "Standardized Manager workspace presentation"
 description = '''
-CAP-4: every Manager Header and Card presents standardized description, path, installed version, status, ownership, counts, and self-update delta, with a staged self-update showing IN PLAN plus a named Remove action.
+R4: every Manager Header and Card presents standardized description, path, installed version, status, ownership, counts, and self-update delta, with a staged self-update showing IN PLAN plus a named Remove action.
 
 Story UX-PB.1e: Standardized Manager workspace presentation (v6 epics.md text; its acceptance criteria are binding)
 
@@ -219,7 +219,7 @@ id = "2a"
 type = "story"
 title = "Distinct one-use preview planId and durable planAttemptId identity types"
 description = '''
-Opens CAP-5: the one-use preview planId and the durable planAttemptId become separate, non-interchangeable branded types across the Rust wire, domain, persistence, and TypeScript boundaries.
+Opens R5: the one-use preview planId and the durable planAttemptId become separate, non-interchangeable branded types across the Rust wire, domain, persistence, and TypeScript boundaries.
 
 Story UX-PB.2a: Distinct one-use preview planId and durable planAttemptId identity types (v6 epics.md text; its acceptance criteria are binding)
 
@@ -254,7 +254,7 @@ id = "2b"
 type = "story"
 title = "Atomic admission mints one planAttemptId and fails a second attempt closed"
 description = '''
-Completes CAP-5: execute_plan atomically mints exactly one attempt with its Operation ids all-or-none, and a second confirmation fails closed while one attempt is active. Cross-Manager concurrency continues inside the active attempt.
+Completes R5: execute_plan atomically mints exactly one attempt with its Operation ids all-or-none, and a second confirmation fails closed while one attempt is active. Cross-Manager concurrency continues inside the active attempt.
 
 Story UX-PB.2b: Atomic admission mints one planAttemptId and fails a second attempt closed (v6 epics.md text; its acceptance criteria are binding)
 
@@ -289,7 +289,7 @@ id = "2c"
 type = "story"
 title = "Persist reviewed intent and the exact command snapshot durably"
 description = '''
-Opens CAP-6: the admission record persists the reviewed scope, the exact command snapshot, and timestamps at mint time, so recovery and history reconstruct without rebuilding executable input from display text.
+Opens R6: the admission record persists the reviewed scope, the exact command snapshot, and timestamps at mint time, so recovery and history reconstruct without rebuilding executable input from display text.
 
 Story UX-PB.2c: Persist reviewed intent and the exact command snapshot durably (v6 epics.md text; its acceptance criteria are binding)
 
@@ -334,7 +334,7 @@ id = "2d"
 type = "story"
 title = "Correlate every Operation, event, and durable record by planAttemptId"
 description = '''
-Completes CAP-6: every Operation, event, transcript, and durable record produced by a confirmed attempt carries that attempt's planAttemptId, so its progress, output, and evidence reconstruct as one coherent whole.
+Completes R6: every Operation, event, transcript, and durable record produced by a confirmed attempt carries that attempt's planAttemptId, so its progress, output, and evidence reconstruct as one coherent whole.
 
 Story UX-PB.2d: Correlate every Operation, event, and durable record by planAttemptId (v6 epics.md text; its acceptance criteria are binding)
 
@@ -370,7 +370,7 @@ id = "2e"
 type = "story"
 title = "Plan-level cancellation that skips unstarted work and escalates running process groups"
 description = '''
-Opens CAP-7: Cancel plan stops only that attempt - unstarted work becomes Skipped and running work escalates through existing process-group mechanics straight to a terminal state, with no second confirmation and no rollback promise.
+Opens R7: Cancel plan stops only that attempt - unstarted work becomes Skipped and running work escalates through existing process-group mechanics straight to a terminal state, with no second confirmation and no rollback promise.
 
 Story UX-PB.2e: Plan-level cancellation that skips unstarted work and escalates running process groups (v6 epics.md text; its acceptance criteria are binding)
 
@@ -411,7 +411,7 @@ id = "2f"
 type = "story"
 title = "Keep legacy Operations honest without inferred plan grouping"
 description = '''
-CAP-8 at the record layer: Operations predating the attempt model stay readable and individually labeled as legacy, never grouped or inferred into plan attempts that never existed.
+R8 at the record layer: Operations predating the attempt model stay readable and individually labeled as legacy, never grouped or inferred into plan attempts that never existed.
 
 Story UX-PB.2f: Keep legacy Operations honest without inferred plan grouping (v6 epics.md text; its acceptance criteria are binding)
 
@@ -445,7 +445,7 @@ id = "3a"
 type = "story"
 title = "Confirmed sidecar as the single active plan summary"
 description = '''
-Opens CAP-9: on admission the same sidecar transforms in place into the one live summary of the admitted attempt, so the user follows a single plan from review into execution with no second surface appearing.
+Opens R9: on admission the same sidecar transforms in place into the one live summary of the admitted attempt, so the user follows a single plan from review into execution with no second surface appearing.
 
 Story UX-PB.3a: Confirmed sidecar as the single active plan summary (v6 epics.md text; its acceptance criteria are binding)
 
@@ -481,7 +481,7 @@ id = "3b"
 type = "story"
 title = "Full Activity as detailed view of the same attempt"
 description = '''
-Continues CAP-9: full Activity is a deeper view of the very same planAttemptId shown in the sidecar, rendering one shared state rather than two different executions.
+Continues R9: full Activity is a deeper view of the very same planAttemptId shown in the sidecar, rendering one shared state rather than two different executions.
 
 Story UX-PB.3b: Full Activity as detailed view of the same attempt (v6 epics.md text; its acceptance criteria are binding)
 
@@ -514,7 +514,7 @@ id = "3c"
 type = "story"
 title = "Per-item live progress states"
 description = '''
-Completes CAP-9: each Package and Manager item shows its own honest queued, waiting, running, verifying, or terminal state, with safety-critical state reaching the user visibly rather than through an announcement channel.
+Completes R9: each Package and Manager item shows its own honest queued, waiting, running, verifying, or terminal state, with safety-critical state reaching the user visibly rather than through an announcement channel.
 
 Story UX-PB.3c: Per-item live progress states (v6 epics.md text; its acceptance criteria are binding)
 
@@ -551,7 +551,7 @@ id = "3d"
 type = "story"
 title = "Verification-gated Results with outcome taxonomy"
 description = '''
-Opens CAP-10: the attempt becomes Results only after affected-Manager refresh verification, using the closed outcome taxonomy. Success is earned by verification, never assumed from a process exit code.
+Opens R10: the attempt becomes Results only after affected-Manager refresh verification, using the closed outcome taxonomy. Success is earned by verification, never assumed from a process exit code.
 
 Story UX-PB.3d: Verification-gated Results with outcome taxonomy (v6 epics.md text; its acceptance criteria are binding)
 
@@ -595,7 +595,7 @@ id = "3e"
 type = "story"
 title = "Failure guidance and safe next step before Retry"
 description = '''
-Completes CAP-10: a failed item presents What happened and What to do next before a secondary Retry, so the user fixes the real cause instead of repeating a doomed attempt.
+Completes R10: a failed item presents What happened and What to do next before a secondary Retry, so the user fixes the real cause instead of repeating a doomed attempt.
 
 Story UX-PB.3e: Failure guidance and safe next step before Retry (v6 epics.md text; its acceptance criteria are binding)
 
@@ -628,7 +628,7 @@ id = "3f"
 type = "story"
 title = "Trusted Interaction-required classifier"
 description = '''
-CAP-11: Interaction required appears only when a closed Manager-specific classifier or an explicit native signal recognizes a known prompt; all other null-stdin silence follows the ordinary 120-second stall path.
+R11: Interaction required appears only when a closed Manager-specific classifier or an explicit native signal recognizes a known prompt; all other null-stdin silence follows the ordinary 120-second stall path.
 
 Story UX-PB.3f: Trusted Interaction-required classifier (v6 epics.md text; its acceptance criteria are binding)
 
@@ -665,7 +665,7 @@ id = "3g"
 type = "story"
 title = "Two labeled cancellation scopes"
 description = '''
-Completes CAP-7 at the surface: the primary cancel action clearly stops the whole plan, with an Operation-only cancel reserved for a deliberate diagnostic, so the scope of what is being stopped is always unambiguous.
+Completes R7 at the surface: the primary cancel action clearly stops the whole plan, with an Operation-only cancel reserved for a deliberate diagnostic, so the scope of what is being stopped is always unambiguous.
 
 Story UX-PB.3g: Two labeled cancellation scopes (v6 epics.md text; its acceptance criteria are binding)
 
@@ -704,7 +704,7 @@ id = "4a"
 type = "story"
 title = "One immutable History row per confirmed attempt"
 description = '''
-Opens CAP-12: each confirmed attempt folds to exactly one immutable History row with nested Operation evidence and verified-outcome wording, replacing scattered per-command rows.
+Opens R12: each confirmed attempt folds to exactly one immutable History row with nested Operation evidence and verified-outcome wording, replacing scattered per-command rows.
 
 Story UX-PB.4a: One immutable History row per confirmed attempt (v6 epics.md text; its acceptance criteria are binding)
 
@@ -748,7 +748,7 @@ id = "4b"
 type = "story"
 title = "Read-only Activity replay of a History row"
 description = '''
-Continues CAP-12: opening a History row routes Activity into read-only replay of that attempt, so a prior attempt can be inspected exactly as it ran.
+Continues R12: opening a History row routes Activity into read-only replay of that attempt, so a prior attempt can be inspected exactly as it ran.
 
 Story UX-PB.4b: Read-only Activity replay of a History row (v6 epics.md text; its acceptance criteria are binding)
 
@@ -782,7 +782,7 @@ id = "4c"
 type = "story"
 title = "Live and replay coexistence with the live attempt primary"
 description = '''
-Completes CAP-12: a replay opened during live work stays clearly secondary, so the one running attempt never looks paused or lost while a past one is being inspected.
+Completes R12: a replay opened during live work stays clearly secondary, so the one running attempt never looks paused or lost while a past one is being inspected.
 
 Story UX-PB.4c: Live and replay coexistence with the live attempt primary (v6 epics.md text; its acceptance criteria are binding)
 
@@ -815,7 +815,7 @@ id = "4d"
 type = "story"
 title = "Retry scope preview and linked new attempt"
 description = '''
-CAP-13: Retry first reveals the failed-item scope, then Create new plan composes a derived RetryIntent in Rust - restricted to failed members, canonically rebuilt - that goes straight to preview and confirmation without touching the persistent draft.
+R13: Retry first reveals the failed-item scope, then Create new plan composes a derived RetryIntent in Rust - restricted to failed members, canonically rebuilt - that goes straight to preview and confirmation without touching the persistent draft.
 
 Story UX-PB.4d: Retry scope preview and linked new attempt (v6 epics.md text; its acceptance criteria are binding)
 
@@ -853,7 +853,7 @@ id = "4e"
 type = "story"
 title = "Legacy Operation History honest labeling"
 description = '''
-Completes CAP-8 at the History surface: legacy Operation records render visibly distinct with Operation-level detail, keeping older history readable without faking it into plans it never had.
+Completes R8 at the History surface: legacy Operation records render visibly distinct with Operation-level detail, keeping older history readable without faking it into plans it never had.
 
 Story UX-PB.4e: Legacy Operation History honest labeling (v6 epics.md text; its acceptance criteria are binding)
 
@@ -886,7 +886,7 @@ id = "5a"
 type = "story"
 title = "Separate final confirmation gate with the `Confirm N Updates` action and `Proceed with Upgrade Plan?` dialog"
 description = '''
-Opens CAP-14: Confirm N Updates opens the Proceed with Upgrade Plan? dialog showing the exact commands with Change Plan and a final confirmation, so a review step always stands between staging and execution.
+Opens R14: Confirm N Updates opens the Proceed with Upgrade Plan? dialog showing the exact commands with Change Plan and a final confirmation, so a review step always stands between staging and execution.
 
 Story UX-PB.5a: Separate final confirmation gate with the `Confirm N Updates` action and `Proceed with Upgrade Plan?` dialog (v6 epics.md text; its acceptance criteria are binding)
 
@@ -937,7 +937,7 @@ id = "5b"
 type = "story"
 title = "Dialog-only disable control with atomic `skipUpgradePlanConfirmation` persistence and Settings migration"
 description = '''
-Continues CAP-14: the disable control exists only inside the confirmation dialog and persists skipUpgradePlanConfirmation atomically only after admission succeeds, with Settings able to reverse it.
+Continues R14: the disable control exists only inside the confirmation dialog and persists skipUpgradePlanConfirmation atomically only after admission succeeds, with Settings able to reverse it.
 
 Story UX-PB.5b: Dialog-only disable control with atomic `skipUpgradePlanConfirmation` persistence and Settings migration (v6 epics.md text; its acceptance criteria are binding)
 
@@ -988,7 +988,7 @@ id = "5c"
 type = "story"
 title = "Confirmation-disabled bypass with expanded commands and native rebuild/stale-validation-gated run"
 description = '''
-Completes CAP-14: with confirmation disabled the path auto-expands commands, shows a persistent Confirmation is off warning, relabels to Run N Updates, and keeps the native rebuild and stale check - removing the dialog never removes the real safety.
+Completes R14: with confirmation disabled the path auto-expands commands, shows a persistent Confirmation is off warning, relabels to Run N Updates, and keeps the native rebuild and stale check - removing the dialog never removes the real safety.
 
 Story UX-PB.5c: Confirmation-disabled bypass with expanded commands and native rebuild/stale-validation-gated run (v6 epics.md text; its acceptance criteria are binding)
 
@@ -1025,7 +1025,7 @@ id = "5d"
 type = "story"
 title = "Responsiveness of the confirmation and safety surfaces at the size and zoom floors"
 description = '''
-CAP-15: Plan, Confirmation, Activity, and Results stay fully visible and operable at 900 x 600 and 150-200% zoom, entering the stacked layout below 720 usable CSS pixels with a visible Back route and a persistent non-occludable safety indicator.
+R15: Plan, Confirmation, Activity, and Results stay fully visible and operable at 900 x 600 and 150-200% zoom, entering the stacked layout below 720 usable CSS pixels with a visible Back route and a persistent non-occludable safety indicator.
 
 Story UX-PB.5d: Responsiveness of the confirmation and safety surfaces at the size and zoom floors (v6 epics.md text; its acceptance criteria are binding)
 
@@ -1067,7 +1067,7 @@ id = "5e"
 type = "story"
 title = "Application-update presentation kept separate from Package plans and History"
 description = '''
-CAP-16: the app's own update surfaces only as the restrained Pack-Manager Update Ready! badge linking to the Settings card, and never enters Package plans, Activity, Results, or History - replay included.
+R16: the app's own update surfaces only as the restrained Pack-Manager Update Ready! badge linking to the Settings card, and never enters Package plans, Activity, Results, or History - replay included.
 
 Story UX-PB.5e: Application-update presentation kept separate from Package plans and History (v6 epics.md text; its acceptance criteria are binding)
 
