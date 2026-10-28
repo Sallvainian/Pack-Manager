@@ -1,3 +1,9 @@
+---
+type: story-triage
+title: "Epics 1-6 story triage — 2026-07-24 scope recalibration"
+created: "2026-07-24"
+---
+
 # Epics 1-6 story triage — 2026-07-24 scope recalibration
 
 Companion to `docs/DECISIONS.md` D33. Records the per-story reasoning behind the

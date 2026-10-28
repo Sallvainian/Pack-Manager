@@ -1,4 +1,5 @@
 ---
+title: "Pack-Manager Architecture Spine"
 name: Pack-Manager Architecture Spine
 type: architecture-spine
 purpose: build-substrate

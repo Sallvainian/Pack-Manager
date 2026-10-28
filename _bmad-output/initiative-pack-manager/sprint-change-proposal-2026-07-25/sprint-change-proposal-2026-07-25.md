@@ -1,4 +1,7 @@
 ---
+type: sprint-change-proposal
+title: "Sprint Change Proposal — reconcile epics.md with ARCHITECTURE-SPINE revision 6"
+created: "2026-07-25"
 name: Sprint Change Proposal — reconcile epics.md with ARCHITECTURE-SPINE revision 6
 date: "2026-07-25"
 project: Pack-Manager

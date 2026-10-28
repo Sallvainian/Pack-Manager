@@ -1,4 +1,5 @@
 ---
+type: prd
 title: Pack-Manager
 status: final
 created: 2026-07-25

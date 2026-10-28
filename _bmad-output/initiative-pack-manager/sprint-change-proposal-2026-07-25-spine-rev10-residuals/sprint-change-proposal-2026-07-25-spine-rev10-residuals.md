@@ -1,4 +1,7 @@
 ---
+type: sprint-change-proposal
+title: "Sprint Change Proposal — apply the ARCHITECTURE-SPINE revision 10 epics.md residuals batch"
+created: "2026-07-25"
 name: Sprint Change Proposal — apply the ARCHITECTURE-SPINE revision 10 epics.md residuals batch
 date: "2026-07-25"
 project: Pack-Manager

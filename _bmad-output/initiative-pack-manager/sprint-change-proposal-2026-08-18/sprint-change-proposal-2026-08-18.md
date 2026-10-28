@@ -1,3 +1,9 @@
+---
+type: sprint-change-proposal
+title: "Sprint Change Proposal — 2026-08-18"
+created: "2026-08-18"
+---
+
 # Sprint Change Proposal — 2026-08-18
 
 Produced by `bmad-correct-course`. Trigger: `docs/DECISIONS.md` **D40**. Approved by the owner (Sallvain) 2026-08-18 — the owner directed this run after accepting D39–D42, so approval was granted in advance for exactly this scope; mode: batch.

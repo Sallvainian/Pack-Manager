@@ -1,4 +1,6 @@
 ---
+type: sprint-change-proposal
+created: "2026-08-11"
 title: Sprint Change Proposal — AD-30 ownership and UX-PB.3a's trigger
 date: 2026-08-11
 status: applied

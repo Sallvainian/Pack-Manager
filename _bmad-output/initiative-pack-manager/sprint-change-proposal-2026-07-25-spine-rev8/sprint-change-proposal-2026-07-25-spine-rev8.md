@@ -1,4 +1,6 @@
 ---
+type: sprint-change-proposal
+created: "2026-07-25"
 title: Sprint Change Proposal — reconcile `epics.md` with ARCHITECTURE-SPINE revision 8
 date: "2026-07-25"
 workflow: bmad-correct-course
