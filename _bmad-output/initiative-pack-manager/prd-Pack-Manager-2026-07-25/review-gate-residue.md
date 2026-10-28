@@ -1,6 +1,6 @@
 # Review — retired-scope residue
 
-**Target:** `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md` + `addendum.md`
+**Target:** `_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md` + `addendum.md`
 **Lens:** anything the PRD or addendum reintroduces — directly or by ambiguous restatement — that `docs/DECISIONS.md` D33 or D37 retired.
 **Date:** 2026-07-25 · **HEAD:** `5972109`
 
@@ -139,21 +139,21 @@ and `prd.md:659` re-confirms it stays dropped. Yet the addendum's `bmad-ux` scop
 
 `prd.md:595`:
 
-> This is the live build queue — 28 stories under `epic-ux-pb` in `_bmad-output/implementation-artifacts/sprint-status.yaml`, which D33 called "the real product stories".
+> This is the live build queue — 28 stories under `epic-ux-pb` in `_bmad-output/initiative-pack-manager/archive-v6/sprint-status.yaml`, which D33 called "the real product stories".
 
 The count is right — `sprint-status.yaml` lines 72–99 are 28 story keys. Two of them:
 
-`_bmad-output/implementation-artifacts/sprint-status.yaml:75`:
+`_bmad-output/initiative-pack-manager/archive-v6/sprint-status.yaml:75`:
 
 > `  ux-pb-1d-ineligible-control-inertness-with-keyboard-pointer-and-voiceover-explanation: backlog`
 
-`_bmad-output/implementation-artifacts/sprint-status.yaml:98`:
+`_bmad-output/initiative-pack-manager/archive-v6/sprint-status.yaml:98`:
 
 > `  ux-pb-5d-accessibility-and-responsiveness-of-the-confirmation-and-safety-surfaces: backlog`
 
 and in the surviving epic-3 block:
 
-`_bmad-output/implementation-artifacts/sprint-status.yaml:112`:
+`_bmad-output/initiative-pack-manager/archive-v6/sprint-status.yaml:112`:
 
 > `  3-5-preserve-exact-keyboard-selection-and-row-plan-actions: backlog`
 
@@ -281,7 +281,7 @@ This one is genuinely close to the D37 boundary — `docs/DECISIONS.md:564` expl
 
 `prd.md:595`:
 
-> This is the live build queue — 28 stories under `epic-ux-pb` in `_bmad-output/implementation-artifacts/sprint-status.yaml`, which D33 called "the real product stories".
+> This is the live build queue — 28 stories under `epic-ux-pb` in `_bmad-output/initiative-pack-manager/archive-v6/sprint-status.yaml`, which D33 called "the real product stories".
 
 `grep -c "the real product stories" docs/DECISIONS.md` → `0`.
 
@@ -303,7 +303,7 @@ Recorded so the negative space is not re-searched. Command: `grep -n -i -E "cove
 - **"gate" at `prd.md:214`** ("the separate confirmation gate") **and `prd.md:622`** ("the confirmation gate") is the D28 product feature, not a readiness gate. Correct usage; not residue.
 - **"P0"/"P1" at `prd.md:46`, `prd.md:599`, `prd.md:612`** is `docs/SPEC.md`'s feature-priority scheme, defined at `docs/SPEC.md:52`: "Priorities: **P0** = MVP-required. **P1** = ship-with polish, after all P0 tests pass. **P2** = out of MVP scope." Not the retired P0 gate. Not residue.
 - **`prd.md:30` naming `readiness-coverage-map.md`** among D33's retirements: D33's retirement sentence (`:331–334`) does not list that filename, but `docs/DECISIONS.md:353` covers it — "Retired planning artifacts are archived under `_bmad-output/archive/2026-07-24-scope-recalibration/`, not deleted" — and the file is in fact at `_bmad-output/archive/2026-07-24-scope-recalibration/planning/prds/prd-Pack-Manager-2026-07-22/readiness-coverage-map.md`. Defensible; not a finding.
-- **No archived retired artifact was copied into `planning-artifacts/`.** `find _bmad-output/planning-artifacts -iname "*prd*"` returns only `prds/prd-Pack-Manager-2026-07-25/prd.md` and `reconcile-archived-prd.md`. The latter matches the `*prd*.md` glob `prd.md:30` warns about, but it disclaims the apparatus at its own line 20 — "No finding concerns a P0 criterion count, a coverage percentage, a versioned scenario contract, an evidence manifest, a candidate freeze, a multi-host environment, or a `contracts/` directory (D33)." Clean.
+- **No archived retired artifact was copied into `planning-artifacts/`.** `find _bmad-output/planning-artifacts -iname "*prd*"` returns only `prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md` and `reconcile-archived-prd.md`. The latter matches the `*prd*.md` glob `prd.md:30` warns about, but it disclaims the apparatus at its own line 20 — "No finding concerns a P0 criterion count, a coverage percentage, a versioned scenario contract, an evidence manifest, a candidate freeze, a multi-host environment, or a `contracts/` directory (D33)." Clean.
 - **`epics.md` lines 344–370's Epic 7/8 references are fenced**, not live: `epics.md:348` reads "**This table is a historical revision record, not a live instruction.**" Not residue.
 - **The three D37 survivors are present and correctly framed as non-accessibility**: focus indicator `prd.md:425` and `prd.md:434`; the Cmd-key map at RP-2 `prd.md:503`; the 4.5:1 floor `prd.md:423` and `prd.md:543`. No re-derivation of the removed items around them.
 - **`ARCHITECTURE-SPINE.md`'s manual-pass dependency is correctly routed.** `addendum.md:53` names lines 332 and 941; `ARCHITECTURE-SPINE.md:941` reads "the manual VoiceOver-and-keyboard pass on `docs/RELEASE-CHECKLIST.md` until a" — a live rule that makes the removed pass the substitute for real-WKWebView verification. Routing is right; only the count (finding 2) is wrong.

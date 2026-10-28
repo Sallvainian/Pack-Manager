@@ -1,6 +1,6 @@
 # Currency & Reality-Check Review — ARCHITECTURE-SPINE.md (revision 4)
 
-**Target:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`
+**Target:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`
 **Reviewed:** 2026-07-25
 **Lens:** Verify every committed decision was web-researched or reality-checked rather than asserted from training data — current library/framework versions, that each named technology still exists and fits, and (brownfield) that the existing project is the reality check. Flag anything that could be out of date and wasn't confirmed against the web, the existing project, or the current starter.
 
@@ -226,10 +226,10 @@ Check 2 — published `latest.json` reachable and coherent:
 
 ### Scope/binding claims
 
-- "Epic UX-PB (28 stories)" (front-matter `:13`, AD-16 `:248`) — `grep -oh "UX-PB\.[0-9][a-z]" … | sort -u | wc -l` → **28** distinct ids (`1a–1e`, `2a–2f`, `3a–3g`, `4a–4e`, `5a–5e` = 5+6+7+5+5 = 28), each with a `### Story UX-PB.…` heading in `_bmad-output/planning-artifacts/epics.md:384-1008`. **✅**
+- "Epic UX-PB (28 stories)" (front-matter `:13`, AD-16 `:248`) — `grep -oh "UX-PB\.[0-9][a-z]" … | sort -u | wc -l` → **28** distinct ids (`1a–1e`, `2a–2f`, `3a–3g`, `4a–4e`, `5a–5e` = 5+6+7+5+5 = 28), each with a `### Story UX-PB.…` heading in `_bmad-output/initiative-pack-manager/archive-v6/epics.md:384-1008`. **✅**
 - "Six stories survive — 2.2, 3.1, 3.2, 3.4, 3.5, 6.5" and "Epics 1, 4, and 5 were removed; 31 stories archived" (`:499`) — `epics.md` contains headings for exactly Epic UX-PB (`:378`), Epic 2 (`:1011`), Epic 3 (`:1039`), Epic 6 (`:1137`) and exactly six non-UX-PB stories: `2.2` (`:1015`), `3.1` (`:1043`), `3.2` (`:1066`), `3.4` (`:1088`), `3.5` (`:1112`), `6.5` (`:1141`). `docs/DECISIONS.md:352-354` gives "6 keep, 19 merge, 12 retire across the 37 stories" — 37 − 6 = **31 archived**. **✅ arithmetic and membership both check out.**
 - The `epics.md` retired register, flagged Open at `:505` — `grep -oh "TIR-[0-9]*" … | sort -uV` → `TIR-1 … TIR-8` (**8**); `grep -oh "\bRE-[0-9]*" … | sort -uV` → `RE-1 … RE-11` (**11**); `grep -c "tauri-boundary/v1.json"` → **1**, at `epics.md:150` "exact set equality across the versioned `contracts/tauri-boundary/v1.json` catalog"; the 72-criterion controls survive at `epics.md:104, 105, 165`. **✅ the spine's open-drift entry is exact, including the id ranges.**
-- `DRIFT-NOTE.md` — referenced at `:39` and `:505`. Present: `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/DRIFT-NOTE.md` (8,781 bytes). **✅**
+- `DRIFT-NOTE.md` — referenced at `:39` and `:505`. Present: `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/DRIFT-NOTE.md` (8,781 bytes). **✅**
 - Retired ids AD-6..AD-10, AD-13..AD-15 are absent from the document body; the surviving set is AD-1..AD-5, AD-11, AD-12, AD-16..AD-19. **✅ no id reuse.**
 
 ---

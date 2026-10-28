@@ -10,7 +10,7 @@ updated: 2026-08-18
 
 ## 0. Document Purpose
 
-This is the Phase 2 requirements artifact for Pack-Manager. It exists because `docs/DECISIONS.md` D33 retired the previous PRD on 2026-07-24 and archived it, leaving requirements authority split between a hand-written file no workflow owns (`docs/SPEC.md`) and a Phase 3 artifact that had absorbed the FR/NFR block (`_bmad-output/planning-artifacts/epics.md`, lines 53–450). Solutioning had no separable requirements input. This document restores one.
+This is the Phase 2 requirements artifact for Pack-Manager. It exists because `docs/DECISIONS.md` D33 retired the previous PRD on 2026-07-24 and archived it, leaving requirements authority split between a hand-written file no workflow owns (`docs/SPEC.md`) and a Phase 3 artifact that had absorbed the FR/NFR block (`_bmad-output/initiative-pack-manager/archive-v6/epics.md`, lines 53–450). Solutioning had no separable requirements input. This document restores one.
 
 **Audience:** the maintainer, and the BMAD workflows that consume Phase 2 output — `bmad-architecture`, `bmad-ux`, and `bmad-create-epics-and-stories`.
 
@@ -26,7 +26,7 @@ This is the Phase 2 requirements artifact for Pack-Manager. It exists because `d
 
 The tags are implementation status, not requirement strength. A Planned FR is as binding as a Shipping one.
 
-**Upstream inputs already written; not duplicated here.** UX experience contract and interaction detail: `_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/EXPERIENCE.md` (journeys AJ-1…AJ-6, referenced by ID below) and `DESIGN.md` (the approved "Aurora Control Deck" palette, adopted by D35). Architecture invariants and `AD-` ids: `ARCHITECTURE-SPINE.md` **revision 10** — the sole authority for `AD-` numbering. Revision 10 added AD-28, AD-29 and AD-30 and narrowed AD-12; each is cited at the FRs it binds under an **Architecture binding** heading.
+**Upstream inputs already written; not duplicated here.** UX experience contract and interaction detail: `_bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/EXPERIENCE.md` (journeys AJ-1…AJ-6, referenced by ID below) and `DESIGN.md` (the approved "Aurora Control Deck" palette, adopted by D35). Architecture invariants and `AD-` ids: `ARCHITECTURE-SPINE.md` **revision 10** — the sole authority for `AD-` numbering. Revision 10 added AD-28, AD-29 and AD-30 and narrowed AD-12; each is cited at the FRs it binds under an **Architecture binding** heading.
 
 **Not carried forward.** D33 retired the 72-criterion P0 gate, the 55 versioned scenario contracts, `readiness-coverage-map.md`, the evidence-manifest and candidate-freeze process, all coverage percentages, and the multi-host environment requirements. None of it appears here. Release readiness is `docs/RELEASE-CHECKLIST.md` plus the two release-blocking checks in `release.yml`. No archived file was copied or moved into `planning-artifacts/`; BMAD skills glob `*prd*.md` from there and would silently reload the retired apparatus.
 
@@ -700,7 +700,7 @@ The Upgrade Plan redesign, in one coherent block:
 - A durable `planAttemptId` correlating reviewed intent, Operations, events, transcripts, journal records, verification, Results, and Retry lineage — with History carrying one immutable row per confirmed attempt (D29).
 - One active attempt at a time, a `Verifying` state before success is declared, Activity as a first-class destination, a terminal Results summary, attempt-wide `Cancel plan`, and trusted-classifier-only `Interaction required` (D30).
 
-This is the live build queue — 28 stories under `epic-ux-pb` in `_bmad-output/implementation-artifacts/sprint-status.yaml`, which D33 describes as "28 real product stories".
+This is the live build queue — 28 stories under `epic-ux-pb` in `_bmad-output/initiative-pack-manager/archive-v6/sprint-status.yaml`, which D33 describes as "28 real product stories".
 
 ### 7.3 Deferred
 

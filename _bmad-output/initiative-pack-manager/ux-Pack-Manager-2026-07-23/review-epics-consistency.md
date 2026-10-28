@@ -1,14 +1,14 @@
 # Epics Consistency Review — Pack-Manager UX Spines vs Epic UX-PB
 
-Lens: epics-consistency. Scope: `_bmad-output/planning-artifacts/epics.md` Epic UX-PB
+Lens: epics-consistency. Scope: `_bmad-output/initiative-pack-manager/archive-v6/epics.md` Epic UX-PB
 against its binding inputs `DESIGN.md` and `EXPERIENCE.md` (this folder), plus
 `docs/DECISIONS.md` D27–D30, D33, D35.
 
 Counts are verbatim command output, not estimates:
 
-- `grep -cE '^### Story UX-PB\.' _bmad-output/planning-artifacts/epics.md` → **28**
+- `grep -cE '^### Story UX-PB\.' _bmad-output/initiative-pack-manager/archive-v6/epics.md` → **28**
   (the stated 28 is confirmed).
-- `grep -cE '^### Story ' _bmad-output/planning-artifacts/epics.md` → **34**
+- `grep -cE '^### Story ' _bmad-output/initiative-pack-manager/archive-v6/epics.md` → **34**
   (28 UX-PB + 6 surviving Epic 1–6 stories).
 - `wc -l` → `epics.md` 1319, `docs/DECISIONS.md` 486, `DESIGN.md` 252,
   `EXPERIENCE.md` 460.

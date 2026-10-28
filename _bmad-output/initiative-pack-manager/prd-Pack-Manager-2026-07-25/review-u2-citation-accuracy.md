@@ -1,6 +1,6 @@
 # Review — Citation Accuracy (Update pass 2)
 
-**Target:** `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md`
+**Target:** `_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md`
 **Axis:** citation accuracy only — every `AD-` id, every `docs/DECISIONS.md` D-number, every
 file-plus-line-number citation, and over-claiming in the 13 `**Architecture binding:**` blocks.
 **Method:** each cited location opened and read this session; every quoted string compared

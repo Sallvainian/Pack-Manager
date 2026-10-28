@@ -2,7 +2,7 @@
 
 **Lens:** independent good-spine rubric, item by item
 **Date:** 2026-07-25
-**Target:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`, revision 8
+**Target:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`, revision 8
 
 ## Verdict
 

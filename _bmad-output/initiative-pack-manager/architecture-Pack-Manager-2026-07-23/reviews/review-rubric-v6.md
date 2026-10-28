@@ -1,6 +1,6 @@
 # Review — `ARCHITECTURE-SPINE.md` revision 6 — rubric-walker lens
 
-**Reviewed:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`
+**Reviewed:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`
 (revision 6, `status: final`, 648 lines, `updated: "2026-07-25"`).
 **Level below:** Epic UX-PB's 28 stories (`UX-PB.1a`–`UX-PB.5e`) plus surviving Stories 2.2, 3.1, 3.2, 3.4, 3.5, 6.5.
 **Date:** 2026-07-25. **Lens:** good-spine checklist walk (divergence coverage, rule enforceability, deferrals, tech currency, brownfield ratification, source coverage, silent dimensions).
@@ -64,7 +64,7 @@ factual claim about the level below:
 
 A live story needs exactly that:
 
-- `_bmad-output/planning-artifacts/epics.md:1247-1249` (Story 6.5) — "**Given** Export diagnostics and Open Logs actions / **When** native command/**opener success and failure are controlled** / **Then** the UI exposes actionable outcomes".
+- `_bmad-output/initiative-pack-manager/archive-v6/epics.md:1247-1249` (Story 6.5) — "**Given** Export diagnostics and Open Logs actions / **When** native command/**opener success and failure are controlled** / **Then** the UI exposes actionable outcomes".
 
 "Open Logs" is `commands::reveal_logs_dir`, and both reveal paths are the
 un-ported direct calls the row names:
@@ -97,7 +97,7 @@ or move it to an Open question with Story 6.5 as its owner. AD-4's sentence at
 **Rubric item:** *Nothing under Deferred could let two units diverge.*
 
 - `ARCHITECTURE-SPINE.md:641` — "| Native Tauri E2E harness and runner | **Deferred** | Story 6.5 is the only live consumer (\"Real native Tauri E2E plus artifact inspection\"). Any choice must satisfy AD-2 and AD-3. |"
-- `_bmad-output/planning-artifacts/epics.md:1234` (Story 6.5 Story Contract) — "- Required test level: Real native Tauri E2E plus artifact inspection"
+- `_bmad-output/initiative-pack-manager/archive-v6/epics.md:1234` (Story 6.5 Story Contract) — "- Required test level: Real native Tauri E2E plus artifact inspection"
 - `ARCHITECTURE-SPINE.md:170-172` (AD-3) — "proving delivery itself waits on the native harness Deferred below, whose only live consumer is Story 6.5. **No story may claim delivery coverage from a fixture or from the browser double.**"
 
 The spine is admirably honest here — it names the consumer and closes the two
@@ -136,8 +136,8 @@ must not blank its peers or destroy its prior snapshot.
 That invariant is load-bearing in three driving sources:
 
 - `docs/SPEC.md:17` — "5. **One failing manager never blanks the others.** Per-manager refresh isolation: independent operations, timeouts, error cards; prior snapshots are retained on failure." (under `docs/SPEC.md:11` "### Load-bearing invariants (violations are bugs)")
-- `_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/EXPERIENCE.md:173` — "On refresh failure, retain the last-good snapshot, show its timestamp, set System health to `Warning`, and provide Retry refresh plus the specific known failure."
-- `_bmad-output/planning-artifacts/epics.md:105` — "NFR-2: Isolate and recover from detection, refresh, parse, network, update, crash, cancellation, timeout, and persistence failures without blanking another Manager or destroying a Last-good Snapshot."
+- `_bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/EXPERIENCE.md:173` — "On refresh failure, retain the last-good snapshot, show its timestamp, set System health to `Warning`, and provide Retry refresh plus the specific known failure."
+- `_bmad-output/initiative-pack-manager/archive-v6/epics.md:105` — "NFR-2: Isolate and recover from detection, refresh, parse, network, update, crash, cancellation, timeout, and persistence failures without blanking another Manager or destroying a Last-good Snapshot."
 
 And it is directly exercised by three bound stories:
 
@@ -233,7 +233,7 @@ owns it.
 
 ### M1. The `epics.md` retired register is still recorded as `Open`, and the description is now false
 
-`ARCHITECTURE-SPINE.md:648` — "| `epics.md` retired register | **Open** | `_bmad-output/planning-artifacts/epics.md` **still carries TIR-1..TIR-8, RE-1..RE-11, the 72-criterion controls, and a set-equality requirement against `contracts/tauri-boundary/v1.json`.** It contradicts this spine and `docs/DECISIONS.md` D33; reconciling it was out of scope for this run. See `DRIFT-NOTE.md`. |"
+`ARCHITECTURE-SPINE.md:648` — "| `epics.md` retired register | **Open** | `_bmad-output/initiative-pack-manager/archive-v6/epics.md` **still carries TIR-1..TIR-8, RE-1..RE-11, the 72-criterion controls, and a set-equality requirement against `contracts/tauri-boundary/v1.json`.** It contradicts this spine and `docs/DECISIONS.md` D33; reconciling it was out of scope for this run. See `DRIFT-NOTE.md`. |"
 
 That was true of the committed file (`git show HEAD:…/epics.md` still has
 "TIR-1: Begin every provisionally test-only gap…" at its line 123 and the
@@ -250,7 +250,7 @@ A builder reading the spine's last row will conclude the binding story document
 contradicts the architecture, when the two now agree.
 
 **Fix.** Close the row (`RESOLVED — reconciled 2026-07-25`, pointing at
-`_bmad-output/planning-artifacts/sprint-change-proposal-2026-07-25.md`), and
+`_bmad-output/initiative-pack-manager/sprint-change-proposal-2026-07-25/sprint-change-proposal-2026-07-25.md`), and
 note that the reconciliation is uncommitted so it survives a checkout.
 
 ### M2. The Stack table and Brownfield baseline report an application version the tree no longer carries

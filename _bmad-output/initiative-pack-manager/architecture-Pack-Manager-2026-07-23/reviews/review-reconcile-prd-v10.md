@@ -2,7 +2,7 @@
 
 **Reviewer:** independent PRD reconciler
 **Date:** 2026-07-25
-**Input owned:** `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md` (709 lines, `wc -l`), `addendum.md` (81 lines, `wc -l`)
+**Input owned:** `_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md` (709 lines, `wc -l`), `addendum.md` (81 lines, `wc -l`)
 **Target:** `ARCHITECTURE-SPINE.md` — read at 1286 lines, **re-anchored at 1308 lines, mtime `2026-07-25 12:53:41`**, which is the version every line citation below refers to.
 
 > **Note on a moving target.** The spine changed under this review (1286 → 1308 lines) while other reconcilers landed. Every quote below was re-verified against the 12:53 version; two findings I had drafted were withdrawn after re-reading, because the new Open row at `:1306` already surfaces them (see "Withdrawn" at the end). If the spine has moved again, re-anchor by the quoted phrase, not by the line number.
@@ -44,8 +44,8 @@ $ grep -rni "cancelling\|canceling" src/ src-tauri/src/
 
 The conflict has a traceable origin, which matters for the remedy: `Cancelling` comes from the **Phase 3/UX layer**, not from the PRD.
 
-- `_bmad-output/planning-artifacts/epics.md:740` — "running work moves to `Cancelling` and escalates through the existing process-group mechanics"
-- `_bmad-output/planning-artifacts/epics.md:903` — "changes still-running Operations bound to that `planAttemptId` to `Cancelling`"
+- `_bmad-output/initiative-pack-manager/archive-v6/epics.md:740` — "running work moves to `Cancelling` and escalates through the existing process-group mechanics"
+- `_bmad-output/initiative-pack-manager/archive-v6/epics.md:903` — "changes still-running Operations bound to that `planAttemptId` to `Cancelling`"
 - `EXPERIENCE.md:216` — "`Cancel plan` requires no second confirmation, changes running work to `Cancelling`"
 
 Under `prd.md:16` ("Where this document and an older artifact disagree, this document wins") the PRD supersedes all three. The spine sided with `epics.md`/`EXPERIENCE.md` **silently** — nothing in AD-16 records that it is overriding FR-13, and the surrounding text presents the rule as a neutral application of the durability principle rather than as a decision against the requirements authority. Note the spine *does* know how to do this properly: AD-29 at `:1150` says "this **deliberately overrides UX-PB.2c's stated record contents**", and AD-22 at `:801` says "**This deliberately overrides UX-PB.5b's stated clause order**". `Cancelling` got no such sentence.

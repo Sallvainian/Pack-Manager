@@ -2,7 +2,7 @@
 
 **Lens:** rubric walker (good-spine checklist), independent, read-only
 **Intent:** Validate — report only. No file outside this one was modified.
-**Target:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`, `artifact_revision: 9`
+**Target:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`, `artifact_revision: 9`
 **Size:** `wc -l ARCHITECTURE-SPINE.md` → `1052` (the final line carries no trailing newline, so the file reads as 1053 lines)
 **Tree state:** HEAD = `5972109` "Clear the epics.md residual pile (#36)"; `git log --oneline -6` confirms `c8c1f9a`, `8a4cf6a`, `03e03fa` beneath it
 **Date:** 2026-07-25
@@ -149,7 +149,7 @@ element — a dedicated indicator, never `--color-accent`. Use `outline-*`, **no
 
 ### C-1 — The two `OPEN — new architecture` rows record a divergence and gate nothing; the register the builders read says nothing blocks starting
 
-**Where:** `spine:1050`, `spine:1051`, and `_bmad-output/planning-artifacts/epics.md:307`
+**Where:** `spine:1050`, `spine:1051`, and `_bmad-output/initiative-pack-manager/archive-v6/epics.md:307`
 
 **Relationship to tracked work:** the *divergence* is tracked — `spine:1050` is the
 promotion of `reviews/review-divergence-v9.md` C-1, and `spine:1051` of its C-6. This
@@ -187,7 +187,7 @@ epics.md:307  | Product Behavior Prerequisite UX-PB.1..UX-PB.5 | `APPROVED TARGE
               (`docs/DECISIONS.md` D35), so both are startable. … |
 ```
 
-`grep -n "Transient selection\|transient selection\|writer identity\|record cardinality" _bmad-output/planning-artifacts/epics.md`
+`grep -n "Transient selection\|transient selection\|writer identity\|record cardinality" _bmad-output/initiative-pack-manager/archive-v6/epics.md`
 returns **one** line, `epics.md:827` — and it is about the journal row, not this one.
 Neither row reaches `epics.md`'s Implementation-Entry Register at all
 (`epics.md:298-322`; the register's open entries are the native harness, the
@@ -710,7 +710,7 @@ spine:717-718  - **Rule:** The shipping call site bumps unconditionally for ever
 ```
 
 AD-21 names Story 3.4 twice, once as a `Binds` target and once as a possible *owner of
-the narrowing work*. `grep -n "AD-21" _bmad-output/planning-artifacts/epics.md` returns
+the narrowing work*. `grep -n "AD-21" _bmad-output/initiative-pack-manager/archive-v6/epics.md` returns
 exactly two lines, `:1051` and `:1066`, both inside UX-PB.5b. Story 3.4's contract:
 
 ```

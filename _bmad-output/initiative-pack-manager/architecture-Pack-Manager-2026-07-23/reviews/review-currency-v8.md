@@ -6,7 +6,7 @@ each named technology still exists and fits, and — greenfield — the live def
 of any starter it leans on. Flag anything that could be out of date and wasn't
 confirmed against the web, the existing project, or the current starter.
 
-**Target:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`
+**Target:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`
 (revision 8, 888 lines, mtime 2026-07-25 04:23).
 
 **Reviewed:** 2026-07-25. Brownfield macOS Tauri 2 + React 19 application.
@@ -599,10 +599,10 @@ the spec agree with the spine and with each other.
 ### Bindings and cross-document citations — exact
 
 - **"Epic UX-PB (28 stories)"** (frontmatter `:13`, AD-16 `:319`) — distinct ids in
-  `_bmad-output/planning-artifacts/epics.md`: UX-PB.1a–1e (5), 2a–2f (6), 3a–3g (7),
+  `_bmad-output/initiative-pack-manager/archive-v6/epics.md`: UX-PB.1a–1e (5), 2a–2f (6), 3a–3g (7),
   4a–4e (5), 5a–5e (5) = **28**. ✓
 - **`:880` quoting `epics.md` Story 6.5: "native command/opener success and failure
-  are controlled"** — `_bmad-output/planning-artifacts/epics.md:1291`: "**When**
+  are controlled"** — `_bmad-output/initiative-pack-manager/archive-v6/epics.md:1291`: "**When**
   native command/opener success and failure are controlled". **Exact.** ✓
 - **`:876` quoting Story 6.5's test level "Real native Tauri E2E plus artifact
   inspection"** — `epics.md:1276` "- Required test level: Real native Tauri E2E

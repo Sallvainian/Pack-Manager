@@ -14,19 +14,19 @@ requirements_authority_used: docs/SPEC.md + the FR/NFR inventory inside epics.md
 prd_status: archived — not authoritative (project-context.md:135)
 closes: "ARCHITECTURE-SPINE.md Decision Status row `epics.md` retired register — **Open**"
 sources_read_this_session:
-  - _bmad-output/planning-artifacts/epics.md
-  - _bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md
-  - _bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/DRIFT-NOTE.md
+  - _bmad-output/initiative-pack-manager/archive-v6/epics.md
+  - _bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md
+  - _bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/DRIFT-NOTE.md
   - docs/DECISIONS.md
   - docs/RELEASE-CHECKLIST.md
   - _bmad-output/project-context.md
-  - _bmad-output/implementation-artifacts/sprint-status.yaml
+  - _bmad-output/initiative-pack-manager/archive-v6/sprint-status.yaml
   - .claude/skills/bmad-correct-course/checklist.md
 ---
 
 # Sprint Change Proposal — 2026-07-25
 
-Reconcile `_bmad-output/planning-artifacts/epics.md` with `ARCHITECTURE-SPINE.md`
+Reconcile `_bmad-output/initiative-pack-manager/archive-v6/epics.md` with `ARCHITECTURE-SPINE.md`
 revision 6 and `docs/DECISIONS.md` D33.
 
 ---
@@ -42,7 +42,7 @@ unless it is reconciled first.
 
 The spine records this against itself. `ARCHITECTURE-SPINE.md:648`:
 
-> \| `epics.md` retired register \| **Open** \| `_bmad-output/planning-artifacts/epics.md` still carries TIR-1..TIR-8, RE-1..RE-11, the 72-criterion controls, and a set-equality requirement against `contracts/tauri-boundary/v1.json`. It contradicts this spine and `docs/DECISIONS.md` D33; reconciling it was out of scope for this run. See `DRIFT-NOTE.md`. \|
+> \| `epics.md` retired register \| **Open** \| `_bmad-output/initiative-pack-manager/archive-v6/epics.md` still carries TIR-1..TIR-8, RE-1..RE-11, the 72-criterion controls, and a set-equality requirement against `contracts/tauri-boundary/v1.json`. It contradicts this spine and `docs/DECISIONS.md` D33; reconciling it was out of scope for this run. See `DRIFT-NOTE.md`. \|
 
 `DRIFT-NOTE.md:170-171` states which side wins:
 
@@ -347,7 +347,7 @@ rule.
 ```markdown
 #### Architecture Invariants
 
-`_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`
+`_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`
 is the **single authority** for architecture invariants. Stories cite its AD ids
 and no others. This section does not restate them, so that the two documents
 cannot drift apart again.

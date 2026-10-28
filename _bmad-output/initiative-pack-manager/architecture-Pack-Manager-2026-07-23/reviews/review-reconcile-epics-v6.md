@@ -2,8 +2,8 @@
 
 **Lens:** reconciliation reviewer (adversarial)
 **Date:** 2026-07-25
-**Subject:** `_bmad-output/planning-artifacts/epics.md` (1250 lines, `wc -l`), rewritten
-2026-07-25 under `_bmad-output/planning-artifacts/sprint-change-proposal-2026-07-25.md`
+**Subject:** `_bmad-output/initiative-pack-manager/archive-v6/epics.md` (1250 lines, `wc -l`), rewritten
+2026-07-25 under `_bmad-output/initiative-pack-manager/sprint-change-proposal-2026-07-25/sprint-change-proposal-2026-07-25.md`
 **Question:** can `ARCHITECTURE-SPINE.md:648` — the `epics.md` retired register **Open**
 row — now honestly be closed?
 
@@ -23,13 +23,13 @@ Closing this row is a bounded fix, not a re-run. See §8.
 
 Every count below comes from a command, quoted with it. Every factual claim is
 anchored to `path:line` with literal text. The rewrite was verified by diffing the
-working tree against `HEAD` (`git diff --numstat HEAD -- _bmad-output/planning-artifacts/epics.md`
-→ `209	125	_bmad-output/planning-artifacts/epics.md`), not by trusting the proposal.
+working tree against `HEAD` (`git diff --numstat HEAD -- _bmad-output/initiative-pack-manager/archive-v6/epics.md`
+→ `209	125	_bmad-output/initiative-pack-manager/archive-v6/epics.md`), not by trusting the proposal.
 
 Documents read this session in full: `ARCHITECTURE-SPINE.md` (648 lines),
 `epics.md` (1250), `docs/DECISIONS.md` (365), `docs/RELEASE-CHECKLIST.md` (104),
 `_bmad-output/project-context.md` (157), `sprint-change-proposal-2026-07-25.md`
-(742, §4–§5 in full), `_bmad-output/implementation-artifacts/sprint-status.yaml` (118),
+(742, §4–§5 in full), `_bmad-output/initiative-pack-manager/archive-v6/sprint-status.yaml` (118),
 `DRIFT-NOTE.md` (§1–§2).
 
 ---

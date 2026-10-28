@@ -1,9 +1,9 @@
 # Reviewer Gate — adversarial divergence lens, `ARCHITECTURE-SPINE.md` revision 10
 
 **Target (read-only):**
-`_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`,
+`_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`,
 `artifact_revision: 10`.
-**Units one level down:** `_bmad-output/planning-artifacts/epics.md` — Epic UX-PB's 28
+**Units one level down:** `_bmad-output/initiative-pack-manager/archive-v6/epics.md` — Epic UX-PB's 28
 stories plus surviving Stories 2.2, 3.1, 3.2, 3.4, 3.5 and 6.5.
 
 **Charter.** Construct two units one level down that each obey every `AD` to the
@@ -28,8 +28,8 @@ closed rather than reported as open.
 | `wc -l ARCHITECTURE-SPINE.md` (**pinned snapshot**) | `1443` |
 | `git hash-object` of the pinned snapshot | `b302ad41e972ec513046b9d998c33a9772970b82` |
 | `git diff --stat -- ARCHITECTURE-SPINE.md` (at read 2) | `1 file changed, 420 insertions(+), 76 deletions(-)` |
-| `wc -l _bmad-output/planning-artifacts/epics.md` | `1319` |
-| `grep -c "Cancelling" _bmad-output/planning-artifacts/epics.md` | `2` |
+| `wc -l _bmad-output/initiative-pack-manager/archive-v6/epics.md` | `1319` |
+| `grep -c "Cancelling" _bmad-output/initiative-pack-manager/archive-v6/epics.md` | `2` |
 
 **All `ARCHITECTURE-SPINE.md` line numbers below are against blob `b302ad4`
 (1443 lines).** `epics.md` was not modified during this pass, so its line numbers are

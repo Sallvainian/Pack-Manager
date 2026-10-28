@@ -8,8 +8,8 @@ updated: 2026-07-24
 sources:
   - _bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-22/prd.md
   - _bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-22/addendum.md
-  - _bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md
-  - _bmad-output/planning-artifacts/epics.md
+  - _bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md
+  - _bmad-output/initiative-pack-manager/archive-v6/epics.md
   - _bmad-output/planning-artifacts/implementation-readiness-report-2026-07-23.md
 colors:
   background: "#090C13"

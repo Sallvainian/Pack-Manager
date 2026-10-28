@@ -6,9 +6,9 @@ build incompatibly — clashing shared-data shapes, two owners of one entity,
 conflicting state-mutation paths. Every pair you find is a hole to close with a new
 or tightened AD."
 
-**Target:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`
+**Target:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`
 (revision 8, 877 lines, `wc -l` on 2026-07-25).
-**Level below:** `_bmad-output/planning-artifacts/epics.md` (1,293 lines) — Epic UX-PB
+**Level below:** `_bmad-output/initiative-pack-manager/archive-v6/epics.md` (1,293 lines) — Epic UX-PB
 (UX-PB.1a–UX-PB.5e) plus Stories 2.2, 3.1, 3.2, 3.4, 3.5, 6.5.
 
 **Scope respected:** AD-6..AD-10 and AD-13..AD-15 are retired ids and are not

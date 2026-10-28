@@ -1,6 +1,6 @@
 # Review U3 — Lens 2: Adversarial Consistency
 
-**Target:** the 2026-08-18 changes to `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md` only — the §9 closure pointer (line 737), the new §9.3 (lines 773–783), and FR-1's retag + Planned — D40 limb (lines 139, 146). Verified against the uncommitted working tree on top of `5c28dcb`.
+**Target:** the 2026-08-18 changes to `_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md` only — the §9 closure pointer (line 737), the new §9.3 (lines 773–783), and FR-1's retag + Planned — D40 limb (lines 139, 146). Verified against the uncommitted working tree on top of `5c28dcb`.
 
 **Method:** every attacked claim defaulted to refuted; it stands only where the cited file, read this session, supports it verbatim. Each verdict below quotes its evidence as `path:line "text"`.
 

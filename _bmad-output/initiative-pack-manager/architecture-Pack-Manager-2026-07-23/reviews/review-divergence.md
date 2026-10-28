@@ -4,11 +4,11 @@
 letter yet still build incompatibly — clashing shared-data shapes, two owners of
 one entity, conflicting state-mutation paths.
 
-**Target:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`
+**Target:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`
 (revision 4, 505 lines)
 
 **Units:** the 28 stories of Epic UX-PB and Stories 2.2, 3.1, 3.2, 3.4, 3.5, 6.5
-in `_bmad-output/planning-artifacts/epics.md` (1,166 lines)
+in `_bmad-output/initiative-pack-manager/archive-v6/epics.md` (1,166 lines)
 
 **Method:** every finding names story A, story B, the compliant-but-incompatible
 choice each makes, and the AD text that fails to prevent it. Where an AD already

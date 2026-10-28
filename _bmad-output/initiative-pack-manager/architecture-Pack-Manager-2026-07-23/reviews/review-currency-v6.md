@@ -1,6 +1,6 @@
 # Currency / Reality-Check Review — ARCHITECTURE-SPINE.md revision 6
 
-**Target:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`
+**Target:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`
 (revision 6, status `final`, `updated: "2026-07-25"`)
 **Reviewed:** 2026-07-25
 **Lens:** Verify every committed decision was web-researched or reality-checked
@@ -106,7 +106,7 @@ not control.
 > ``| Draft durability | **RESOLVED** | Fail-to-empty. The draft is session-scoped and never persisted; every relaunch starts empty. `epics.md:437-439` permits this branch explicitly. Decided 2026-07-25; closes the assumption revision 5 carried. |``
 
 **The substance is true.** The permitting text exists and says what the spine
-says it says (working tree, `_bmad-output/planning-artifacts/epics.md:523`):
+says it says (working tree, `_bmad-output/initiative-pack-manager/archive-v6/epics.md:523`):
 
 > `**Then** the draft's canonical membership is reconstructed into the sidecar, or — if it cannot be recovered — the sidecar returns to empty with no fabricated membership and nothing executes; a draft is never surfaced as Activity or History.`
 
@@ -118,14 +118,14 @@ AD-17 at `ARCHITECTURE-SPINE.md:452` takes exactly that second branch —
 Given/When/Then block:
 
 ```
-$ git show HEAD:_bmad-output/planning-artifacts/epics.md | sed -n '437,439p'
+$ git show HEAD:_bmad-output/initiative-pack-manager/archive-v6/epics.md | sed -n '437,439p'
 **Given** an in-progress draft when the app crashes or is force-quit
 **When** Pack-Manager relaunches
 **Then** the draft's canonical membership is reconstructed into the sidecar, or — if it cannot be recovered — the sidecar returns to empty with no fabricated membership and nothing executes; a draft is never surfaced as Activity or History.
 ```
 
 Against the working tree, `epics.md` is modified (`git status`: ` M
-_bmad-output/planning-artifacts/epics.md`) and the same block now sits at
+_bmad-output/initiative-pack-manager/archive-v6/epics.md`) and the same block now sits at
 lines 521-523. Line 437 of the current file is instead:
 
 > `### Epic 6: Preserve State, Evidence, and Privacy Across Failure and Relaunch`
@@ -347,7 +347,7 @@ else: `.release-please-manifest.json`, `CHANGELOG.md`, `package-lock.json`,
 **All nine frontmatter `sources:` paths exist** — `docs/SPEC.md`,
 `docs/DECISIONS.md`, `docs/RELEASE-CHECKLIST.md`, `docs/architecture.md`,
 `_bmad-output/project-context.md`,
-`_bmad-output/planning-artifacts/epics.md`, and the three workflow files.
+`_bmad-output/initiative-pack-manager/archive-v6/epics.md`, and the three workflow files.
 
 **All seven cited `docs/DECISIONS.md` ids exist** — D25 (`:118`), D25a (`:132`),
 D27 (`:161`), D30 (`:218`), D31 (`:245`), D32 (`:282`), D33 (`:310`).

@@ -5,7 +5,7 @@ each obey every AD to the letter yet still build incompatibly — clashing share
 shapes, two owners of one entity, conflicting state-mutation paths. Every pair is a
 hole to close with a new or tightened AD.
 
-**Target:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`
+**Target:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`
 (revision 6, status `final`, 648 lines).
 
 **Units:** the 28 Epic UX-PB stories (`epics.md:468`–`epics.md:1093`) and surviving

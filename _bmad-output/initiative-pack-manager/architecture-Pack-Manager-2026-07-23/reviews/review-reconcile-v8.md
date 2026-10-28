@@ -18,7 +18,7 @@ file.
 **Inputs reconciled against:** `docs/SPEC.md` (§0 load-bearing invariants 1–7,
 §5.6, §5.7, §5.10, §7.6, F4/F6/F7/F9/F11); `docs/DECISIONS.md` D22, D25, D25a, D27,
 D28, D29, D30, D31, D32, D33; `_bmad-output/project-context.md`;
-`ux-.../DESIGN.md`; `ux-.../EXPERIENCE.md`; `_bmad-output/planning-artifacts/epics.md`
+`ux-.../DESIGN.md`; `ux-.../EXPERIENCE.md`; `_bmad-output/initiative-pack-manager/archive-v6/epics.md`
 (read only). Spine factual claims were additionally checked against the tree:
 `src-tauri/src/commands.rs`, `queue.rs`, `state.rs`, `app_update.rs`,
 `src-tauri/Cargo.toml`, `src-tauri/capabilities/default.json`,

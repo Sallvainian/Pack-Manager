@@ -2,9 +2,9 @@
 
 **Reviewer:** `ARCHITECTURE-SPINE.md`
 **Date:** 2026-07-25
-**Subjects:** `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md`,
+**Subjects:** `_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md`,
 `.../addendum.md`, and
-`_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`
+`_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`
 (revision 9, 19 live ADs).
 
 ## Method and its limits

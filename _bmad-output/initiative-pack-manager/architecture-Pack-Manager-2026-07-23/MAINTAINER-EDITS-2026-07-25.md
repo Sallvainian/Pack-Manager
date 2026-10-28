@@ -56,9 +56,9 @@ respectively — never a hand edit.
 **Measurement.** Run from the repo root:
 
 ```
-grep -ciE "voiceover|keyboard" _bmad-output/planning-artifacts/epics.md \
-  _bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md \
-  _bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/EXPERIENCE.md
+grep -ciE "voiceover|keyboard" _bmad-output/initiative-pack-manager/archive-v6/epics.md \
+  _bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md \
+  _bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/EXPERIENCE.md
 ```
 
 Result on 2026-07-25: `epics.md` **13** lines (21 raw occurrences),

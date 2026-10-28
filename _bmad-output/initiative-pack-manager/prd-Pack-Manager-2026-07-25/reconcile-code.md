@@ -3,7 +3,7 @@
 **Reviewer:** `src/` + `src-tauri/` at HEAD
 **HEAD:** `5972109f46efe730d8b02c69cff3273aa80adfaa` (`git rev-parse HEAD`)
 **Date:** 2026-07-25
-**Subject:** `prd.md` + `addendum.md` in `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/`
+**Subject:** `prd.md` + `addendum.md` in `_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/`
 
 ## Method
 

@@ -1,5 +1,5 @@
 # Stories of epic-upgrade-plan-redesign, in build order (v6 stories.yaml order).
-# Migrated 2026-10-28 from specs/spec-upgrade-plan-redesign/stories.yaml; each description carries the story's
+# Migrated 2026-10-28 from _bmad-output/initiative-pack-manager/archive-v6/spec-upgrade-plan-redesign/stories.yaml; each description carries the story's
 # full v6 epics.md text. `after` comes only from epics.md's declared Dependencies/Blocks. v6_key is the sprint-status key.
 
 [[entry]]

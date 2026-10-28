@@ -325,7 +325,7 @@ over the spine returns six hits. Every one is a retirement record or a negation:
 One further hit is a deliberate drift report about a *different* file, correctly
 labelled — `ARCHITECTURE-SPINE.md:505`:
 
-> "| `epics.md` retired register | **Open** | `_bmad-output/planning-artifacts/epics.md` still carries TIR-1..TIR-8, RE-1..RE-11, the 72-criterion controls, and a set-equality requirement against `contracts/tauri-boundary/v1.json`. It contradicts this spine and `docs/DECISIONS.md` D33; reconciling it was out of scope for this run. See `DRIFT-NOTE.md`. |"
+> "| `epics.md` retired register | **Open** | `_bmad-output/initiative-pack-manager/archive-v6/epics.md` still carries TIR-1..TIR-8, RE-1..RE-11, the 72-criterion controls, and a set-equality requirement against `contracts/tauri-boundary/v1.json`. It contradicts this spine and `docs/DECISIONS.md` D33; reconciling it was out of scope for this run. See `DRIFT-NOTE.md`. |"
 
 This is not spine residue: it names the retired vocabulary only to flag it as
 living somewhere else. It is the correct handling. The remaining work is in

@@ -2,8 +2,8 @@
 
 **Reviewer:** `DESIGN.md` + `EXPERIENCE.md`
 **Date:** 2026-07-25
-**Subject:** `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md` (659 lines) with `addendum.md` (69 lines)
-**Sources:** `_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/DESIGN.md` (252 lines), `EXPERIENCE.md` (460 lines)
+**Subject:** `_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md` (659 lines) with `addendum.md` (69 lines)
+**Sources:** `_bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/DESIGN.md` (252 lines), `EXPERIENCE.md` (460 lines)
 
 Line counts from `wc -l`. Every occurrence count below comes from `grep -c` / `grep -n` against the named file, cited inline.
 
@@ -25,7 +25,7 @@ and the addendum schedules the reconciliation:
 
 But the delegation the PRD grants back to the spine is narrower than the spine:
 
-> `prd.md:28` — "**Upstream inputs already written; not duplicated here.** UX experience contract and interaction detail: `_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/EXPERIENCE.md` (journeys AJ-1…AJ-6, referenced by ID below) and `DESIGN.md` (the approved "Aurora Control Deck" palette, adopted by D35)."
+> `prd.md:28` — "**Upstream inputs already written; not duplicated here.** UX experience contract and interaction detail: `_bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/EXPERIENCE.md` (journeys AJ-1…AJ-6, referenced by ID below) and `DESIGN.md` (the approved "Aurora Control Deck" palette, adopted by D35)."
 
 `EXPERIENCE.md` is delegated as *journeys*. `DESIGN.md` is delegated as *a palette*. `EXPERIENCE.md` is 460 lines of which the journeys (`# Key Flows`, lines 373–460) are 88; `DESIGN.md` is 252 lines of which the colour table (lines 105–141) is 37. The remaining 372 and 215 lines — Information Architecture, Voice and Tone, Component Patterns, State Patterns, the lifecycle model, Inspiration & Anti-patterns, Brand & Style, Typography, Layout, Elevation, Do's and Don'ts — are neither carried in the PRD nor named in the delegation, and the addendum's §1 "Mechanisms deliberately excluded from the PRD narrative" table (`addendum.md:11–20`) lists eight rows, all of which are architecture (search path, ownership classification, adapters/parsers, lock sets, IPC, transcript format, test seams, updater transport). **Not one row delegates UX voice, IA, or brand.**
 

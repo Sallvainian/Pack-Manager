@@ -13,12 +13,12 @@ verdict: 'NOT READY — 3 blockers, 2 requiring an owner decision'
 documentsAssessed:
   requirements: 'docs/SPEC.md'
   decisions: 'docs/DECISIONS.md'
-  architecture: '_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md'
+  architecture: '_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md'
   ux:
-    - '_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/DESIGN.md'
-    - '_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/EXPERIENCE.md'
-  epics: '_bmad-output/planning-artifacts/epics.md'
-  sprintStatus: '_bmad-output/implementation-artifacts/sprint-status.yaml'
+    - '_bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/DESIGN.md'
+    - '_bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/EXPERIENCE.md'
+  epics: '_bmad-output/initiative-pack-manager/archive-v6/epics.md'
+  sprintStatus: '_bmad-output/initiative-pack-manager/archive-v6/sprint-status.yaml'
   releaseVerification: 'docs/RELEASE-CHECKLIST.md'
 prdStatus: 'deliberately absent (D33) — not a gap'
 nonAuthoritative:
@@ -50,7 +50,7 @@ retired 72-criterion gate. No remediation required or recommended.
 ### Architecture Documents
 
 **Whole:** none at the `planning-artifacts` root.
-**Sharded:** `architecture/architecture-Pack-Manager-2026-07-23/`
+**Sharded:** `architecture-Pack-Manager-2026-07-23/`
 - `ARCHITECTURE-SPINE.md` (1052 lines) — authoritative, revision 9
 - `DRIFT-NOTE.md` (774 lines)
 - `.memlog.md` (append-only run log)
@@ -71,7 +71,7 @@ these are architecture review records, not epic or UX sources, and are excluded 
 ### UX Design Documents
 
 **Whole:** none at the `planning-artifacts` root.
-**Sharded:** `ux-designs/ux-Pack-Manager-2026-07-23/`
+**Sharded:** `ux-Pack-Manager-2026-07-23/`
 - `DESIGN.md` (252 lines) and `EXPERIENCE.md` (460 lines) — both authoritative
 - `mockups/` — 4 HTML mockups; `validation-report.{md,html}`;
   `review-accessibility.md`; `review-usability.md`; `.memlog.md`
@@ -104,10 +104,10 @@ date stamp. Which one `epics.md` cites as authoritative is checked in Step 3, si
 | --- | --- |
 | Requirements | `docs/SPEC.md` (815 lines) |
 | Decisions | `docs/DECISIONS.md` (486 lines, through D35) |
-| Architecture | `.../architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md` (rev 9) |
+| Architecture | `.../architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md` (rev 9) |
 | UX | `.../ux-Pack-Manager-2026-07-23/DESIGN.md` + `EXPERIENCE.md` |
-| Epics & stories | `_bmad-output/planning-artifacts/epics.md` |
-| Sprint status | `_bmad-output/implementation-artifacts/sprint-status.yaml` (118 lines) |
+| Epics & stories | `_bmad-output/initiative-pack-manager/archive-v6/epics.md` |
+| Sprint status | `_bmad-output/initiative-pack-manager/archive-v6/sprint-status.yaml` (118 lines) |
 | Release verification | `docs/RELEASE-CHECKLIST.md` (113 lines) |
 
 Excluded as non-authoritative: everything under

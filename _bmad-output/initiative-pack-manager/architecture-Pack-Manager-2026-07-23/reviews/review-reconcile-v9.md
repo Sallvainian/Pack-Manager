@@ -2,7 +2,7 @@
 
 - **Lens:** input reconciliation. Does each load-bearing input land in the `AD`
   structure, and does the spine contradict an input without saying so?
-- **Target:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`,
+- **Target:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`,
   `artifact_revision: 9`.
 - **Reviewed state:** 1019 lines, md5 `35c6d46c866faaae1b0558ecd59ba15b`, read
   2026-07-25. **The file was edited by another session during this review** — the
@@ -13,8 +13,8 @@
   outline so it is visible in WKWebView"), which landed during this review.
 - **Read this pass:** `docs/SPEC.md`, `docs/DECISIONS.md`,
   `docs/RELEASE-CHECKLIST.md`, `ux-.../DESIGN.md`, `ux-.../EXPERIENCE.md`,
-  `_bmad-output/planning-artifacts/epics.md`,
-  `_bmad-output/implementation-artifacts/deferred-work.md`,
+  `_bmad-output/initiative-pack-manager/archive-v6/epics.md`,
+  `_bmad-output/initiative-pack-manager/deferred-work.md`,
   `.github/workflows/*.yml`, `playwright.config.ts`,
   `tests/e2e/browser-style-contract.spec.ts`, `src-tauri/src/commands.rs`.
 
@@ -133,7 +133,7 @@ requires pinned rows to "explain **on attempted interaction**", which a natively
 ### 3. `deferred-work.md` — was the closure claim accurate?
 
 **Yes, verified.** Both entries were genuinely dischargeable and both are gone:
-`git show 22ed41e -- _bmad-output/implementation-artifacts/deferred-work.md`
+`git show 22ed41e -- _bmad-output/initiative-pack-manager/deferred-work.md`
 removes exactly the two `spec-adopt-design-tokens-and-focus-ring.md` blocks, and
 `grep -n "outline\|ring-offset\|focus" deferred-work.md` now exits 1. Neither
 survives.

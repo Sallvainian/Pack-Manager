@@ -9,12 +9,12 @@ approved_by: maintainer (all five changes, as proposed)
 trigger: sprint-planning gate 2026-08-11 (verdict CONCERNS)
 scope_classification: Moderate
 artifacts_changed:
-  - _bmad-output/planning-artifacts/epics.md
-  - _bmad-output/implementation-artifacts/sprint-status.yaml
+  - _bmad-output/initiative-pack-manager/archive-v6/epics.md
+  - _bmad-output/initiative-pack-manager/archive-v6/sprint-status.yaml
 artifacts_verified_unchanged:
-  - _bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md
-  - _bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md
-  - _bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/EXPERIENCE.md
+  - _bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md
+  - _bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md
+  - _bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/EXPERIENCE.md
 ---
 
 # Sprint Change Proposal — 2026-08-11

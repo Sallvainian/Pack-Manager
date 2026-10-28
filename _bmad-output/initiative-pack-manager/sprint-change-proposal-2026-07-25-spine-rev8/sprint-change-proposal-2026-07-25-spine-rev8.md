@@ -11,10 +11,10 @@ status: APPROVED AND APPLIED
 supersedes: nothing
 companion_to: sprint-change-proposal-2026-07-25.md
 artifacts_modified:
-  - _bmad-output/planning-artifacts/epics.md
+  - _bmad-output/initiative-pack-manager/archive-v6/epics.md
 authorities:
-  - _bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md (revision 8)
-  - _bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/DRIFT-NOTE.md
+  - _bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md (revision 8)
+  - _bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/DRIFT-NOTE.md
   - docs/SPEC.md
   - docs/DECISIONS.md
   - docs/RELEASE-CHECKLIST.md
@@ -33,7 +33,7 @@ overwritten. This is a separate, later pass against revision 8.
 
 `ARCHITECTURE-SPINE.md` reached **revision 8** on 2026-07-25. Across revisions 6, 7, and 8
 it took explicit positions — six of them written as brand-new invariants, **AD-21** through
-**AD-26** — that seven passages in `_bmad-output/planning-artifacts/epics.md` still
+**AD-26** — that seven passages in `_bmad-output/initiative-pack-manager/archive-v6/epics.md` still
 contradicted.
 
 `epics.md` is the file `bmad-create-story` reads. Left alone, each contradiction would have
@@ -160,7 +160,7 @@ items (a), (b), (c), (e), and (g). No story text the batch row does not name was
 
 ## 4. Detailed Change Proposals
 
-All fifteen edits applied to `_bmad-output/planning-artifacts/epics.md`.
+All fifteen edits applied to `_bmad-output/initiative-pack-manager/archive-v6/epics.md`.
 `git diff --stat`: **1 file changed, 33 insertions(+), 20 deletions(-)**.
 
 ### (a) UX-PB.1b — crash/relaunch recovery criterion
@@ -421,7 +421,7 @@ state `retry-linked`, "a lineage pointer, not an action". That objection is agai
 
 ### 6a. Mechanical — every offending string is gone
 
-`grep -c` over `_bmad-output/planning-artifacts/epics.md` after the edits:
+`grep -c` over `_bmad-output/initiative-pack-manager/archive-v6/epics.md` after the edits:
 
 | Pattern from the batch row | Hits |
 | --- | --- |
@@ -504,7 +504,7 @@ to the owner as a separate decision and both were **approved and fixed** — see
 
 **S-1 (HIGH) — AD-25 is cited nowhere in `epics.md`, and Story 2.2 asserts a closed set that excludes it.**
 
-`grep -c "AD-25" _bmad-output/planning-artifacts/epics.md` returns **0**. Every other live
+`grep -c "AD-25" _bmad-output/initiative-pack-manager/archive-v6/epics.md` returns **0**. Every other live
 AD id is cited (AD-16 × 31 down to AD-21/22/23 × 1). AD-25 names its holders explicitly —
 `ARCHITECTURE-SPINE.md:799`:
 

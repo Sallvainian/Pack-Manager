@@ -1,7 +1,7 @@
 # PRD Review — Testability of Consequences (Update pass 2, spine revision 10)
 
-**Target:** `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md` (768 lines)
-**Reference:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md` (1601 lines, revision 10)
+**Target:** `_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md` (768 lines)
+**Reference:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md` (1601 lines, revision 10)
 **Also read this session:** `src-tauri/src/settings.rs`, `src/store/packages.ts`, `src/components/manager/PackageRow.tsx`, `src-tauri/src/logging.rs`, `review-testability.md` (prior pass)
 **Lens:** every bullet under `**Consequences (testable):**` must be checkable by someone who can run the app and read the repo. Emphasis on text this Update added or rewrote.
 

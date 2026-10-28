@@ -1,8 +1,8 @@
 # Reviewer Gate — adversarial divergence lens, v10
 
-**Target:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`, revision 9.
+**Target:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`, revision 9.
 **Intent:** Validate. Report only. No file outside this review was modified.
-**Level below:** stories, in `_bmad-output/planning-artifacts/epics.md`.
+**Level below:** stories, in `_bmad-output/initiative-pack-manager/archive-v6/epics.md`.
 **Date:** 2026-07-25.
 
 ## Method and counts
@@ -22,7 +22,7 @@ Every count below comes from a command run this session, not an estimate.
 Files read in full or in the cited ranges this session: `ARCHITECTURE-SPINE.md` (all
 1053 lines), `epics.md` (all 1319), `src-tauri/src/process/runner.rs:288-332`. Files
 quoted from line-numbered `grep`/`sed` output this session: `docs/SPEC.md`,
-`_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/EXPERIENCE.md`,
+`_bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/EXPERIENCE.md`,
 `src-tauri/src/error.rs`, `src-tauri/src/ipc.rs`, `src-tauri/src/queue.rs`.
 Prior lenses read for overlap: `reviews/review-divergence-v6.md`,
 `review-divergence-v8.md`, `review-divergence-v9.md` (finding indexes plus the

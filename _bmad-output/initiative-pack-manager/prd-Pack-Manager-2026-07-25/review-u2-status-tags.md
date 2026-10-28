@@ -1,6 +1,6 @@
 # Review — status-tag truthfulness (Update pass 2)
 
-**Artifact:** `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md` (769 lines, working tree — `git status` reports it ` M` against `HEAD`)
+**Artifact:** `_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md` (769 lines, working tree — `git status` reports it ` M` against `HEAD`)
 **Lens:** does every FR / RP / NFR status tag match what that requirement's consequences actually claim, verified against code at `HEAD` `1ac959e`
 **Date:** 2026-07-25
 

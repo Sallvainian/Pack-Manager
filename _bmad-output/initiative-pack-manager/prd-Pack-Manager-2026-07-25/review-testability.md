@@ -1,7 +1,7 @@
 # PRD Review — Done-ness and Testability
 
 **Reviewer lens:** done-ness and testability
-**Target:** `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md` (659 lines) with `addendum.md` (69 lines)
+**Target:** `_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md` (659 lines) with `addendum.md` (69 lines)
 **Date:** 2026-07-25
 **Verified against:** `HEAD` `5972109`
 
@@ -35,7 +35,7 @@ worth recording because it is the part of this document that is most testable:
 | newest 3 logs, newest 25 transcripts, Desktop | `src-tauri/src/diagnostics.rs:22-23`, `:4` | ✅ |
 | six-hour app-update check | `src-tauri/src/app_update.rs:27` `AUTO_CHECK_INTERVAL … from_secs(6 * 60 * 60)` | ✅ |
 | focus indicator across 31 sites | `grep -rn "focus-visible:outline\|focus:outline" src/ \| wc -l` → `31` | ✅ |
-| 28 stories under `epic-ux-pb` | `grep -c "^  ux-pb-" _bmad-output/implementation-artifacts/sprint-status.yaml` → `28` | ✅ |
+| 28 stories under `epic-ux-pb` | `grep -c "^  ux-pb-" _bmad-output/initiative-pack-manager/archive-v6/sprint-status.yaml` → `28` | ✅ |
 | 900 × 600 floor | `src-tauri/tauri.conf.json:18-19` `"minWidth": 900,` `"minHeight": 600,` | ✅ |
 | "complete transcript … on disk" | `src-tauri/src/process/runner.rs:171-172` `return; // cap reached — transcripts still carry the full output` | ✅ (512 KiB cap is in-memory only) |
 

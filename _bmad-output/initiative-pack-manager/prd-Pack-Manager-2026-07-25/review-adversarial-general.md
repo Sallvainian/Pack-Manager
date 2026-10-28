@@ -1,7 +1,7 @@
 # Adversarial review — PRD Pack-Manager 2026-07-25
 
 **Reviewer lens:** adversarial-general
-**Target:** `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md` (659 lines) + `addendum.md` (69 lines)
+**Target:** `_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md` (659 lines) + `addendum.md` (69 lines)
 **Baseline:** `HEAD` = `5972109` (`git log --oneline -1`)
 **Excluded by instruction:** D33-retired gate apparatus, D37-removed keyboard/VoiceOver criteria, commercial-scale rigor, Planned-status D27–D30 absences, mechanism deliberately mapped to `addendum.md` §1, and the four already-known items (FR-14 quit guard, §7.3 health fixes, §7.1 contrast guard, FR-6 self-update call sites).
 
@@ -77,7 +77,7 @@ This is not a nitpick, because three other documents converge on it:
 
 `addendum.md:48-54` names exactly three artifacts to reconcile: `epics.md`, `ARCHITECTURE-SPINE.md`, `EXPERIENCE.md`. `sprint-status.yaml` is not among them — yet `prd.md:595` cites it as authoritative:
 
-> "This is the live build queue — 28 stories under `epic-ux-pb` in `_bmad-output/implementation-artifacts/sprint-status.yaml`"
+> "This is the live build queue — 28 stories under `epic-ux-pb` in `_bmad-output/initiative-pack-manager/archive-v6/sprint-status.yaml`"
 
 Three live entries in that file encode behavior this PRD abolishes or that D37 removed:
 

@@ -1,7 +1,7 @@
 # Validation Report — Pack-Manager
 
-- **DESIGN.md:** `_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/DESIGN.md`
-- **EXPERIENCE.md:** `_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/EXPERIENCE.md`
+- **DESIGN.md:** `_bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/DESIGN.md`
+- **EXPERIENCE.md:** `_bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/EXPERIENCE.md`
 - **Run at:** 2026-07-25 (Validate intent, headless)
 - **Lenses run:** rubric walker, code-consistency, epics-consistency, accessibility, usability
 

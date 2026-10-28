@@ -1,8 +1,8 @@
 # Reconciliation review — `epics.md` against ARCHITECTURE-SPINE.md revision 4
 
 **Date:** 2026-07-25
-**Spine:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md` (505 lines, revision 4)
-**Input:** `_bmad-output/planning-artifacts/epics.md` (1166 lines)
+**Spine:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md` (505 lines, revision 4)
+**Input:** `_bmad-output/initiative-pack-manager/archive-v6/epics.md` (1166 lines)
 **Scope:** Epic UX-PB (28 stories, lines 384–1009) and the six surviving stories 2.2, 3.1, 3.2, 3.4, 3.5, 6.5 (lines 1015–1166).
 
 ## Method
@@ -411,7 +411,7 @@ Five of the six survivors are declared blocked by UX-PB stories. A builder readi
 
 Spine `:505`:
 
-> "| `epics.md` retired register | **Open** | `_bmad-output/planning-artifacts/epics.md` still carries TIR-1..TIR-8, RE-1..RE-11, the 72-criterion controls, and a set-equality requirement against `contracts/tauri-boundary/v1.json`. It contradicts this spine and `docs/DECISIONS.md` D33; reconciling it was out of scope for this run. See `DRIFT-NOTE.md`. |"
+> "| `epics.md` retired register | **Open** | `_bmad-output/initiative-pack-manager/archive-v6/epics.md` still carries TIR-1..TIR-8, RE-1..RE-11, the 72-criterion controls, and a set-equality requirement against `contracts/tauri-boundary/v1.json`. It contradicts this spine and `docs/DECISIONS.md` D33; reconciling it was out of scope for this run. See `DRIFT-NOTE.md`. |"
 
 **Every element of that claim verifies.** TIR-1..TIR-8 at `epics.md:123-130`; RE-1..RE-11 at `epics.md:134-144`; the 72-criterion control at `epics.md:104` ("Preserve exactly 72 P0 criteria from `readiness-coverage-map.md`"); the catalog set-equality at `epics.md:150` ("Accept by Batch 4 exit through exact set equality across the versioned `contracts/tauri-boundary/v1.json` catalog").
 

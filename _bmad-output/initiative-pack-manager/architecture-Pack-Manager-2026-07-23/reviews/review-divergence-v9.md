@@ -3,15 +3,15 @@
 **Lens:** adversarial divergence. Construct pairs of stories one level down that
 each obey every `AD` to the letter and still build incompatibly.
 
-**Target:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`,
+**Target:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`,
 `artifact_revision: 9`, read 2026-07-25.
 
-**Units one level down:** `_bmad-output/planning-artifacts/epics.md` — Epic UX-PB's
+**Units one level down:** `_bmad-output/initiative-pack-manager/archive-v6/epics.md` — Epic UX-PB's
 28 stories (UX-PB.1a–5e) plus Stories 2.2, 3.1, 3.2, 3.4, 3.5, 6.5.
 
 **Read this session (every quote below is from one of these):**
 `ARCHITECTURE-SPINE.md`, `epics.md`, `docs/SPEC.md`, `docs/DECISIONS.md`,
-`_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/DESIGN.md`,
+`_bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/DESIGN.md`,
 `.../EXPERIENCE.md`, `tests/e2e/browser-style-contract.spec.ts`,
 `playwright.config.ts`, `.github/workflows/test.yml`, `src/styles/theme.css`,
 `src/store/packages.ts`, `src/components/primitives/Checkbox.tsx`,

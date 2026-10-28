@@ -1,6 +1,6 @@
 # Reviewer Gate — Currency / Reality-Check Lens
 
-**Target:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`, `artifact_revision: 10`
+**Target:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`, `artifact_revision: 10`
 **Lens charter:** "Verify every committed decision was web-researched or reality-checked rather than asserted from training data: current library/framework versions, that each named technology still exists and fits, and the live defaults of any starter it leans on. Flag anything that could be out of date and wasn't confirmed against the web, the existing project, or the current starter."
 **Run date:** 2026-07-25
 **Repo state at review:** branch `chore/restore-phase-2-prd`, `HEAD` = `1ac959e`
@@ -202,7 +202,7 @@ defeats that instruction.
 ## MEDIUM-4 — `prd.md`, which this spine's frontmatter names as its requirements authority, carries two contrast claims that commit `a201fb0` falsified
 
 **Spine text.** `ARCHITECTURE-SPINE.md:16` lists
-`_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md` as a
+`_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md` as a
 source, and `ARCHITECTURE-SPINE.md:36-38` calls it "the requirements authority
 this spine is reconciled *against*".
 
@@ -210,7 +210,7 @@ this spine is reconciled *against*".
 
 ```
 $ grep -n "Not met at \`HEAD\`\|uncommitted working-tree changes" \
-    _bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md
+    _bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md
 447:- Text contrast meets at least 4.5:1 on its surface. **Not met at `HEAD`** — see NFR-6.
 628:**Not in this list, deliberately:** the automated contrast guard. The 4.5:1 assertion and the on-fill ink tokens that make it pass are **uncommitted working-tree changes**, absent from `HEAD` `5972109`. Until they land, contrast at release time is a by-eye check, and neither FR-19 nor NFR-6 may be read as CI-guaranteed on that axis.
 

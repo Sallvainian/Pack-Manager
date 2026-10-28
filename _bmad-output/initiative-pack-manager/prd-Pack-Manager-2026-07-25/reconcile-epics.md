@@ -1,12 +1,12 @@
-# Reconciliation — `epics.md` FR/NFR inventory vs. `prd-Pack-Manager-2026-07-25/prd.md`
+# Reconciliation — `epics.md` FR/NFR inventory vs. `prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md`
 
 **Reviewer:** epics.md FR/NFR block
 **Date:** 2026-07-25
 **Sources read in full this session:**
 
-- `_bmad-output/planning-artifacts/epics.md` lines 40–459 (the FR/NFR inventory is lines 53–117; the surrounding blocks 119–454 were read for context but are Phase 3 material and out of scope for this diff).
-- `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md` (all 659 lines).
-- `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/addendum.md` (all 69 lines).
+- `_bmad-output/initiative-pack-manager/archive-v6/epics.md` lines 40–459 (the FR/NFR inventory is lines 53–117; the surrounding blocks 119–454 were read for context but are Phase 3 material and out of scope for this diff).
+- `_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md` (all 659 lines).
+- `_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/addendum.md` (all 69 lines).
 - Corroborating reads: `ux-Pack-Manager-2026-07-23/.memlog.md`, `EXPERIENCE.md`, `docs/SPEC.md` (F5/F11/§8), `src-tauri/src/settings.rs`, `src-tauri/src/logging.rs`, `src-tauri/src/commands.rs`.
 
 ## Method

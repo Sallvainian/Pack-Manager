@@ -1,6 +1,6 @@
 # Currency & Reality-Check Review — ARCHITECTURE-SPINE.md revision 9
 
-**Target:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md` (artifact_revision 9, 1015 lines).
+**Target:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md` (artifact_revision 9, 1015 lines).
 **Lens:** every committed decision must have been web-researched or reality-checked, not asserted from training data. Every quotation mark in the spine is a claim checked byte-for-byte against its source.
 **Date:** 2026-07-25.
 
@@ -42,7 +42,7 @@ The two HIGH findings are both **enumeration failures inherited from a secondary
 
 and, in the same row:
 
-> When it lands it closes both accessibility entries in `_bmad-output/implementation-artifacts/deferred-work.md` — the missing `ring-offset-*` on 16 of 22 sites and the three absent indicators
+> When it lands it closes both accessibility entries in `_bmad-output/initiative-pack-manager/deferred-work.md` — the missing `ring-offset-*` on 16 of 22 sites and the three absent indicators
 
 The `16 of 22` half verifies exactly. The `three absent indicators` half does not.
 
@@ -57,7 +57,7 @@ The remediation commit `22ed41e`, written independently, states the same correct
 
 > Nine controls had no focus style at all, not the three a grep found. The other six were located by an audit that focused every focusable element in every reachable view and read computed style: both History select filters, the History search input, both Upgrade Plan sheet checkboxes, and the StatusBar Settings button. Absence of a class is invisible to grep.
 
-The number `three` traces to `_bmad-output/implementation-artifacts/deferred-work.md:46` at `8d36cdf`:
+The number `three` traces to `_bmad-output/initiative-pack-manager/deferred-work.md:46` at `8d36cdf`:
 
 > summary: Three keyboard-focusable controls render no focus indicator at all — the "Outdated only" checkbox, the activity-drawer toggle, and the status-bar "Open logs folder" button.
 
@@ -73,7 +73,7 @@ The number `three` traces to `_bmad-output/implementation-artifacts/deferred-wor
 
 > | Canonical design-token set | **RESOLVED** | … UX-PB.1e and UX-PB.5d are unblocked. |
 
-`_bmad-output/planning-artifacts/epics.md:308` — unchanged at `8d36cdf` and still unchanged at current `HEAD` (`22ed41e`):
+`_bmad-output/initiative-pack-manager/archive-v6/epics.md:308` — unchanged at `8d36cdf` and still unchanged at current `HEAD` (`22ed41e`):
 
 > | Canonical design-token set | `OPEN` — needs an owner decision | UX decides; Development implements | **Blocks UX-PB.1e and UX-PB.5d** (`ARCHITECTURE-SPINE.md:944`). …
 
@@ -402,7 +402,7 @@ The 44-finding arithmetic, reconstructed from the four review files:
 
 ### `epics.md` divergence batch, items (a)–(g) plus three follow-ups (10 claims — 10 verified)
 
-All checked against `8d36cdf:_bmad-output/planning-artifacts/epics.md`, not against the proposal.
+All checked against `8d36cdf:_bmad-output/initiative-pack-manager/archive-v6/epics.md`, not against the proposal.
 
 - **(a)** UX-PB.1b, `epics.md:566`: "…the draft is session-scoped and never written to disk, so membership is never reconstructed, never partially restored, and never fabricated, and nothing executes on relaunch" — VERIFIED byte-exact against the spine's quotation.
 - **(b)** UX-PB.1c, `epics.md:590`: "**And** no whole-intent `kind` is stored or converted — there is no `AllEligible` value to convert from…" — VERIFIED, and `AllEligible` occurs **exactly once** in the whole file (`grep -o … | wc -l` → 1), as claimed.

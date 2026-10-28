@@ -1,6 +1,6 @@
 # Currency / reality review — ARCHITECTURE-SPINE.md revision 10
 
-**Target:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`
+**Target:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`
 (revision 10, working-tree state — the file is modified and uncommitted:
 `git diff --stat` → `1 file changed, 312 insertions(+), 56 deletions(-)`)
 
@@ -61,8 +61,8 @@ batch."*
 **Command:**
 
 ```
-grep -c 'AD-27' _bmad-output/planning-artifacts/epics.md
-grep -n 'AD-27' _bmad-output/planning-artifacts/epics.md | head -40
+grep -c 'AD-27' _bmad-output/initiative-pack-manager/archive-v6/epics.md
+grep -n 'AD-27' _bmad-output/initiative-pack-manager/archive-v6/epics.md | head -40
 ```
 
 **Result:** `32`. Sample lines, verbatim:
@@ -100,8 +100,8 @@ stories are unblocked and `epics.md` says otherwise."*
 **Command:**
 
 ```
-grep -n 'Blocks UX-PB.1e' _bmad-output/planning-artifacts/epics.md
-grep -n 'Canonical design-token set' _bmad-output/planning-artifacts/epics.md
+grep -n 'Blocks UX-PB.1e' _bmad-output/initiative-pack-manager/archive-v6/epics.md
+grep -n 'Canonical design-token set' _bmad-output/initiative-pack-manager/archive-v6/epics.md
 ```
 
 **Result:** `Blocks UX-PB.1e` → **no matches**. The register row reads, verbatim
@@ -129,7 +129,7 @@ spine says, and cites this spine by `AD` id and row title while doing so.
 **Claim:** `ARCHITECTURE-SPINE.md:1282` — *"(4) the same register still records
 the `notarytool minos 15.0` question as OPEN, which D34 closed."*
 
-**Command:** `grep -n 'notarytool' _bmad-output/planning-artifacts/epics.md`
+**Command:** `grep -n 'notarytool' _bmad-output/initiative-pack-manager/archive-v6/epics.md`
 
 **Result:** one match, `epics.md:309`, verbatim:
 
@@ -140,7 +140,7 @@ the `notarytool minos 15.0` question as OPEN, which D34 closed."*
 **Verdict:** FALSE.
 
 **Remedy:** delete residual (4). Note the corroborating negative:
-`grep -c 'macos-14' _bmad-output/planning-artifacts/epics.md` → `0`.
+`grep -c 'macos-14' _bmad-output/initiative-pack-manager/archive-v6/epics.md` → `0`.
 
 ---
 
@@ -182,7 +182,7 @@ disappear on `git gc`. All five were squash-merged into `c8c1f9a`
 confirmed by content search:
 
 ```
-git log --oneline -S 'session-scoped and never written to disk, so membership is never reconstructed' -- _bmad-output/planning-artifacts/epics.md
+git log --oneline -S 'session-scoped and never written to disk, so membership is never reconstructed' -- _bmad-output/initiative-pack-manager/archive-v6/epics.md
 → c8c1f9a Reconcile the planning spine with reality, and fix what that surfaced (#35)
 git log --oneline -S 'macos-15' -- .github/workflows/ci.yml
 → c8c1f9a Reconcile the planning spine with reality, and fix what that surfaced (#35)
@@ -218,8 +218,8 @@ the builder reads."*
 **Command:**
 
 ```
-grep -n "stays \`Verifying\` until it resolves" _bmad-output/planning-artifacts/epics.md
-grep -n "the Manager's Last-good Snapshot is left in place with its timestamp" _bmad-output/planning-artifacts/epics.md
+grep -n "stays \`Verifying\` until it resolves" _bmad-output/initiative-pack-manager/archive-v6/epics.md
+grep -n "the Manager's Last-good Snapshot is left in place with its timestamp" _bmad-output/initiative-pack-manager/archive-v6/epics.md
 ```
 
 **Result:** the quoted criterion is present at `epics.md:844` — and is
@@ -246,7 +246,7 @@ criterion text**, surviving only as a parenthetical on UX-PB.5b's Dependencies
 line, while AD-22's and AD-23's substance *is* restated in criterion prose."*
 
 **Command:**
-`grep -n 'skipUpgradePlanConfirmation\` is plan-inert (AD-21)' _bmad-output/planning-artifacts/epics.md`
+`grep -n 'skipUpgradePlanConfirmation\` is plan-inert (AD-21)' _bmad-output/initiative-pack-manager/archive-v6/epics.md`
 
 **Result:** `epics.md:1066`, inside UX-PB.5b's acceptance criteria, verbatim:
 
@@ -271,7 +271,7 @@ after the AD-22 ordering clause the residual credits.
 number**, and those citations have already drifted — the same positional-reference
 failure this run folder has now hit three times…"*
 
-**Command:** `grep -n 'ARCHITECTURE-SPINE.md' _bmad-output/planning-artifacts/epics.md | grep -c ':[0-9]'` on the two register rows; read `epics.md:307-309`.
+**Command:** `grep -n 'ARCHITECTURE-SPINE.md' _bmad-output/initiative-pack-manager/archive-v6/epics.md | grep -c ':[0-9]'` on the two register rows; read `epics.md:307-309`.
 
 **Result:** `epics.md:308` cites *"`ARCHITECTURE-SPINE.md` AD-27 and the
 *Canonical design-token set* row of its Decision Status table"* — by `AD` id and
@@ -293,7 +293,7 @@ tri-state, `⌘A`, Space, `⌘`-click, Clear and `Esc` against "the exact select
 identities", plus a `Clear`/`Esc`-clears-selection rung AD-28 deletes and a `⌘U`
 limb `prd.md` FR-6 drops."*
 
-**Command:** `grep -n 'Cmd+U\|⌘U\|Cmd-U' _bmad-output/planning-artifacts/epics.md`
+**Command:** `grep -n 'Cmd+U\|⌘U\|Cmd-U' _bmad-output/initiative-pack-manager/archive-v6/epics.md`
 
 **Result:** **no matches.**
 
@@ -319,7 +319,7 @@ criterion needs AD-16's corrected inertness rule: **not** native `disabled`,
 pointer-interactive, inert."*
 
 **Command:**
-`grep -n 'aria-disabled="true"\` rather than native' _bmad-output/planning-artifacts/epics.md`
+`grep -n 'aria-disabled="true"\` rather than native' _bmad-output/initiative-pack-manager/archive-v6/epics.md`
 
 **Result:** `epics.md:613`, verbatim:
 
@@ -659,7 +659,7 @@ Verified in this section, notably:
 
 - `macos-14` retirement — no `runs-on` in `.github/workflows/` names `macos-14` ✔
   (`grep -rn 'runs-on:' .github/workflows/` — full listing above), and
-  `grep -c 'macos-14' _bmad-output/planning-artifacts/epics.md` → `0` ✔.
+  `grep -c 'macos-14' _bmad-output/initiative-pack-manager/archive-v6/epics.md` → `0` ✔.
   `docs/SPEC.md:805` reads `rust (macos-15)` … `build-smoke (macos-15, main only)` ✔.
 - The app-update guard is Rust and matches the frontend predicate exactly ✔ —
   `commands.rs:810 refuse_app_update_while_busy(&state.queue.records())?;` is the

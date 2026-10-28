@@ -6,8 +6,8 @@
 
 | Role | Path |
 | --- | --- |
-| Under review | `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md` (659 lines) |
-| Companion | `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/addendum.md` (69 lines) |
+| Under review | `_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md` (659 lines) |
+| Companion | `_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/addendum.md` (69 lines) |
 | Archived source extraction (READ-ONLY) | `_bmad-output/archive/2026-07-24-scope-recalibration/planning/prds/prd-Pack-Manager-2026-07-22/extract-product-intent.md` (616 lines) |
 | Archived reconciliation (READ-ONLY) | `_bmad-output/archive/2026-07-24-scope-recalibration/planning/prds/prd-Pack-Manager-2026-07-22/reconcile-spec.md` (93 lines) |
 

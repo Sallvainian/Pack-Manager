@@ -10,7 +10,7 @@ mode: Batch
 status: applied
 trigger_type: upstream-authority-revision
 scope_classification: Moderate
-requirements_authority_used: _bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md (status final) + addendum.md
+requirements_authority_used: _bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md (status final) + addendum.md
 architecture_authority_used: ARCHITECTURE-SPINE.md revision 10
 code_baseline: 5c28dcb (branch chore/restore-phase-2-prd), clean tree at start
 closes: "ARCHITECTURE-SPINE.md Decision Status row `epics.md` residuals for the next `bmad-correct-course` run — **OPEN**"
@@ -19,14 +19,14 @@ closes: "ARCHITECTURE-SPINE.md Decision Status row `epics.md` residuals for the 
 #   sprint-change-proposal-2026-07-25.md            (spine revision 6 / D33 reconciliation)
 #   sprint-change-proposal-2026-07-25-spine-rev8.md
 sources_read_this_session:
-  - _bmad-output/planning-artifacts/epics.md
-  - _bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md
-  - _bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md
-  - _bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/addendum.md
-  - _bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/EXPERIENCE.md
+  - _bmad-output/initiative-pack-manager/archive-v6/epics.md
+  - _bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md
+  - _bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md
+  - _bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/addendum.md
+  - _bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/EXPERIENCE.md
   - docs/DECISIONS.md
   - _bmad-output/project-context.md
-  - _bmad-output/implementation-artifacts/sprint-status.yaml
+  - _bmad-output/initiative-pack-manager/archive-v6/sprint-status.yaml
   - .claude/skills/bmad-correct-course/checklist.md
 ---
 

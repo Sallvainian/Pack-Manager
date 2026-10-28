@@ -1,5 +1,5 @@
 # Stories of epic-shipped-behavior-gaps, in build order (v6 stories.yaml order).
-# Migrated 2026-10-28 from specs/spec-shipped-behavior-gaps/stories.yaml; ids lost their dash (6-6 -> 66). Each
+# Migrated 2026-10-28 from _bmad-output/initiative-pack-manager/archive-v6/spec-shipped-behavior-gaps/stories.yaml; ids lost their dash (6-6 -> 66). Each
 # description carries the story's full v6 epics.md text. `after` comes only from epics.md's declared
 # Dependencies/Blocks; "1.<id>" names an entry of epic 1. v6_key is the sprint-status key.
 

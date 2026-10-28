@@ -1,6 +1,6 @@
 # Review — status-tag accuracy
 
-**Artifact:** `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md`
+**Artifact:** `_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md`
 (companion `addendum.md`)
 **Scope:** the `Shipping` / `Partial` / `Planned` tag on each of FR-1…FR-22, RP-1, RP-2,
 NFR-1…NFR-8, checked one requirement at a time against `src/` and `src-tauri/`.

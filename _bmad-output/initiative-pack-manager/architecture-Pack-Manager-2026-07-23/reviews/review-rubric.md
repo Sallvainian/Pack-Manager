@@ -1,6 +1,6 @@
 # Rubric Walk — ARCHITECTURE-SPINE.md revision 4
 
-**Target:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`
+**Target:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`
 (30,442 bytes, 506 lines, `artifact_revision: 4`, `updated: "2026-07-25"`)
 **Gate:** pre-handoff, initiative altitude
 **Level below:** Epic UX-PB (28 stories) + Stories 2.2, 3.1, 3.2, 3.4, 3.5, 6.5
@@ -298,7 +298,7 @@ promote the delivery obligation into a Rule with a named owner (Story 6.5).
 
 `ARCHITECTURE-SPINE.md:505`:
 
-> | `epics.md` retired register | **Open** | `_bmad-output/planning-artifacts/epics.md` still carries TIR-1..TIR-8, RE-1..RE-11, the 72-criterion controls, and a set-equality requirement against `contracts/tauri-boundary/v1.json`. It contradicts this spine and `docs/DECISIONS.md` D33; reconciling it was out of scope for this run. See `DRIFT-NOTE.md`. |
+> | `epics.md` retired register | **Open** | `_bmad-output/initiative-pack-manager/archive-v6/epics.md` still carries TIR-1..TIR-8, RE-1..RE-11, the 72-criterion controls, and a set-equality requirement against `contracts/tauri-boundary/v1.json`. It contradicts this spine and `docs/DECISIONS.md` D33; reconciling it was out of scope for this run. See `DRIFT-NOTE.md`. |
 
 The claim is accurate. `epics.md:150`:
 
@@ -308,7 +308,7 @@ The claim is accurate. `epics.md:150`:
 
 > - Preserve exactly 72 P0 criteria from `readiness-coverage-map.md`, whose status remains `final-pending-approval`.
 
-`grep -c "TIR-" _bmad-output/planning-artifacts/epics.md` → `9`.
+`grep -c "TIR-" _bmad-output/initiative-pack-manager/archive-v6/epics.md` → `9`.
 `ls contracts` → `ls: cannot access 'contracts': No such file or directory`.
 
 And the spine directly forbids the artifact epics.md mandates
@@ -327,7 +327,7 @@ contradictory text is still the operative planning artifact.
 Compounding it: the stated resolution pointer is absent.
 
 ```
-$ ls -la _bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/
+$ ls -la _bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/
 .memlog.md
 ARCHITECTURE-SPINE.md
 reviews

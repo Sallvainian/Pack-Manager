@@ -1,6 +1,6 @@
 # Reviewer Gate — currency / reality-check lens, revision 10
 
-**Target:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`
+**Target:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`
 (1053 lines, `artifact_revision: 9`, `updated: "2026-07-25"`).
 **Intent:** Validate — report only. This file is the only thing this lens wrote.
 **Date:** 2026-07-25. **Prior lenses read:** `review-currency-v6.md`,
@@ -590,7 +590,7 @@ Repo files Read or grepped this session: `ARCHITECTURE-SPINE.md`,
 `src/components/settings/SettingsView.tsx`, `src/styles/theme.css`,
 `tests/e2e/browser-style-contract.spec.ts`, `playwright.config.ts`,
 `docs/{DECISIONS,SPEC,RELEASE-CHECKLIST,index,development-guide,deployment-guide}.md`,
-`_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/{DESIGN,EXPERIENCE}.md`,
+`_bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/{DESIGN,EXPERIENCE}.md`,
 `node_modules/tailwindcss/dist/lib.mjs`.
 
 Web: `https://tauri.app/llms-full.txt` (downloaded 2026-07-25, 2,430,050 bytes,

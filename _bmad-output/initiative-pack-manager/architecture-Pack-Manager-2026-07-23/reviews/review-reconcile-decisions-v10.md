@@ -1,7 +1,7 @@
 # Reconcile — `docs/DECISIONS.md` against ARCHITECTURE-SPINE revision 10
 
 **Lens:** decision reconciliation (D37 and D36 focus, D1–D37 sweep)
-**Target (read-only):** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`
+**Target (read-only):** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`
 
 **Reviewed at:** `md5 c2d62373f807bfc9a192c07ba7a973a6`, **1343 lines**. The
 target was being written concurrently — it changed five times during this review
@@ -378,7 +378,7 @@ No spine change.
 
 `ARCHITECTURE-SPINE.md:571` cites `"(`prd.md` FR-5, `EXPERIENCE.md` Checkbox
 contract)"`. That contract, at
-`_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/EXPERIENCE.md:143`,
+`_bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/EXPERIENCE.md:143`,
 carries D37-removed obligations in the sentence being borrowed from: `"it
 **announces the exact count** and uses `mixed` when only some are staged. An
 explanatory-disabled control never uses native `disabled`: expose

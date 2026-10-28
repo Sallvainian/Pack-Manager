@@ -23,7 +23,7 @@ Deterministic pass, run this session:
 
 ```
 uv run .claude/skills/bmad-architecture/scripts/lint_spine.py \
-  --workspace _bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/
+  --workspace _bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/
 → {"ok": true, "spine": "ARCHITECTURE-SPINE.md", "total_findings": 0, "by_severity": {}, "findings": []}
 ```
 
@@ -48,7 +48,7 @@ only hit is line 623 above. AD-18 states **no writer and no record cardinality.*
 
 ### `epics.md` now carries both rules in its own text — and says so
 
-`_bmad-output/planning-artifacts/epics.md:827` (UX-PB.3d Dependencies):
+`_bmad-output/initiative-pack-manager/archive-v6/epics.md:827` (UX-PB.3d Dependencies):
 
 > `AD-18 (the plan-attempt journal's home, format and durability — note AD-18 does not itself name a writer or a record cardinality, so the terminal-write ownership below is stated here and belongs in AD-18 when it is next amended); UX-PB.4a owns the single durable terminal write and this story never writes one`
 
@@ -202,7 +202,7 @@ spine's `c8c1f9a` at 08:22:05, and touched only `epics.md`:
 
 ```
 git show --stat 5972109
-→ _bmad-output/planning-artifacts/epics.md | 79 +++++++++++++++++---------------
+→ _bmad-output/initiative-pack-manager/archive-v6/epics.md | 79 +++++++++++++++++---------------
   1 file changed, 43 insertions(+), 36 deletions(-)
 ```
 

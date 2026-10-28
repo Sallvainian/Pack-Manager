@@ -503,7 +503,7 @@ obligations; 10 mentions total. FR-17 also still describes
 qualification." Route: `bmad-correct-course`. The carve-out is absent.
 
 The risk is concrete, because the story's *title* is two-thirds removed
-criteria. `_bmad-output/planning-artifacts/epics.md:596` — "### Story UX-PB.1d:
+criteria. `_bmad-output/initiative-pack-manager/archive-v6/epics.md:596` — "### Story UX-PB.1d:
 Ineligible-control inertness with keyboard, pointer, and VoiceOver explanation".
 A correct-course run told to strip D37's ten `epics.md` mentions, reading only
 the PRD's reconciliation queue, has every reason to retire the whole story.
@@ -539,7 +539,7 @@ the question D31 left open." — which the PRD never names, while asserting at
 `prd.md:635` that "This document carries **no phase-blockers**."
 
 `epics.md` already does this correctly, which is the standard the PRD should
-meet. `_bmad-output/planning-artifacts/epics.md:309` — "The `notarytool` `minos
+meet. `_bmad-output/initiative-pack-manager/archive-v6/epics.md:309` — "The `notarytool` `minos
 15.0` question is CLOSED by `docs/DECISIONS.md` D34: CI and release moved to
 `macos-15`, so the build SDK is no longer behind the declared floor".
 
@@ -590,7 +590,7 @@ the plan sidecar itself becomes live status."
 
 `docs/DECISIONS.md:348-351` — "That triage is recorded per story, with rationale
 and `epics.md` citations, in
-`_bmad-output/planning-artifacts/story-triage-2026-07-24.md`: 6 keep, 19 merge,
+`_bmad-output/initiative-pack-manager/story-triage-2026-07-24/story-triage-2026-07-24.md`: 6 keep, 19 merge,
 12 retire across the 37 stories. Read it before rescheduling any of them."
 
 `prd.md:599` invokes the habit and reproduces the supporting number, but names
@@ -600,7 +600,7 @@ work. An adversarial triage pass overturned 14 of 20 initial keep verdicts for
 exactly that reason."
 
 §7.3 Deferred is the rescheduling surface D33's imperative was written for. The
-file exists (`ls _bmad-output/planning-artifacts/story-triage-2026-07-24.md` →
+file exists (`ls _bmad-output/initiative-pack-manager/story-triage-2026-07-24/story-triage-2026-07-24.md` →
 present) and carries per-story verdicts a PM would otherwise re-derive.
 
 **Fix:** name the file in `prd.md:599`.

@@ -1,7 +1,7 @@
 # Rubric walk — ARCHITECTURE-SPINE.md revision 9
 
 **Lens:** rubric walker (good-spine checklist), independent, read-only
-**Target:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`, `artifact_revision: 9`, uncommitted working-tree state
+**Target:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`, `artifact_revision: 9`, uncommitted working-tree state
 **Baseline for the diff:** `db92db7` (revision 8) — 78 insertions, 26 deletions, one file
 **Tree state at review:** HEAD = `22ed41e`; `git status --short` shows only `.memlog.md`, `ARCHITECTURE-SPINE.md`, `DRIFT-NOTE.md` modified
 **Date:** 2026-07-25
@@ -729,7 +729,7 @@ evidence of those three" — is a real prohibition and should stay.
 
 #### H-5 — `epics.md` now contradicts two of revision 9's own RESOLVED rows, and the new residuals row does not list it
 
-**Where:** spine:994, spine:996, spine:1018 vs. `_bmad-output/planning-artifacts/epics.md:307`, `:308`, `:311` *[carried, re-verified against the committed file]*
+**Where:** spine:994, spine:996, spine:1018 vs. `_bmad-output/initiative-pack-manager/archive-v6/epics.md:307`, `:308`, `:311` *[carried, re-verified against the committed file]*
 
 The spine closes the design-token row and states "UX-PB.1e and UX-PB.5d are unblocked."
 `epics.md` at HEAD still says the opposite, twice:

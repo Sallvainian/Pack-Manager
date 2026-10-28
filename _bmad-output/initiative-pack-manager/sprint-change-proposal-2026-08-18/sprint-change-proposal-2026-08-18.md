@@ -29,7 +29,7 @@ Discovery context: the four §9 open questions were closed as D39–D42 on 2026-
   - `epics.md` — add Story 2.5; update Epic 2's retained-stories lines; add a "partly revived" note to the FR Coverage Map's FR-1 entry, mirroring FR-14's precedent wording.
   - `sprint-status.yaml` — add the `2-5` key **by hand** (the generate step drops all Epic UX-PB keys; never regenerate — 6-6 precedent).
   - `prd.md` — FR-1's "install hint where one is known" limb and the §9 closures; routed to the `bmad-prd` Update run the owner has already directed, citing D39–D42. Not edited here.
-  - `_bmad-output/specs/spec-shipped-behavior-gaps/` — gains a capability for Story 2.5 via a `bmad-spec` re-derive so the two spec kernels keep covering the whole queue.
+  - `_bmad-output/initiative-pack-manager/tickets/epic-shipped-behavior-gaps/` — gains a capability for Story 2.5 via a `bmad-spec` re-derive so the two spec kernels keep covering the whole queue.
   - Architecture — **no impact**: no new invariant, no IPC schema change (`installHint` exists; populating more values may require regenerating the representative contract fixture with `PM_UPDATE_CONTRACT=1`, an implementation detail).
   - UX documents — **no required change**: `DESIGN.md` already reserves the "no Managers" states; the copy is recorded in D40. An optional future `bmad-ux` Update may inline the copy.
 - **Technical impact:** small — a static hint table in `detect.rs` plus tests, an all-absent state panel in `DashboardView`, possible contract-fixture regeneration.

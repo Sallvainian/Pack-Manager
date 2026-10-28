@@ -7,10 +7,10 @@ that it belongs in AD-18?
 **Intent:** Validate. Report only. No file edited except this one.
 
 **Files Read this session:**
-`_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`
+`_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`
 (lines 1-60, 160-189, 600-680, 795-816, 945-960, 1035-1053),
-`_bmad-output/planning-artifacts/epics.md` (lines 681-712, 822-853, 911-942),
-`_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/reviews/review-divergence-v9.md`
+`_bmad-output/initiative-pack-manager/archive-v6/epics.md` (lines 681-712, 822-853, 911-942),
+`_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/reviews/review-divergence-v9.md`
 (lines 315-359).
 
 **VERDICT: CONFIRMED.**
@@ -136,7 +136,7 @@ The single-terminal-writer rule exists in exactly **one** place in the entire
 
 ### It was placed there instead of in AD-18, in the current HEAD commit
 
-`git blame -L 848,849 --porcelain _bmad-output/planning-artifacts/epics.md`:
+`git blame -L 848,849 --porcelain _bmad-output/initiative-pack-manager/archive-v6/epics.md`:
 
 ```
 5972109f46efe730d8b02c69cff3273aa80adfaa 848 848 2

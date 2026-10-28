@@ -1,6 +1,6 @@
 # Internal-coherence review — `prd.md` after the revision-10 Update pass
 
-**Reviewed:** `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md`
+**Reviewed:** `_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md`
 (768 lines, `wc -l`), read end to end 2026-07-25, against the working tree at
 `chore/restore-phase-2-prd`.
 **Lens:** internal coherence only — cross-references that resolve, sections that agree

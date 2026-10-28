@@ -179,7 +179,7 @@ The `[ASSUMPTION]` tag inside AD-17 was moved out to an Open row. A tag reading
   revision 4 removed from the spine. That run was scoped to the spine plus this
   note, so the reconciliation was recorded rather than performed. **It was
   performed on 2026-07-25** under
-  `_bmad-output/planning-artifacts/sprint-change-proposal-2026-07-25.md`. The row
+  `_bmad-output/initiative-pack-manager/sprint-change-proposal-2026-07-25/sprint-change-proposal-2026-07-25.md`. The row
   is now RESOLVED in the spine's Decision Status table.
 - **`docs/architecture.md`** was not re-read this pass. It remains listed as a
   source because it fed revisions 1–3; whether it also carries retired-gate
@@ -248,7 +248,7 @@ Reviewer files, if you want the detail: `reviews/review-rubric.md`,
 ## 2d. Revision 7 — the epics.md register reconciled, and four false claims corrected
 
 `epics.md` was reconciled on 2026-07-25 under
-`_bmad-output/planning-artifacts/sprint-change-proposal-2026-07-25.md`, closing the
+`_bmad-output/initiative-pack-manager/sprint-change-proposal-2026-07-25/sprint-change-proposal-2026-07-25.md`, closing the
 last Open row revision 6 carried. Its six retired sections became retirement-record
 stubs naming this spine as the sole AD authority; the AD-id collision that made the
 divergence urgent — `epics.md` publishing its own AD-1..AD-15 under the same ids as
@@ -795,7 +795,7 @@ in the batch.
 ## 2g. Revision 10 — Phase 2 has an owner again, and two Open rows become invariants
 
 Revision 10 is the first revision since 3 with a **separable requirements authority**
-above it. `prds/prd-Pack-Manager-2026-07-25/prd.md` (status `final`) restores
+above it. `prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md` (status `final`) restores
 FR-1…FR-22, RP-1/RP-2 and NFR-1…NFR-8 as Phase 2 content that had been living inside
 `epics.md`, and it declares itself the authority this spine is reconciled *against*.
 Two rows revision 9 routed to the owner as *new architecture* came back with decisions

@@ -1,6 +1,6 @@
 # Rubric Walk — `ARCHITECTURE-SPINE.md` revision 10
 
-**Target:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`
+**Target:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`
 **Snapshot judged:** 1395 lines, `sha256 a9fc1d9433cdaba8ec910340ff66ee2821c65346a46dea73f8f84c9548607f6c`, taken 2026-07-25 13:06:48 to `/tmp/spine-rev10-snapshot.md`.
 **Note on the moving target:** the file was 1338 lines when this run opened it and 1395 lines eight minutes later — AD-11 gained the PRD-supersession rule, AD-16 gained the three-call-sites, no-`Cancelling`, rebuild-in-flight, `rustDedup`-direction and three-compensations rules, AD-28 gained the ordering and SPEC §4.11 rules, and two Open rows were added. **Every line number below is the snapshot's.**
 **Repo state:** working tree; `HEAD` `1ac959e` (`git log -1 --format="%h %s"`).
@@ -34,7 +34,7 @@ That is an editing pass over one table plus one rule, not a redesign. Hence READ
 
 ```
 uv run .claude/skills/bmad-architecture/scripts/lint_spine.py \
-  --workspace _bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/
+  --workspace _bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/
 → "total_findings": 0, "by_severity": {}, "findings": []
 ```
 
@@ -53,7 +53,7 @@ And the residuals row repeats the same attribution:
 
 - `:1389` `"**UX-PB.2f and UX-PB.4c still move running work to a \`Cancelling\` state** that \`prd.md\` FR-13 forbids by name and AD-16 now refuses — \"changes still-running Operations bound to that \`planAttemptId\` to \`Cancelling\`\""`
 
-**Both story ids are wrong.** `grep -n "Cancelling" _bmad-output/planning-artifacts/epics.md` returns exactly two lines:
+**Both story ids are wrong.** `grep -n "Cancelling" _bmad-output/initiative-pack-manager/archive-v6/epics.md` returns exactly two lines:
 
 - `epics.md:740` (inside **UX-PB.2e**, heading at `:728` `"### Story UX-PB.2e: Plan-level cancellation that skips unstarted work and escalates running process groups"`) — `"running work moves to \`Cancelling\` and escalates through the existing process-group mechanics"`
 - `epics.md:903` (inside **UX-PB.3g**, heading at `:891` `"### Story UX-PB.3g: Two labeled cancellation scopes"`) — `"changes still-running Operations bound to that \`planAttemptId\` to \`Cancelling\`"`
@@ -205,7 +205,7 @@ The residuals row records this correction against UX-PB.1d only: `:1389` `"**UX-
 
 AD-18's `Binds` is `:726` `"- **Binds:** UX-PB.2c, UX-PB.2d, UX-PB.2f, UX-PB.3d, UX-PB.4a, UX-PB.4b, UX-PB.4e; Story 6.5"` — **UX-PB.2e is not in it**, and **UX-PB.2f and UX-PB.4b are**.
 
-`grep -n "AD-18" _bmad-output/planning-artifacts/epics.md` returns `288, 316, 664, 827, 916, 1004, 1302` — story-block hits at UX-PB.2b (`:664`), UX-PB.3d (`:827`), UX-PB.4a (`:916`), UX-PB.4e (`:1004`), Story 6.5 (`:1302`). So the stories AD-18 binds that cite it nowhere are **UX-PB.2c, UX-PB.2d, UX-PB.2f and UX-PB.4b** — the row gets two of four right, adds one AD-18 does not bind, and drops two it does. (The AD-29 half of the same sentence is correct: `grep -c "AD-29" epics.md` → `0`, and `grep -c "AD-28" epics.md` → `0`.)
+`grep -n "AD-18" _bmad-output/initiative-pack-manager/archive-v6/epics.md` returns `288, 316, 664, 827, 916, 1004, 1302` — story-block hits at UX-PB.2b (`:664`), UX-PB.3d (`:827`), UX-PB.4a (`:916`), UX-PB.4e (`:1004`), Story 6.5 (`:1302`). So the stories AD-18 binds that cite it nowhere are **UX-PB.2c, UX-PB.2d, UX-PB.2f and UX-PB.4b** — the row gets two of four right, adds one AD-18 does not bind, and drops two it does. (The AD-29 half of the same sentence is correct: `grep -c "AD-29" epics.md` → `0`, and `grep -c "AD-28" epics.md` → `0`.)
 
 ---
 

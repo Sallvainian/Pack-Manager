@@ -187,8 +187,8 @@ The spine's own frontmatter names **15** sources (`ARCHITECTURE-SPINE.md:15-33`)
 Three reconcilers ran this revision: `prd.md`+`addendum.md`, `docs/DECISIONS.md`, and
 the tree (currency). Sources with **no reconciler this revision**:
 
-- `_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/EXPERIENCE.md`
-- `_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/DESIGN.md`
+- `_bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/EXPERIENCE.md`
+- `_bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/DESIGN.md`
 - `docs/SPEC.md`
 - `docs/RELEASE-CHECKLIST.md`
 

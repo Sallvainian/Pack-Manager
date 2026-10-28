@@ -1,20 +1,20 @@
 # Reconciliation review — UX design vs. Architecture Spine revision 4
 
 - **Run at:** 2026-07-25
-- **Spine under review:** `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md` (`artifact_revision: 4`)
+- **Spine under review:** `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md` (`artifact_revision: 4`)
 - **UX inputs read in full:** `DESIGN.md` (252 lines), `EXPERIENCE.md` (460 lines), `validation-report.md` (167 lines, partial)
 - **Code read:** `src/styles/theme.css`, `src/store/ui.ts`, `src/hooks/useKeyboard.ts`, `src/components/shell/ToastHost.tsx`
 
 Path abbreviations used below:
 
-- `SPINE` = `_bmad-output/planning-artifacts/architecture/architecture-Pack-Manager-2026-07-23/ARCHITECTURE-SPINE.md`
-- `DESIGN` = `_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/DESIGN.md`
-- `EXP` = `_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/EXPERIENCE.md`
+- `SPINE` = `_bmad-output/initiative-pack-manager/architecture-Pack-Manager-2026-07-23/architecture-Pack-Manager-2026-07-23.md`
+- `DESIGN` = `_bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/DESIGN.md`
+- `EXP` = `_bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/EXPERIENCE.md`
 
 ## Folder inventory
 
 ```
-_bmad-output/planning-artifacts/ux-designs/ux-Pack-Manager-2026-07-23/
+_bmad-output/initiative-pack-manager/ux-Pack-Manager-2026-07-23/
   .memlog.md              22062 bytes
   .working/               40 entries
   DESIGN.md               29880 bytes

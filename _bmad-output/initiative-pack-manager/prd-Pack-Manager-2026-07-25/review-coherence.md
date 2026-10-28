@@ -1,6 +1,6 @@
 # Review — internal coherence and glossary discipline
 
-**Artifact:** `_bmad-output/planning-artifacts/prds/prd-Pack-Manager-2026-07-25/prd.md`
+**Artifact:** `_bmad-output/initiative-pack-manager/prd-Pack-Manager-2026-07-25/prd-Pack-Manager-2026-07-25.md`
 **Companion:** `.../addendum.md`
 **Lens:** the PRD checked against itself — glossary discipline, cross-reference resolution, ID continuity, and prd/addendum agreement.
 **Date:** 2026-07-25
