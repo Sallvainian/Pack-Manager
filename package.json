@@ -20,7 +20,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@tanstack/react-virtual": "^3.14.22",
+    "@tanstack/react-virtual": "^3.14.24",
     "@tauri-apps/api": "^2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -29,7 +29,7 @@
   "devDependencies": {
     "@faker-js/faker": "^10.6.0",
     "@playwright/test": "^1.64.1",
-    "@seontechnologies/playwright-utils": "^4.4.2",
+    "@seontechnologies/playwright-utils": "^4.6.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/cli": "^2",
     "@testing-library/jest-dom": "^7.0.1",
