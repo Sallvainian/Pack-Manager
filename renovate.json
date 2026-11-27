@@ -1,0 +1,128 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": [
+    "Replaces Dependabot's version updates, with the same rules .github/dependabot.yml had (that file now only shapes Dependabot's security PRs).",
+    "Security fixes stay with Dependabot (alerts and security updates on as GitHub settings; dependabot-auto-merge.yml merges its PRs): it updates vulnerable packages that only appear in package-lock.json or Cargo.lock, which Renovate's own security PRs do not.",
+    "Every commit type here is chore or ci, never fix or feat, so a dependency update never triggers a release-please release (config:recommended alone would write fix(deps) for production dependencies)."
+  ],
+  "extends": [
+    "config:recommended"
+  ],
+  "enabledManagers": [
+    "npm",
+    "cargo",
+    "github-actions",
+    "nvm"
+  ],
+  "timezone": "America/New_York",
+  "schedule": [
+    "* * * * 1"
+  ],
+  "semanticCommits": "enabled",
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 0,
+  "labels": [
+    "dependencies"
+  ],
+  "automerge": true,
+  "automergeType": "pr",
+  "platformAutomerge": true,
+  "automergeStrategy": "squash",
+  "vulnerabilityAlerts": {
+    "enabled": false
+  },
+  "packageRules": [
+    {
+      "description": "npm: commits as chore(deps), package.json ranges raised as Dependabot did; minor and patch updates in one PR.",
+      "matchManagers": [
+        "npm"
+      ],
+      "rangeStrategy": "bump",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "deps",
+      "addLabels": [
+        "npm"
+      ]
+    },
+    {
+      "matchManagers": [
+        "npm"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "npm-minor-and-patch"
+    },
+    {
+      "description": "Cargo (src-tauri/): commits as chore(deps). In-range updates change only Cargo.lock and a major raises Cargo.toml's requirement, as Dependabot did; minor and patch updates in one PR.",
+      "matchManagers": [
+        "cargo"
+      ],
+      "rangeStrategy": "update-lockfile",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "deps",
+      "addLabels": [
+        "rust"
+      ]
+    },
+    {
+      "matchManagers": [
+        "cargo"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "cargo-minor-and-patch"
+    },
+    {
+      "description": "GitHub Actions: commits as ci(deps); minor and patch updates in one PR. SHA-pinned actions stay pinned.",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "semanticCommitType": "ci",
+      "semanticCommitScope": "deps",
+      "addLabels": [
+        "github-actions"
+      ]
+    },
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "github-actions-minor-and-patch"
+    },
+    {
+      "description": "Node is pinned in .nvmrc and as node-version in ci.yml (twice) and release.yml, which must move together (AGENTS.md). One PR moves them; the major-only range ('26') is kept, and a new major waits for a person.",
+      "matchManagers": [
+        "nvm",
+        "github-actions"
+      ],
+      "matchDepNames": [
+        "node"
+      ],
+      "groupName": "node",
+      "rangeStrategy": "replace",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "node"
+    },
+    {
+      "matchManagers": [
+        "nvm",
+        "github-actions"
+      ],
+      "matchDepNames": [
+        "node"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false
+    }
+  ]
+}
